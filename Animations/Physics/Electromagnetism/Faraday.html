@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Esperimento di Faraday — 1821</title>
+<title>Faraday's Experiment — 1821</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
 
@@ -31,9 +31,7 @@
     color: var(--text-primary);
     font-family: 'Crimson Text', serif;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex; flex-direction: column; align-items: center;
     overflow-x: hidden;
   }
 
@@ -88,7 +86,6 @@
     position: relative; z-index: 1;
   }
 
-  /* Canvas */
   .canvas-wrap {
     width: 100%; max-width: 840px;
     border: 1px solid var(--border);
@@ -96,11 +93,9 @@
     background: var(--surface);
     overflow: hidden;
     box-shadow: 0 0 80px rgba(74,158,255,0.06), inset 0 0 40px rgba(0,0,0,0.6);
-    position: relative;
   }
   canvas { display: block; width: 100%; height: auto; }
 
-  /* Controls grid */
   .controls {
     width: 100%; max-width: 840px;
     display: grid;
@@ -121,9 +116,7 @@
     text-transform: uppercase; color: var(--text-secondary);
   }
 
-  .ctrl-row {
-    display: flex; align-items: center; gap: 0.8rem;
-  }
+  .ctrl-row { display: flex; align-items: center; gap: 0.8rem; }
 
   input[type=range] {
     -webkit-appearance: none; appearance: none;
@@ -148,7 +141,6 @@
     min-width: 4rem; text-align: right; white-space: nowrap;
   }
 
-  /* Buttons */
   .btn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 
   .btn {
@@ -167,11 +159,8 @@
   .btn.active { background: var(--blue); color: var(--bg); border-color: var(--blue); }
   .btn.inverted { border-color: #e05050; color: #e05050; background: rgba(224,80,80,.07); }
 
-  /* Info panel */
   .info-panel {
     width: 100%; max-width: 840px;
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 1.2rem;
   }
 
   .info-card {
@@ -189,7 +178,6 @@
   .hi { color: var(--text-primary); font-weight: 600; }
   .hi-force { color: var(--force-col); font-weight: 700; font-size: 1.1rem; }
 
-  /* Sine visualiser */
   .sine-wrap {
     width: 100%; max-width: 840px;
     background: rgba(17,22,32,0.8);
@@ -207,19 +195,17 @@
 
   @media (max-width:650px) {
     .controls { grid-template-columns: 1fr; }
-    .info-panel { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <span class="year-badge">Londra · 1821</span>
-  <h1>L'Esperimento di <em>Faraday</em></h1>
+  <span class="year-badge">London · 1821</span>
+  <h1><em>Faraday's</em> Experiment</h1>
   <div class="ornament"><div class="ornament-diamond"></div></div>
   <p class="subtitle">
-    Un filo percorso da corrente immerso nel campo di una calamita a ferro di cavallo
-    è soggetto a una forza: <strong>F = I L B sin α</strong>
+    A current-carrying wire in the field of a horseshoe magnet experiences a force.
   </p>
 </header>
 
@@ -231,22 +217,20 @@
 
   <div class="controls">
 
-    <!-- Corrente -->
     <div class="ctrl-card">
-      <span class="ctrl-title">Corrente nel filo</span>
+      <span class="ctrl-title">Current in wire</span>
       <div class="ctrl-row">
         <input type="range" id="currentSlider" min="0" max="100" value="50">
         <span class="ctrl-val" id="currentVal">50 A</span>
       </div>
       <div class="btn-row">
-        <button class="btn" id="currentToggle" onclick="toggleCurrent()">Accendi</button>
-        <button class="btn" id="currentRev"    onclick="reverseCurrent()" disabled>⇄ Inverti I</button>
+        <button class="btn" id="currentToggle">Turn on</button>
+        <button class="btn" id="currentRev" disabled>⇄ Reverse I</button>
       </div>
     </div>
 
-    <!-- Angolo α -->
     <div class="ctrl-card">
-      <span class="ctrl-title">Angolo α (filo / campo B)</span>
+      <span class="ctrl-title">Angle α (wire / field B)</span>
       <div class="ctrl-row">
         <input type="range" id="alphaSlider" min="0" max="180" value="90">
         <span class="ctrl-val" id="alphaVal">90°</span>
@@ -257,80 +241,64 @@
       </div>
     </div>
 
-    <!-- Calamita -->
     <div class="ctrl-card">
-      <span class="ctrl-title">Calamita a ferro di cavallo</span>
+      <span class="ctrl-title">Horseshoe magnet</span>
       <div class="btn-row">
-        <button class="btn" id="magnetRev" onclick="reverseMagnet()">⇄ Inverti poli</button>
+        <button class="btn" id="magnetRevBtn">⇄ Swap poles</button>
       </div>
       <div style="font-size:.88rem; color:var(--text-secondary); margin-top:.2rem;">
-        Polo N: <span class="hi" id="nPoleLabel">sinistra</span> &nbsp;|&nbsp;
-        Polo S: <span class="hi" id="sPoleLabel">destra</span>
+        N pole: <span class="hi" id="nPoleLabel">left</span> &nbsp;|&nbsp;
+        S pole: <span class="hi" id="sPoleLabel">right</span>
       </div>
     </div>
 
-    <!-- Lunghezza filo -->
     <div class="ctrl-card">
-      <span class="ctrl-title">Lunghezza filo (L)</span>
+      <span class="ctrl-title">Wire length (L)</span>
       <div class="ctrl-row">
         <input type="range" id="wireLenSlider" min="80" max="260" value="170">
         <span class="ctrl-val" id="wireLenVal">170</span>
       </div>
       <div style="font-size:.88rem; color:var(--text-secondary); margin-top:.2rem;">
-        F ∝ L (maggiore L → maggiore F)
+        F ∝ L — longer wire → greater force
       </div>
     </div>
 
-    <!-- Intensità campo magnetico -->
     <div class="ctrl-card">
-      <span class="ctrl-title">Intensità campo B</span>
+      <span class="ctrl-title">Magnetic field strength B</span>
       <div class="ctrl-row">
         <input type="range" id="magnetBSlider" min="1" max="30" value="10">
         <span class="ctrl-val" id="magnetBVal">1.0×</span>
       </div>
       <div style="font-size:.88rem; color:var(--text-secondary); margin-top:.2rem;">
-        F ∝ B (calamita più forte → maggiore F)
+        F ∝ B — stronger magnet → greater force
       </div>
     </div>
 
   </div>
 
-  <!-- Sine visualiser -->
   <div class="sine-wrap">
     <canvas id="cSine" width="840" height="110"></canvas>
   </div>
 
   <div class="info-panel">
     <div class="info-card">
-      <h3>Stato del sistema</h3>
+      <h3>System state</h3>
       <p>
-        Corrente I: <span class="hi" id="iState">0 A (spenta)</span><br>
-        Angolo α:   <span class="hi" id="aState">90°</span><br>
-        sin α:      <span class="hi" id="sinState">1.000</span><br>
-        Forza F:    <span class="hi-force" id="fState">0</span><br>
-        Direzione:  <span class="hi" id="dirState">—</span>
-      </p>
-    </div>
-    <div class="info-card">
-      <h3>Forza di Lorentz sul filo</h3>
-      <p>
-        <span class="hi">F = I L × B</span> &nbsp;→&nbsp; |F| = <span class="hi">I L B sin α</span><br><br>
-        La forza è <strong>proporzionale</strong> a:<br>
-        • <span class="hi">I</span> (intensità di corrente)<br>
-        • <span class="hi">L</span> (lunghezza del filo immerso nel campo)<br>
-        • <span class="hi">B</span> (intensità del campo magnetico)<br>
-        • <span class="hi">sin α</span> (angolo tra corrente e campo)<br><br>
-        Massima per α = 90° (filo ⊥ a B), nulla per α = 0° o 180° (filo ∥ a B).
+        Current I: <span class="hi" id="iState">0 A (off)</span><br>
+        Angle α:   <span class="hi" id="aState">90°</span><br>
+        sin α:     <span class="hi" id="sinState">1.000</span><br>
+        Force F:   <span class="hi-force" id="fState">0</span><br>
+        Direction: <span class="hi" id="dirState">—</span>
       </p>
     </div>
   </div>
 
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#e05050"></div> Polo Nord calamita</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#4a80ff"></div> Polo Sud calamita</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f0c060"></div> Corrente nel filo</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffdd00"></div> Forza F su filo</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div> Campo B</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e05050"></div> N pole of magnet</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a80ff"></div> S pole of magnet</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0c060"></div> Current in wire</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffdd00"></div> Force F on wire</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div> Field B</div>
   </div>
 
 </div>
@@ -338,37 +306,39 @@
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentOn  = false;
-let currentI   = 50;        // Ampere
-let currentRev = false;     // direction of I
-let magnetRev  = false;     // swap N/S poles
-let alpha      = 90;        // degrees, angle between wire and B
-let wireLength = 170;       // wire length in world units
-let magnetB    = 1.0;       // magnetic field intensity multiplier (0.1 to 3.0)
+let currentI   = 50;
+let currentRev = false;
+let magnetRev  = false;
+let alpha      = 90;
+let wireLength = 170;
+let magnetB    = 1.0;
 let t          = 0;
-let wireOffset = 0;         // visual displacement of wire due to force
+let wireOffset = 0;
 let particles  = [];
 
-// UI
-const currentSlider = document.getElementById('currentSlider');
-const alphaSlider   = document.getElementById('alphaSlider');
-const wireLenSlider = document.getElementById('wireLenSlider');
-const magnetBSlider = document.getElementById('magnetBSlider');
-const currentValEl  = document.getElementById('currentVal');
-const alphaValEl    = document.getElementById('alphaVal');
-const wireLenValEl  = document.getElementById('wireLenVal');
-const magnetBValEl  = document.getElementById('magnetBVal');
-const sinValEl      = document.getElementById('sinVal');
-const forceValEl    = document.getElementById('forceVal');
-const iStateEl      = document.getElementById('iState');
-const aStateEl      = document.getElementById('aState');
-const sinStateEl    = document.getElementById('sinState');
-const fStateEl      = document.getElementById('fState');
-const dirStateEl    = document.getElementById('dirState');
-const nPoleEl       = document.getElementById('nPoleLabel');
-const sPoleEl       = document.getElementById('sPoleLabel');
-const currentToggle = document.getElementById('currentToggle');
-const currentRevBtn = document.getElementById('currentRev');
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+const currentSlider  = document.getElementById('currentSlider');
+const alphaSlider    = document.getElementById('alphaSlider');
+const wireLenSlider  = document.getElementById('wireLenSlider');
+const magnetBSlider  = document.getElementById('magnetBSlider');
+const currentToggle  = document.getElementById('currentToggle');
+const currentRevBtn  = document.getElementById('currentRev');
+const magnetRevBtn   = document.getElementById('magnetRevBtn');
+const currentValEl   = document.getElementById('currentVal');
+const alphaValEl     = document.getElementById('alphaVal');
+const wireLenValEl   = document.getElementById('wireLenVal');
+const magnetBValEl   = document.getElementById('magnetBVal');
+const sinValEl       = document.getElementById('sinVal');
+const forceValEl     = document.getElementById('forceVal');
+const iStateEl       = document.getElementById('iState');
+const aStateEl       = document.getElementById('aState');
+const sinStateEl     = document.getElementById('sinState');
+const fStateEl       = document.getElementById('fState');
+const dirStateEl     = document.getElementById('dirState');
+const nPoleEl        = document.getElementById('nPoleLabel');
+const sPoleEl        = document.getElementById('sPoleLabel');
 
+// ─── Events ───────────────────────────────────────────────────────────────────
 currentSlider.addEventListener('input', () => {
   currentI = +currentSlider.value;
   currentValEl.textContent = currentI + ' A';
@@ -393,389 +363,326 @@ magnetBSlider.addEventListener('input', () => {
   updateState();
 });
 
-function toggleCurrent() {
+currentToggle.addEventListener('click', () => {
   currentOn = !currentOn;
   if (currentOn) {
     currentToggle.classList.add('active');
-    currentToggle.textContent = 'Spegni';
+    currentToggle.textContent = 'Turn off';
     currentRevBtn.disabled = false;
     spawnParticles();
   } else {
     currentToggle.classList.remove('active');
-    currentToggle.textContent = 'Accendi';
+    currentToggle.textContent = 'Turn on';
     currentRevBtn.disabled = true;
     particles = [];
   }
   updateState();
-}
+});
 
-function reverseCurrent() {
+currentRevBtn.addEventListener('click', () => {
   currentRev = !currentRev;
   currentRevBtn.classList.toggle('inverted', currentRev);
   updateState();
-}
+});
 
-function reverseMagnet() {
+magnetRevBtn.addEventListener('click', () => {
   magnetRev = !magnetRev;
-  const btn = document.getElementById('magnetRev');
-  btn.classList.toggle('inverted', magnetRev);
-  nPoleEl.textContent = magnetRev ? 'destra' : 'sinistra';
-  sPoleEl.textContent = magnetRev ? 'sinistra' : 'destra';
+  magnetRevBtn.classList.toggle('inverted', magnetRev);
+  nPoleEl.textContent = magnetRev ? 'right' : 'left';
+  sPoleEl.textContent = magnetRev ? 'left'  : 'right';
   updateState();
-}
+});
 
+// ─── Physics ──────────────────────────────────────────────────────────────────
 function updateState() {
-  const sinA   = Math.sin(alpha * Math.PI / 180);
-  // Force now depends on wire length L and magnetic field B
-  const force  = currentOn ? (currentI / 100) * (wireLength / 170) * magnetB * Math.abs(sinA) : 0;
+  const sinA  = Math.sin(alpha * Math.PI / 180);
+  const force = currentOn ? (currentI / 100) * (wireLength / 170) * magnetB * Math.abs(sinA) : 0;
 
   sinValEl.textContent   = sinA.toFixed(3);
   forceValEl.textContent = force.toFixed(3);
 
-  // Direction: F = I L̂ × B
-  // wire along z (into screen at α=90), B along x (left→right for normal poles)
-  // F = z × x = -y (downward) when I positive and B left→right
-  // We'll compute a signed force for the visual
-  const iSign = currentRev ? -1 : 1;
-  const bSign = magnetRev  ? -1 : 1;
+  const iSign     = currentRev ? -1 : 1;
+  const bSign     = magnetRev  ? -1 : 1;
   const forceSign = iSign * bSign * Math.sin(alpha * Math.PI / 180);
   const forceNorm = currentOn ? forceSign : 0;
 
-  iStateEl.textContent  = currentOn
-    ? `${currentI} A (${currentRev ? '←' : '→'})`
-    : '0 A (spenta)';
+  iStateEl.textContent  = currentOn ? `${currentI} A (${currentRev ? '←' : '→'})` : '0 A (off)';
   aStateEl.textContent  = alpha + '°';
   sinStateEl.textContent = sinA.toFixed(3);
   fStateEl.textContent  = currentOn
     ? (Math.abs(forceNorm) * 100).toFixed(1) + ' N (rel.)'
     : '0';
   dirStateEl.textContent = currentOn && Math.abs(sinA) > 0.01
-    ? (forceNorm > 0 ? '↑ verso alto' : '↓ verso basso')
-    : (Math.abs(sinA) < 0.01 ? 'nulla (α = 0° o 180°)' : '—');
+    ? (forceNorm > 0 ? '↑ upward' : '↓ downward')
+    : (Math.abs(sinA) < 0.01 ? 'zero (α = 0° or 180°)' : '—');
 
   return { forceNorm, sinA };
 }
 
 function spawnParticles() {
   particles = [];
-  for (let i = 0; i < 18; i++) {
-    particles.push({ t: Math.random(), speed: 0.004 + Math.random() * 0.003, size: 2.5 + Math.random() });
-  }
+  for (let i = 0; i < 18; i++)
+    particles.push({ t: Math.random(), speed: 0.004 + Math.random()*0.003, size: 2.5 + Math.random() });
 }
 
-// ─── 3D Projection ───────────────────────────────────────────────────────────
-// Simple isometric-ish perspective projection
-// World axes: x = right, y = up, z = into screen
-// We use a fixed camera angle
-
-const ISO_AX = Math.cos(Math.PI / 6);   // ≈ 0.866
-const ISO_AY = Math.sin(Math.PI / 6);   // ≈ 0.5
+// ─── Projection ───────────────────────────────────────────────────────────────
 const PERSPECTIVE = 800;
 
 function project(x, y, z, cx, cy) {
-  // Slight perspective: scale by depth
   const scale = PERSPECTIVE / (PERSPECTIVE + z * 0.3);
-  // Isometric-ish mapping
-  const sx = cx + (x - z * 0.55) * scale;
-  const sy = cy + (-y + z * 0.32) * scale;
-  return { sx, sy, scale };
+  return {
+    sx: cx + (x - z * 0.55) * scale,
+    sy: cy + (-y + z * 0.32) * scale,
+    scale
+  };
 }
 
-// ─── 3D Canvas ───────────────────────────────────────────────────────────────
+// ─── Canvas setup ─────────────────────────────────────────────────────────────
 const c3d  = document.getElementById('c3d');
 const ctx3 = c3d.getContext('2d');
 const W = 840, H = 500;
 const CX = W * 0.5, CY = H * 0.52;
 
-// ─── Sine canvas ─────────────────────────────────────────────────────────────
-const cSine  = document.getElementById('cSine');
-const ctxS   = cSine.getContext('2d');
+const cSine = document.getElementById('cSine');
+const ctxS  = cSine.getContext('2d');
 const SW = 840, SH = 110;
 
+// ─── Sine graph ───────────────────────────────────────────────────────────────
 function drawSineGraph() {
   ctxS.clearRect(0, 0, SW, SH);
-
-  // Background
   ctxS.fillStyle = 'rgba(17,22,32,1)';
   ctxS.fillRect(0, 0, SW, SH);
 
   const pad  = 40;
   const midY = SH / 2;
 
-  // Axes
-  ctxS.strokeStyle = 'rgba(100,160,255,0.2)';
-  ctxS.lineWidth   = 1;
-  ctxS.beginPath(); ctxS.moveTo(pad, midY); ctxS.lineTo(SW - pad, midY); ctxS.stroke();
-  ctxS.beginPath(); ctxS.moveTo(pad, 10);   ctxS.lineTo(pad, SH-10);    ctxS.stroke();
+  ctxS.strokeStyle = 'rgba(100,160,255,0.2)'; ctxS.lineWidth = 1;
+  ctxS.beginPath(); ctxS.moveTo(pad, midY); ctxS.lineTo(SW-pad, midY); ctxS.stroke();
+  ctxS.beginPath(); ctxS.moveTo(pad, 10);   ctxS.lineTo(pad, SH-10);  ctxS.stroke();
 
-  // Axis labels
   ctxS.fillStyle = 'rgba(100,160,255,0.45)';
   ctxS.font = 'italic 11px Crimson Text, serif';
   ctxS.textAlign = 'center';
-  ctxS.fillText('0°', pad, midY + 18);
-  ctxS.fillText('90°', pad + (SW - 2*pad)/2, midY + 18);
-  ctxS.fillText('180°', SW - pad, midY + 18);
+  ctxS.fillText('0°', pad, midY+18);
+  ctxS.fillText('90°', pad+(SW-2*pad)/2, midY+18);
+  ctxS.fillText('180°', SW-pad, midY+18);
   ctxS.textAlign = 'right';
-  ctxS.fillText('+1', pad - 4, midY - 30 + 4);
-  ctxS.fillText('−1', pad - 4, midY + 30 + 4);
-  ctxS.fillText('sin α', pad - 4, 16);
+  ctxS.fillText('+1', pad-4, midY-30+4);
+  ctxS.fillText('−1', pad-4, midY+30+4);
+  ctxS.fillText('sin α', pad-4, 16);
 
-  // Sine curve
-  ctxS.beginPath();
-  ctxS.strokeStyle = 'rgba(0,212,255,0.5)';
-  ctxS.lineWidth = 1.5;
-  for (let px = 0; px <= SW - 2*pad; px++) {
-    const a = (px / (SW - 2*pad)) * Math.PI;
-    const sy = midY - Math.sin(a) * 30;
-    px === 0 ? ctxS.moveTo(pad + px, sy) : ctxS.lineTo(pad + px, sy);
+  ctxS.beginPath(); ctxS.strokeStyle = 'rgba(0,212,255,0.5)'; ctxS.lineWidth = 1.5;
+  for (let px = 0; px <= SW-2*pad; px++) {
+    const a = (px/(SW-2*pad)) * Math.PI;
+    const sy = midY - Math.sin(a)*30;
+    px===0 ? ctxS.moveTo(pad+px, sy) : ctxS.lineTo(pad+px, sy);
   }
   ctxS.stroke();
 
-  // Current alpha marker
   const alphaRad = alpha * Math.PI / 180;
-  const markerX  = pad + (alpha / 180) * (SW - 2*pad);
-  const markerY  = midY - Math.sin(alphaRad) * 30;
+  const markerX  = pad + (alpha/180)*(SW-2*pad);
+  const markerY  = midY - Math.sin(alphaRad)*30;
   const sinA     = Math.sin(alphaRad);
 
-  // Vertical dashed line
-  ctxS.save();
-  ctxS.setLineDash([4, 6]);
-  ctxS.strokeStyle = 'rgba(255,221,0,0.5)';
-  ctxS.lineWidth = 1;
+  ctxS.save(); ctxS.setLineDash([4,6]);
+  ctxS.strokeStyle = 'rgba(255,221,0,0.5)'; ctxS.lineWidth = 1;
   ctxS.beginPath(); ctxS.moveTo(markerX, midY); ctxS.lineTo(markerX, markerY); ctxS.stroke();
-  ctxS.setLineDash([]);
-  ctxS.restore();
+  ctxS.setLineDash([]); ctxS.restore();
 
-  // Dot on curve
-  ctxS.beginPath();
-  ctxS.arc(markerX, markerY, 5, 0, Math.PI * 2);
-  ctxS.fillStyle = '#ffdd00';
-  ctxS.fill();
-  ctxS.strokeStyle = '#fff';
-  ctxS.lineWidth = 1.5;
-  ctxS.stroke();
+  ctxS.beginPath(); ctxS.arc(markerX, markerY, 5, 0, Math.PI*2);
+  ctxS.fillStyle = '#ffdd00'; ctxS.fill();
+  ctxS.strokeStyle = '#fff'; ctxS.lineWidth = 1.5; ctxS.stroke();
 
-  // sin α label
   ctxS.fillStyle = '#ffdd00';
   ctxS.font = 'bold 12px Crimson Text, serif';
-  ctxS.textAlign = markerX > SW / 2 ? 'right' : 'left';
-  const labelX = markerX + (markerX > SW / 2 ? -10 : 10);
-  ctxS.fillText(`sin(${alpha}°) = ${sinA.toFixed(3)}`, labelX, markerY - 10);
+  ctxS.textAlign = markerX > SW/2 ? 'right' : 'left';
+  ctxS.fillText(`sin(${alpha}°) = ${sinA.toFixed(3)}`, markerX+(markerX>SW/2?-10:10), markerY-10);
 }
 
-// ─── 3D Scene Drawing ────────────────────────────────────────────────────────
-
-function drawScene() {
-  ctx3.clearRect(0, 0, W, H);
-
-  // Background gradient
-  const bg = ctx3.createRadialGradient(W/2, H*0.4, 0, W/2, H/2, W*0.7);
-  bg.addColorStop(0, '#141a28');
-  bg.addColorStop(1, '#0a0d12');
-  ctx3.fillStyle = bg;
-  ctx3.fillRect(0, 0, W, H);
-
-  // Subtle grid on "floor"
-  ctx3.save();
-  ctx3.strokeStyle = 'rgba(74,158,255,0.04)';
-  ctx3.lineWidth = 1;
-  for (let gx = -5; gx <= 5; gx++) {
-    const a = project(gx * 40, -80, -200, CX, CY);
-    const b = project(gx * 40, -80,  200, CX, CY);
-    ctx3.beginPath(); ctx3.moveTo(a.sx, a.sy); ctx3.lineTo(b.sx, b.sy); ctx3.stroke();
-  }
-  for (let gz = -5; gz <= 5; gz++) {
-    const a = project(-200, -80, gz * 40, CX, CY);
-    const b = project( 200, -80, gz * 40, CX, CY);
-    ctx3.beginPath(); ctx3.moveTo(a.sx, a.sy); ctx3.lineTo(b.sx, b.sy); ctx3.stroke();
-  }
-  ctx3.restore();
-
-  // Get current state
-  const { forceNorm, sinA } = updateState();
-
-  // Animate wire curvature - scales with all force factors
-  const targetOffset = currentOn ? forceNorm * 30 * Math.abs(sinA) * (currentI / 100) * (wireLength / 170) * magnetB : 0;
-  wireOffset += (targetOffset - wireOffset) * 0.08;
-
-  // ── Painter's order for correct occlusion ──────────────────────────────────
-  // 1. Base arch (grey, horizontal, behind everything)
-  drawArch();
-  // 2. B field lines (float between arms)
-  drawBField();
-  // 3. Left arm (pole facing viewer-left — in front of arch, behind wire)
-  drawLeftArm();
-  // 4. Wire supports (front one visible, back one will be covered by right arm)
-  drawWireSupports();
-  // 5. Wire curve (in front of left arm and supports)
-  drawWireCurve(forceNorm);
-  // 6. Force arrow (on top of wire)
-  if (currentOn && Math.abs(sinA) > 0.01) drawForceArrow(forceNorm, sinA);
-  // 7. Angle arc (on top of wire plane)
-  drawAlphaArc();
-  // 8. Right arm drawn LAST — its semi-transparent front face covers the back
-  //    portion of the wire and its support, fading them behind the pole
-  drawRightArm();
-  // 9. Labels on top of everything
-  drawLabels(forceNorm, sinA);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function adjustAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
-// Draw a single 3D box face given 4 corners (projected), fill + stroke
 function drawFace(pts, fillStyle, strokeStyle, lw) {
   ctx3.beginPath();
   ctx3.moveTo(pts[0].sx, pts[0].sy);
-  for (let i = 1; i < pts.length; i++) ctx3.lineTo(pts[i].sx, pts[i].sy);
+  for (let i=1; i<pts.length; i++) ctx3.lineTo(pts[i].sx, pts[i].sy);
   ctx3.closePath();
   ctx3.fillStyle = fillStyle; ctx3.fill();
   if (strokeStyle) { ctx3.strokeStyle = strokeStyle; ctx3.lineWidth = lw||1; ctx3.stroke(); }
 }
 
-function drawBox(x0,x1, y0,y1, z0,z1, col, darkFactor) {
-  // 8 corners
-  const C = (x,y,z) => project(x,y,z,CX,CY);
-  const df = darkFactor || 0.65;
-  const dim = adjustAlpha(col, df);
-  const bright = adjustAlpha(col, 0.92);
-  const mid    = adjustAlpha(col, 0.78);
-  const edge   = adjustAlpha(col, 0.3);
-
-  // Back face (z=z1) — darkest, drawn first
-  drawFace([C(x0,y1,z1),C(x1,y1,z1),C(x1,y0,z1),C(x0,y0,z1)], adjustAlpha(col,0.28), edge, 0.8);
-  // Bottom face
-  drawFace([C(x0,y0,z0),C(x1,y0,z0),C(x1,y0,z1),C(x0,y0,z1)], adjustAlpha(col,0.35), edge, 0.8);
-  // Top face
-  drawFace([C(x0,y1,z0),C(x1,y1,z0),C(x1,y1,z1),C(x0,y1,z1)], mid, adjustAlpha(col,0.45), 1);
-  // Right side face (x=x1)
-  drawFace([C(x1,y0,z0),C(x1,y1,z0),C(x1,y1,z1),C(x1,y0,z1)], dim, adjustAlpha(col,0.4), 1);
-  // Left side face (x=x0)
-  drawFace([C(x0,y0,z0),C(x0,y1,z0),C(x0,y1,z1),C(x0,y0,z1)], adjustAlpha(col,0.5), adjustAlpha(col,0.35), 1);
-  // Front face (z=z0) — brightest, drawn last
-  const fg = ctx3.createLinearGradient(0, C(x0,y1,z0).sy, 0, C(x0,y0,z0).sy);
-  fg.addColorStop(0, bright); fg.addColorStop(1, adjustAlpha(col,0.65));
-  drawFace([C(x0,y0,z0),C(x1,y0,z0),C(x1,y1,z0),C(x0,y1,z0)], fg, adjustAlpha(col,0.5), 1.5);
-}
-
-// ─── Magnet geometry constants ───────────────────────────────────────────────
-const ZF = -20, ZB = 20;         // front and back z of magnet
-const ARM_YB = -80, ARM_YT = 80; // arm y extent
-const ARCH_YB = -110, ARCH_YT = -80;
-
 function getColors() {
   return {
-    left:  magnetRev ? '#4a80ff' : '#cc3030',
-    right: magnetRev ? '#cc3030' : '#4a80ff',
+    left:     magnetRev ? '#4a80ff' : '#cc3030',
+    right:    magnetRev ? '#cc3030' : '#4a80ff',
     leftLbl:  magnetRev ? 'S' : 'N',
     rightLbl: magnetRev ? 'N' : 'S',
   };
 }
 
-function drawArch() {
-  drawBox(-134, 134, ARCH_YB, ARCH_YT, ZF, ZB, '#7080a0');
+// ─── Horseshoe magnet ─────────────────────────────────────────────────────────
+// Layout: two vertical arms joined at bottom by a curved U-bend.
+// Arms span y from ARM_YB (bottom) to ARM_YT (top, open ends with poles).
+// The curve is drawn as an arc in the yz-plane, at x=−halfGap and x=+halfGap,
+// bridged by a connecting base block.
+
+const ZF = -20, ZB = 20;          // front/back z thickness of magnet
+const ARM_YB = -100;               // bottom of arms (where curve meets)
+const ARM_YT =  90;                // top of arms (pole faces)
+const ARM_HALF_W = 14;             // half-width of each arm in x
+const LEFT_CX  = -120;            // centre x of left arm
+const RIGHT_CX =  120;            // centre x of right arm
+
+// Draw a rectangular box face-by-face given world-coordinate bounds.
+// Bottom face is intentionally omitted — it sits against the U-curve and the seam must be invisible.
+function drawBox3D(x0,x1, y0,y1, z0,z1, col) {
+  const C = (x,y,z) => project(x,y,z,CX,CY);
+  const fill = adjustAlpha(col, 0.80);
+  const edge = adjustAlpha(col, 0.35);
+  // back
+  drawFace([C(x0,y1,z1),C(x1,y1,z1),C(x1,y0,z1),C(x0,y0,z1)], fill, edge, 0.8);
+  // top
+  drawFace([C(x0,y1,z0),C(x1,y1,z0),C(x1,y1,z1),C(x0,y1,z1)], fill, edge, 1);
+  // right side
+  drawFace([C(x1,y0,z0),C(x1,y1,z0),C(x1,y1,z1),C(x1,y0,z1)], fill, edge, 1);
+  // left side
+  drawFace([C(x0,y0,z0),C(x0,y1,z0),C(x0,y1,z1),C(x0,y0,z1)], fill, edge, 1);
+  // front
+  drawFace([C(x0,y0,z0),C(x1,y0,z0),C(x1,y1,z0),C(x0,y1,z0)], fill, edge, 1.5);
 }
 
+// Draw the curved U-bend connecting the two arms at the bottom.
+// Arc goes DOWNWARD (concave opening upward) — sin is negated so the curve dips below ARM_YB.
+// Left half = left arm colour, right half = right arm colour, sharp split at midpoint.
+// All faces use the same base alpha so no face looks brighter/darker than the others.
+function drawUCurve() {
+  const { left, right } = getColors();
+  const numSlices = 32;
+  const mid = numSlices / 2;
+  const curveR    = (RIGHT_CX - LEFT_CX) / 2;
+  const curveCX   = (LEFT_CX + RIGHT_CX) / 2;
+  const curveCY   = ARM_YB;
+  const thickness = ARM_HALF_W;
+  const rOuter = curveR + thickness;
+  const rInner = curveR - thickness;
+  const BASE_A = 0.80;
+
+  function arcPt(i, r, z) {
+    const ang = Math.PI * (1 - i / numSlices);
+    return project(curveCX + Math.cos(ang)*r, curveCY - Math.sin(ang)*r*0.55, z, CX, CY);
+  }
+
+  for (let i = 0; i < numSlices; i++) {
+    const col  = (i < mid) ? left : right;
+    const fill = adjustAlpha(col, BASE_A);
+    const edge = adjustAlpha(col, 0.35);
+
+    const pf0o = arcPt(i,   rOuter, ZF);
+    const pf1o = arcPt(i+1, rOuter, ZF);
+    const pf0i = arcPt(i,   rInner, ZF);
+    const pf1i = arcPt(i+1, rInner, ZF);
+    const pb0o = arcPt(i,   rOuter, ZB);
+    const pb1o = arcPt(i+1, rOuter, ZB);
+    const pb0i = arcPt(i,   rInner, ZB);
+    const pb1i = arcPt(i+1, rInner, ZB);
+
+    drawFace([pb0o,pb1o,pb1i,pb0i], fill, edge, 0.5);
+    drawFace([pf0o,pf1o,pb1o,pb0o], fill, edge, 0.5);
+    drawFace([pf0i,pf1i,pb1i,pb0i], fill, edge, 0.4);
+    drawFace([pf0o,pf1o,pf1i,pf0i], fill, edge, 1);
+  }
+}
+
+// Draw the left arm (N pole, red) — closed on all sides
 function drawLeftArm() {
   const { left, leftLbl } = getColors();
-  drawBox(-134, -106, ARM_YB, ARM_YT, ZF, ZB, left);
-  const pm = project(-120, 0, ZF - 0.1, CX, CY);
+  drawBox3D(LEFT_CX - ARM_HALF_W, LEFT_CX + ARM_HALF_W, ARM_YB, ARM_YT, ZF, ZB, left);
+  const pm = project(LEFT_CX, ARM_YT + 8, ZF - 1, CX, CY);
   ctx3.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx3.font = 'bold 24px Playfair Display, serif';
-  ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+  ctx3.font = 'bold 22px Playfair Display, serif';
+  ctx3.textAlign = 'center'; ctx3.textBaseline = 'bottom';
   ctx3.fillText(leftLbl, pm.sx, pm.sy);
 }
 
+// Draw the right arm (S pole, blue) — semi-transparent front so wire fades
 function drawRightArm() {
   const { right, rightLbl } = getColors();
-  // Draw all faces EXCEPT front opaque — front face is semi-transparent so wire fades behind it
-  const C = (x,y,z) => project(x,y,z,CX,CY);
+  const x0 = RIGHT_CX - ARM_HALF_W, x1 = RIGHT_CX + ARM_HALF_W;
+  const y0 = ARM_YB, y1 = ARM_YT;
+  const z0 = ZF, z1 = ZB;
   const col = right;
-  const edge = adjustAlpha(col, 0.3);
+  const C = (x,y,z) => project(x,y,z,CX,CY);
+  const fill = adjustAlpha(col, 0.80);
+  const edge = adjustAlpha(col, 0.35);
 
-  // Back face
-  drawFace([C(-106+228,ARM_YT,ZB),C(134,ARM_YT,ZB),C(134,ARM_YB,ZB),C(-106+228,ARM_YB,ZB)], adjustAlpha(col,0.28), edge, 0.8);
-  // Bottom face
-  drawFace([C(106,ARM_YB,ZF),C(134,ARM_YB,ZF),C(134,ARM_YB,ZB),C(106,ARM_YB,ZB)], adjustAlpha(col,0.35), edge, 0.8);
-  // Top face
-  drawFace([C(106,ARM_YT,ZF),C(134,ARM_YT,ZF),C(134,ARM_YT,ZB),C(106,ARM_YT,ZB)], adjustAlpha(col,0.78), adjustAlpha(col,0.45), 1);
-  // Right side face
-  drawFace([C(134,ARM_YB,ZF),C(134,ARM_YT,ZF),C(134,ARM_YT,ZB),C(134,ARM_YB,ZB)], adjustAlpha(col,0.65), adjustAlpha(col,0.4), 1);
-  // Left side face
-  drawFace([C(106,ARM_YB,ZF),C(106,ARM_YT,ZF),C(106,ARM_YT,ZB),C(106,ARM_YB,ZB)], adjustAlpha(col,0.5), adjustAlpha(col,0.35), 1);
-  // Front face — SEMI-TRANSPARENT so wire behind it fades naturally
-  const fg = ctx3.createLinearGradient(0, C(106,ARM_YT,ZF).sy, 0, C(106,ARM_YB,ZF).sy);
-  fg.addColorStop(0, adjustAlpha(col, 0.82));
-  fg.addColorStop(1, adjustAlpha(col, 0.58));
-  drawFace([C(106,ARM_YB,ZF),C(134,ARM_YB,ZF),C(134,ARM_YT,ZF),C(106,ARM_YT,ZF)], fg, adjustAlpha(col,0.5), 1.5);
+  drawFace([C(x0,y1,z1),C(x1,y1,z1),C(x1,y0,z1),C(x0,y0,z1)], fill, edge, 0.8);
+  drawFace([C(x0,y1,z0),C(x1,y1,z0),C(x1,y1,z1),C(x0,y1,z1)], fill, edge, 1);
+  drawFace([C(x1,y0,z0),C(x1,y1,z0),C(x1,y1,z1),C(x1,y0,z1)], fill, edge, 1);
+  drawFace([C(x0,y0,z0),C(x0,y1,z0),C(x0,y1,z1),C(x0,y0,z1)], fill, edge, 1);
+  // front face — same alpha as other faces for consistency
+  drawFace([C(x0,y0,z0),C(x1,y0,z0),C(x1,y1,z0),C(x0,y1,z0)], fill, edge, 1.5);
 
-  // Label
-  const pm = project(120, 0, ZF - 0.1, CX, CY);
+  const pm = project(RIGHT_CX, ARM_YT + 8, ZF - 1, CX, CY);
   ctx3.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx3.font = 'bold 24px Playfair Display, serif';
-  ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
+  ctx3.font = 'bold 22px Playfair Display, serif';
+  ctx3.textAlign = 'center'; ctx3.textBaseline = 'bottom';
   ctx3.fillText(rightLbl, pm.sx, pm.sy);
 }
 
+// ─── B field lines ────────────────────────────────────────────────────────────
 function drawBField() {
-  if (Math.abs(alpha - 0) < 1 || Math.abs(alpha - 180) < 1) return; // no field lines when parallel
+  if (Math.abs(alpha-0)<1 || Math.abs(alpha-180)<1) return;
 
-  // B field goes from N pole to S pole (left to right for normal, right to left for reversed)
-  const bDir = magnetRev ? -1 : 1;  // +1 = left→right = N→S normal
-
-  // Number of field lines scales with magnetB: from 3 (weak) to 9 (strong)
-  const numLines = Math.round(3 + (magnetB - 0.1) / (3.0 - 0.1) * 6);  // 3-9 lines
+  const bDir    = magnetRev ? -1 : 1;
+  const numLines = Math.round(3 + (magnetB-0.1)/(3.0-0.1)*6);
   const alphaRad = alpha * Math.PI / 180;
 
-  for (let i = 0; i < numLines; i++) {
-    const fy = -60 + (i / (numLines - 1)) * 120;   // y positions evenly distributed
-    const fAlpha = 0.15 + 0.5 * Math.sin((i / (numLines - 1)) * Math.PI); // stronger in middle
-
-    // Line from left arm to right arm at this y level
-    const startX = bDir > 0 ? -106 : 106;
-    const endX   = bDir > 0 ?  106 : -106;
-
+  for (let i=0; i<numLines; i++) {
+    const fy    = ARM_YB + 20 + (i/(numLines-1))*((ARM_YT-30)-(ARM_YB+20));
+    const fAlpha = 0.15 + 0.5 * Math.sin((i/(numLines-1))*Math.PI);
+    const startX = bDir>0 ? LEFT_CX+ARM_HALF_W : RIGHT_CX-ARM_HALF_W;
+    const endX   = bDir>0 ? RIGHT_CX-ARM_HALF_W : LEFT_CX+ARM_HALF_W;
     const ps = project(startX, fy, 0, CX, CY);
     const pe = project(endX,   fy, 0, CX, CY);
 
     ctx3.save();
     ctx3.globalAlpha = fAlpha * 0.7;
-    ctx3.strokeStyle = '#00d4ff';
-    ctx3.lineWidth = 1.2;
-    ctx3.setLineDash([5, 7]);
-    ctx3.beginPath();
-    ctx3.moveTo(ps.sx, ps.sy);
-    ctx3.lineTo(pe.sx, pe.sy);
-    ctx3.stroke();
+    ctx3.strokeStyle = '#00d4ff'; ctx3.lineWidth = 1.2;
+    ctx3.setLineDash([5,7]);
+    ctx3.beginPath(); ctx3.moveTo(ps.sx,ps.sy); ctx3.lineTo(pe.sx,pe.sy); ctx3.stroke();
     ctx3.setLineDash([]);
 
-    // Arrow at midpoint
-    const mx = (ps.sx + pe.sx) / 2;
-    const my = (ps.sy + pe.sy) / 2;
-    const dx = pe.sx - ps.sx;
-    const dy = pe.sy - ps.sy;
-    const len = Math.sqrt(dx*dx + dy*dy);
+    const mx = (ps.sx+pe.sx)/2, my = (ps.sy+pe.sy)/2;
+    const dx = pe.sx-ps.sx, dy = pe.sy-ps.sy;
+    const len = Math.sqrt(dx*dx+dy*dy);
     const nx = dx/len, ny = dy/len;
     ctx3.fillStyle = '#00d4ff';
     ctx3.beginPath();
-    ctx3.moveTo(mx + nx*7, my + ny*7);
-    ctx3.lineTo(mx - nx*5 - ny*4, my - ny*5 + nx*4);
-    ctx3.lineTo(mx - nx*5 + ny*4, my - ny*5 - nx*4);
+    ctx3.moveTo(mx+nx*7, my+ny*7);
+    ctx3.lineTo(mx-nx*5-ny*4, my-ny*5+nx*4);
+    ctx3.lineTo(mx-nx*5+ny*4, my-ny*5-nx*4);
     ctx3.closePath(); ctx3.fill();
-
     ctx3.restore();
   }
 }
 
-// ─── Shared wire geometry ────────────────────────────────────────────────────
+// ─── Wire geometry ────────────────────────────────────────────────────────────
 function wireGeom() {
   const alphaRad = alpha * Math.PI / 180;
-  const wLen = wireLength;  // Use dynamic wire length
+  const wLen = wireLength;
   const wDx  = Math.cos(alphaRad) * wLen;
   const wDz  = Math.sin(alphaRad) * wLen;
   const numSeg = 40;
   const points = [];
-  for (let i = 0; i <= numSeg; i++) {
-    const frac = (i / numSeg) * 2 - 1;
-    const sag  = wireOffset * (1 - frac * frac);
-    points.push(project(frac * wDx, sag, frac * wDz, CX, CY));
+  for (let i=0; i<=numSeg; i++) {
+    const frac = (i/numSeg)*2-1;
+    const sag  = wireOffset*(1-frac*frac);
+    points.push(project(frac*wDx, sag, frac*wDz, CX, CY));
   }
   return { alphaRad, wLen, wDx, wDz, numSeg, points };
 }
@@ -783,9 +690,9 @@ function wireGeom() {
 function drawWireSupports() {
   const { wDx, wDz, numSeg, points } = wireGeom();
   [-1, 1].forEach(side => {
-    const endPt = points[side > 0 ? numSeg : 0];
-    const baseP = project(side * wDx, -55, side * wDz, CX, CY);
-    ctx3.beginPath(); ctx3.moveTo(endPt.sx, endPt.sy); ctx3.lineTo(baseP.sx, baseP.sy);
+    const endPt  = points[side>0 ? numSeg : 0];
+    const baseP  = project(side*wDx, -55, side*wDz, CX, CY);
+    ctx3.beginPath(); ctx3.moveTo(endPt.sx,endPt.sy); ctx3.lineTo(baseP.sx,baseP.sy);
     ctx3.strokeStyle = 'rgba(180,160,100,0.5)'; ctx3.lineWidth = 3; ctx3.stroke();
     ctx3.beginPath(); ctx3.arc(baseP.sx, baseP.sy, 4, 0, Math.PI*2);
     ctx3.fillStyle = 'rgba(180,160,100,0.55)'; ctx3.fill();
@@ -795,162 +702,133 @@ function drawWireSupports() {
 function drawWireCurve(forceNorm) {
   const { alphaRad, wLen, points } = wireGeom();
 
-  if (currentOn && currentI > 0) {
+  if (currentOn && currentI>0) {
     ctx3.save();
-    ctx3.globalAlpha = 0.12 * (currentI / 100);
+    ctx3.globalAlpha = 0.12*(currentI/100);
     ctx3.strokeStyle = '#f0c060'; ctx3.lineWidth = 20; ctx3.lineCap = 'round';
     ctx3.beginPath();
     points.forEach((p,i) => i===0 ? ctx3.moveTo(p.sx,p.sy) : ctx3.lineTo(p.sx,p.sy));
-    ctx3.stroke();
-    ctx3.restore();
+    ctx3.stroke(); ctx3.restore();
   }
 
   ctx3.beginPath();
   points.forEach((p,i) => i===0 ? ctx3.moveTo(p.sx,p.sy) : ctx3.lineTo(p.sx,p.sy));
   ctx3.strokeStyle = '#c87830'; ctx3.lineWidth = 8; ctx3.lineCap = 'round'; ctx3.stroke();
+
   ctx3.beginPath();
   points.forEach((p,i) => i===0 ? ctx3.moveTo(p.sx,p.sy) : ctx3.lineTo(p.sx,p.sy));
   ctx3.strokeStyle = '#e8a040'; ctx3.lineWidth = 5; ctx3.stroke();
+
   ctx3.beginPath();
   points.forEach((p,i) => i===0 ? ctx3.moveTo(p.sx,p.sy) : ctx3.lineTo(p.sx,p.sy));
   ctx3.strokeStyle = 'rgba(255,210,120,0.3)'; ctx3.lineWidth = 2; ctx3.stroke();
 
-  if (currentOn && currentI > 0) drawCurrentParticles(alphaRad, wLen, forceNorm, points);
+  if (currentOn && currentI>0) drawCurrentParticles(alphaRad, wLen, forceNorm, points);
 }
 
 function drawCurrentParticles(alphaRad, wLen, forceNorm, wirePts) {
   const dir   = currentRev ? -1 : 1;
-  const speed = 0.003 + (currentI / 100) * 0.007;
-  const numSeg = wirePts.length - 1;
+  const speed = 0.003 + (currentI/100)*0.007;
+  const numSeg = wirePts.length-1;
 
   particles.forEach(p => {
-    p.t += dir * speed;
-    if (p.t > 1) p.t -= 1;
-    if (p.t < 0) p.t += 1;
-
-    // Map t (0..1) to segment index
-    const segF = p.t * numSeg;
+    p.t += dir*speed;
+    if (p.t>1) p.t -= 1;
+    if (p.t<0) p.t += 1;
+    const segF = p.t*numSeg;
     const seg  = Math.floor(segF);
-    const rem  = segF - seg;
-    const idx  = Math.min(seg, numSeg - 1);
-    const pp = {
-      sx: wirePts[idx].sx + (wirePts[idx+1].sx - wirePts[idx].sx) * rem,
-      sy: wirePts[idx].sy + (wirePts[idx+1].sy - wirePts[idx].sy) * rem,
+    const rem  = segF-seg;
+    const idx  = Math.min(seg, numSeg-1);
+    const pp   = {
+      sx: wirePts[idx].sx + (wirePts[idx+1].sx-wirePts[idx].sx)*rem,
+      sy: wirePts[idx].sy + (wirePts[idx+1].sy-wirePts[idx].sy)*rem,
     };
-
-    ctx3.save();
-    ctx3.globalAlpha = 0.9;
-    const g = ctx3.createRadialGradient(pp.sx, pp.sy, 0, pp.sx, pp.sy, p.size * 3);
-    g.addColorStop(0, 'rgba(255,220,80,0.95)');
-    g.addColorStop(1, 'transparent');
-    ctx3.fillStyle = g;
-    ctx3.beginPath(); ctx3.arc(pp.sx, pp.sy, p.size * 3, 0, Math.PI*2); ctx3.fill();
-    ctx3.fillStyle = '#fffacc';
-    ctx3.beginPath(); ctx3.arc(pp.sx, pp.sy, p.size * 0.7, 0, Math.PI*2); ctx3.fill();
+    ctx3.save(); ctx3.globalAlpha = 0.9;
+    const g = ctx3.createRadialGradient(pp.sx,pp.sy,0, pp.sx,pp.sy,p.size*3);
+    g.addColorStop(0,'rgba(255,220,80,0.95)'); g.addColorStop(1,'transparent');
+    ctx3.fillStyle=g; ctx3.beginPath(); ctx3.arc(pp.sx,pp.sy,p.size*3,0,Math.PI*2); ctx3.fill();
+    ctx3.fillStyle='#fffacc'; ctx3.beginPath(); ctx3.arc(pp.sx,pp.sy,p.size*0.7,0,Math.PI*2); ctx3.fill();
     ctx3.restore();
   });
 }
 
 function drawAlphaArc() {
-  // The angle α lies on the plane of the wire (xz plane at y=wireOffset).
-  // We draw:
-  //   1. A dashed reference line along B direction (x axis in 3D)
-  //   2. A reference line along the wire direction
-  //   3. An arc sampled as 3D points in the xz plane, all projected
-  const alphaRad  = alpha * Math.PI / 180;
-  const arcR = 55;   // radius in 3D world units
+  const alphaRad = alpha * Math.PI / 180;
+  const arcR = 55;
   const numArcPts = 40;
 
-  // Reference B direction line (along x, in xz plane at y=wireOffset)
   const p0  = project(0, wireOffset, 0, CX, CY);
-  const pBx = project(arcR * 1.3, wireOffset, 0, CX, CY);
+  const pBx = project(arcR*1.3, wireOffset, 0, CX, CY);
 
-  ctx3.save();
-  ctx3.globalAlpha = 0.55;
-  ctx3.strokeStyle = '#00d4ff';
-  ctx3.lineWidth = 1.2;
-  ctx3.setLineDash([5, 7]);
-  ctx3.beginPath(); ctx3.moveTo(p0.sx, p0.sy); ctx3.lineTo(pBx.sx, pBx.sy); ctx3.stroke();
+  ctx3.save(); ctx3.globalAlpha = 0.55;
+  ctx3.strokeStyle = '#00d4ff'; ctx3.lineWidth = 1.2;
+  ctx3.setLineDash([5,7]);
+  ctx3.beginPath(); ctx3.moveTo(p0.sx,p0.sy); ctx3.lineTo(pBx.sx,pBx.sy); ctx3.stroke();
   ctx3.setLineDash([]);
 
-  // Wire direction reference line
   const pWx = project(Math.cos(alphaRad)*arcR*1.1, wireOffset, Math.sin(alphaRad)*arcR*1.1, CX, CY);
-  ctx3.strokeStyle = '#f0c060';
-  ctx3.lineWidth = 1;
-  ctx3.setLineDash([4, 6]);
-  ctx3.beginPath(); ctx3.moveTo(p0.sx, p0.sy); ctx3.lineTo(pWx.sx, pWx.sy); ctx3.stroke();
+  ctx3.strokeStyle = '#f0c060'; ctx3.lineWidth = 1;
+  ctx3.setLineDash([4,6]);
+  ctx3.beginPath(); ctx3.moveTo(p0.sx,p0.sy); ctx3.lineTo(pWx.sx,pWx.sy); ctx3.stroke();
   ctx3.setLineDash([]);
 
-  // Arc: sample angles from 0 to alpha in the xz plane at y=wireOffset
-  ctx3.strokeStyle = '#ffdd00';
-  ctx3.lineWidth = 1.8;
-  ctx3.globalAlpha = 0.75;
+  ctx3.strokeStyle = '#ffdd00'; ctx3.lineWidth = 1.8; ctx3.globalAlpha = 0.75;
   ctx3.beginPath();
-  for (let i = 0; i <= numArcPts; i++) {
-    const a = (i / numArcPts) * alphaRad;
+  for (let i=0; i<=numArcPts; i++) {
+    const a = (i/numArcPts)*alphaRad;
     const pp = project(Math.cos(a)*arcR, wireOffset, Math.sin(a)*arcR, CX, CY);
-    i === 0 ? ctx3.moveTo(pp.sx, pp.sy) : ctx3.lineTo(pp.sx, pp.sy);
+    i===0 ? ctx3.moveTo(pp.sx,pp.sy) : ctx3.lineTo(pp.sx,pp.sy);
   }
   ctx3.stroke();
 
-  // α label at arc midpoint in 3D
-  const midA  = alphaRad / 2;
-  const plbl  = project(Math.cos(midA)*arcR*1.45, wireOffset, Math.sin(midA)*arcR*1.45, CX, CY);
+  const midA = alphaRad/2;
+  const plbl = project(Math.cos(midA)*arcR*1.45, wireOffset, Math.sin(midA)*arcR*1.45, CX, CY);
   ctx3.fillStyle = '#ffdd00';
   ctx3.font = 'italic 14px Crimson Text, serif';
   ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
   ctx3.fillText('α', plbl.sx, plbl.sy);
-
   ctx3.restore();
 }
 
 function drawForceArrow(forceNorm, sinA) {
-  // Arrow base at the apex of the curved wire (midpoint, max sag = y=wireOffset)
-  const pBase = project(0, wireOffset, 0, CX, CY);
-  // Scale force arrow length with ALL force factors: I, L, B, sin(α)
-  const forceLenBase = 50; // base length
-  const forceLen = forceLenBase * forceNorm * Math.abs(sinA) * (currentI / 100) * (wireLength / 170) * magnetB;
-  const pTip  = project(0, wireOffset + forceLen, 0, CX, CY);
-  if (Math.abs(pTip.sy - pBase.sy) < 3) return;
+  const pBase  = project(0, wireOffset, 0, CX, CY);
+  const forceLen = 50 * forceNorm * Math.abs(sinA) * (currentI/100) * (wireLength/170) * magnetB;
+  const pTip   = project(0, wireOffset+forceLen, 0, CX, CY);
+  if (Math.abs(pTip.sy-pBase.sy)<3) return;
 
   ctx3.save();
-  ctx3.strokeStyle = '#ffdd00'; ctx3.lineWidth = 4; ctx3.lineCap = 'round';
-  ctx3.shadowColor = '#ffdd00'; ctx3.shadowBlur = 14;
-  ctx3.beginPath(); ctx3.moveTo(pBase.sx, pBase.sy); ctx3.lineTo(pTip.sx, pTip.sy); ctx3.stroke();
+  ctx3.strokeStyle='#ffdd00'; ctx3.lineWidth=4; ctx3.lineCap='round';
+  ctx3.shadowColor='#ffdd00'; ctx3.shadowBlur=14;
+  ctx3.beginPath(); ctx3.moveTo(pBase.sx,pBase.sy); ctx3.lineTo(pTip.sx,pTip.sy); ctx3.stroke();
 
-  const dx = pTip.sx - pBase.sx, dy = pTip.sy - pBase.sy;
-  const len = Math.sqrt(dx*dx + dy*dy);
-  const nx = dx/len, ny = dy/len;
-  ctx3.shadowBlur = 0;
-  ctx3.fillStyle = '#ffdd00';
+  const dx=pTip.sx-pBase.sx, dy=pTip.sy-pBase.sy;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  const nx=dx/len, ny=dy/len;
+  ctx3.shadowBlur=0; ctx3.fillStyle='#ffdd00';
   ctx3.beginPath();
-  ctx3.moveTo(pTip.sx, pTip.sy);
-  ctx3.lineTo(pTip.sx - nx*14 - ny*6, pTip.sy - ny*14 + nx*6);
-  ctx3.lineTo(pTip.sx - nx*14 + ny*6, pTip.sy - ny*14 - nx*6);
+  ctx3.moveTo(pTip.sx,pTip.sy);
+  ctx3.lineTo(pTip.sx-nx*14-ny*6, pTip.sy-ny*14+nx*6);
+  ctx3.lineTo(pTip.sx-nx*14+ny*6, pTip.sy-ny*14-nx*6);
   ctx3.closePath(); ctx3.fill();
 
-  ctx3.fillStyle = '#ffdd00';
-  ctx3.font = 'bold 15px Playfair Display, serif';
-  ctx3.textAlign = 'left'; ctx3.textBaseline = 'middle';
-  ctx3.fillText('F', pTip.sx + 9, pTip.sy);
+  ctx3.fillStyle='#ffdd00';
+  ctx3.font='bold 15px Playfair Display, serif';
+  ctx3.textAlign='left'; ctx3.textBaseline='middle';
+  ctx3.fillText('F', pTip.sx+9, pTip.sy);
   ctx3.restore();
 }
 
 function drawLabels(forceNorm, sinA) {
-  // B direction label — inside field lines, arrow reverses with poles
   const bDir = magnetRev ? -1 : 1;
-  // Place label near centre of the gap, slightly above wire centre
-  const pBL = project(0, 30, 0, CX, CY);
+  const pBL  = project(0, 30, 0, CX, CY);
   ctx3.fillStyle = 'rgba(0,212,255,0.75)';
   ctx3.font = 'italic bold 14px Crimson Text, serif';
   ctx3.textAlign = 'center'; ctx3.textBaseline = 'middle';
-  // Arrow direction reflects bDir: → when normal, ← when reversed
-  ctx3.fillText(bDir > 0 ? 'B →' : 'B ←', pBL.sx, pBL.sy);
+  ctx3.fillText(bDir>0 ? 'B →' : 'B ←', pBL.sx, pBL.sy);
 
-  // Force formula label
-  if (currentOn && Math.abs(sinA) > 0.01) {
-    const fMag = Math.abs(forceNorm * sinA * currentI / 100);
-    const p0 = project(60, wireOffset + 15, 0, CX, CY);
+  if (currentOn && Math.abs(sinA)>0.01) {
+    const fMag = Math.abs(forceNorm*sinA*currentI/100);
+    const p0 = project(60, wireOffset+15, 0, CX, CY);
     ctx3.fillStyle = 'rgba(255,221,0,0.75)';
     ctx3.font = '12px Crimson Text, serif';
     ctx3.textAlign = 'left';
@@ -958,15 +836,52 @@ function drawLabels(forceNorm, sinA) {
   }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function adjustAlpha(hex, a) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
+// ─── Main draw ────────────────────────────────────────────────────────────────
+function drawScene() {
+  ctx3.clearRect(0,0,W,H);
+  const bg = ctx3.createRadialGradient(W/2,H*0.4,0, W/2,H/2,W*0.7);
+  bg.addColorStop(0,'#141a28'); bg.addColorStop(1,'#0a0d12');
+  ctx3.fillStyle=bg; ctx3.fillRect(0,0,W,H);
+
+  // Grid
+  ctx3.save(); ctx3.strokeStyle='rgba(74,158,255,0.04)'; ctx3.lineWidth=1;
+  for (let gx=-5;gx<=5;gx++) {
+    const a=project(gx*40,-80,-200,CX,CY), b=project(gx*40,-80,200,CX,CY);
+    ctx3.beginPath(); ctx3.moveTo(a.sx,a.sy); ctx3.lineTo(b.sx,b.sy); ctx3.stroke();
+  }
+  for (let gz=-5;gz<=5;gz++) {
+    const a=project(-200,-80,gz*40,CX,CY), b=project(200,-80,gz*40,CX,CY);
+    ctx3.beginPath(); ctx3.moveTo(a.sx,a.sy); ctx3.lineTo(b.sx,b.sy); ctx3.stroke();
+  }
+  ctx3.restore();
+
+  const { forceNorm, sinA } = updateState();
+
+  // Animate wire sag
+  const targetOffset = currentOn ? forceNorm*30*Math.abs(sinA)*(currentI/100)*(wireLength/170)*magnetB : 0;
+  wireOffset += (targetOffset-wireOffset)*0.08;
+
+  // Painter's order:
+  // 1. U-curve of the horseshoe (back, bottom of scene)
+  drawUCurve();
+  // 2. B field lines
+  drawBField();
+  // 3. Left arm
+  drawLeftArm();
+  // 4. Wire supports
+  drawWireSupports();
+  // 5. Wire
+  drawWireCurve(forceNorm);
+  // 6. Force arrow
+  if (currentOn && Math.abs(sinA)>0.01) drawForceArrow(forceNorm, sinA);
+  // 7. Alpha arc
+  drawAlphaArc();
+  // 8. Right arm (semi-transparent front, drawn last to occlude)
+  drawRightArm();
+  // 9. Labels
+  drawLabels(forceNorm, sinA);
 }
 
-// ─── Main loop ────────────────────────────────────────────────────────────────
 function loop() {
   t++;
   drawScene();
