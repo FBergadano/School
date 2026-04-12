@@ -24,12 +24,17 @@
       margin-bottom: 40px;
     }
 
+    h2 {
+      margin-top: 50px;
+      border-left: 4px solid #38bdf8;
+      padding-left: 10px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 20px;
-      max-width: 900px;
-      margin: auto;
+      margin-top: 20px;
     }
 
     .card {
@@ -40,7 +45,7 @@
       transition: 0.3s;
       text-decoration: none;
       color: white;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .card:hover {
@@ -53,12 +58,48 @@
 <body>
 
 <h1>⚡ Electromagnetism Lab</h1>
-<p>Click an experiment to explore interactive simulations</p>
+<p>Interactive experiments in electromagnetism</p>
+
+<!-- ===================== -->
+<!-- MAGNETISM EXPERIMENTS -->
+<!-- ===================== -->
+
+<h2>🧲 Fundamental Experiments of Magnetism</h2>
 
 <div class="grid">
 
-  <a class="card" href="Faradays_3rd_EM.html">
-    🔄 Faraday's 3rd experiment on electromagnetic induction
+  <a class="card" href="orsted.html">
+    🧭 Ørsted’s Experiment
+  </a>
+
+  <a class="card" href="faraday_magnetism.html">
+    ⚡ Faraday’s Experiment
+  </a>
+
+  <a class="card" href="ampere.html">
+    🔁 Ampère’s Experiment
+  </a>
+
+</div>
+
+<!-- ===================== -->
+<!-- FARADAY INDUCTION -->
+<!-- ===================== -->
+
+<h2>⚡ Faraday’s Induction Experiments</h2>
+
+<div class="grid">
+
+  <a class="card" href="faraday1.html">
+    1️⃣ First Induction Experiment
+  </a>
+
+  <a class="card" href="faraday2.html">
+    2️⃣ Second Induction Experiment
+  </a>
+
+  <a class="card" href="faraday3.html">
+    3️⃣ Third Induction Experiment
   </a>
 
 </div>
