@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C⃗ = A⃗ + B⃗ — Metodo Punta-Coda</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #13161d;
+  --surface2: #1a1e28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e4e8f0;
+  --muted: #606880;
+  --ca: #f97316;
+  --cb: #3b82f6;
+  --cc: #22c55e;
+  --ca-dim: rgba(249,115,22,0.15);
+  --cb-dim: rgba(59,130,246,0.15);
+  --cc-dim: rgba(34,197,94,0.15);
+  --gold: #f59e0b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ═══ LAYOUT ═══ */
+.app {
+  display: grid;
+  grid-template-rows: 52px 1fr;
+  grid-template-columns: 1fr 320px;
+  height: 100vh;
+}
+
+/* ═══ HEADER ═══ */
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+header h1 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+header h1 span.eq { color: var(--cc); font-weight: 800; }
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.tab {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.18s;
+  letter-spacing: 0.3px;
+}
+.tab:hover { color: var(--text); border-color: var(--border2); }
+.tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* ═══ CANVAS ═══ */
+.canvas-area {
+  position: relative;
+  background: var(--bg);
+  overflow: hidden;
+}
+canvas { display:block; }
+
+/* Step bar (animation mode) */
+#stepBar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.step-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-btn:last-child { border-right: none; }
+.step-btn:hover { background: var(--surface2); color: var(--text); }
+.step-btn.active { background: var(--surface2); color: var(--text); }
+.step-btn.done { color: var(--cc); }
+.step-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.64rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.step-btn.active .step-dot { background: var(--text); color: var(--bg); border-color: var(--text); }
+.step-btn.done .step-dot { background: var(--cc); color: var(--bg); border-color: var(--cc); }
+
+/* Quiz drag hint */
+#dragHint {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+  display: none;
+}
+
+/* ═══ PANEL ═══ */
+.panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius:2px; }
+
+.p-section {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.p-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* Vector control blocks */
+.vec-block { margin-bottom: 14px; }
+.vec-block:last-child { margin-bottom: 0; }
+.vec-header {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+.vec-pip {
+  width: 9px; height: 9px;
+  border-radius: 50%; flex-shrink: 0;
+}
+
+.ctrl-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 7px;
+}
+.ctrl-row:last-child { margin-bottom: 0; }
+.ctrl-row label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem; color: var(--muted);
+  width: 60px; flex-shrink: 0;
+}
+.ctrl-row input[type=range] {
+  flex: 1; height: 3px;
+  appearance: none; background: var(--border2);
+  border-radius: 2px; cursor: pointer;
+  outline: none;
+}
+.ctrl-row input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.ctrl-row input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.ctrl-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; color: var(--text);
+  width: 40px; text-align: right; flex-shrink: 0;
+}
+
+/* Verso toggle */
+.verso-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 7px;
+}
+.verso-row label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem; color: var(--muted);
+  width: 60px; flex-shrink: 0;
+}
+.verso-btns { display: flex; gap: 4px; flex: 1; }
+.verso-btn {
+  flex: 1; padding: 4px 6px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.verso-btn:hover { color: var(--text); }
+.verso-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* Result card */
+.result-card {
+  background: var(--cc-dim);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.r-eq {
+  font-size: 0.88rem; font-weight: 700;
+  color: var(--cc); margin-bottom: 8px;
+}
+.r-row {
+  display: flex; justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(34,197,94,0.1);
+  font-size: 0.76rem;
+}
+.r-row:last-child { border-bottom: none; }
+.r-row .rk { color: var(--muted); }
+.r-row .rv { font-family: 'JetBrains Mono', monospace; color: var(--cc); }
+
+/* Animation controls */
+.anim-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.2px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text);
+}
+.btn:hover { background: var(--surface2); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.primary:hover { background: #c8d0e0; }
+.btn.danger { border-color: rgba(239,68,68,0.4); color: #ef4444; }
+.btn.danger:hover { background: rgba(239,68,68,0.1); }
+.btn.success { border-color: rgba(34,197,94,0.4); color: var(--cc); }
+.btn.success:hover { background: var(--cc-dim); }
+
+.prog-wrap { flex: 1; height: 3px; background: var(--border2); border-radius: 2px; }
+.prog-bar { height: 100%; background: var(--text); border-radius: 2px; transition: width 0.08s linear; }
+
+/* Quiz feedback */
+.quiz-section { flex: 1; }
+.feedback-box {
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  font-weight: 500;
+  margin-bottom: 10px;
+  min-height: 48px;
+}
+.feedback-box.idle {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.feedback-box.correct {
+  background: var(--cc-dim);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: var(--cc);
+}
+.feedback-box.wrong {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+}
+
+/* Instruction box */
+.instr-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.instr-box strong { color: var(--text); }
+.instr-box .step-label {
+  display: inline-block;
+  background: var(--border2);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  margin-right: 4px;
+}
+
+/* Notation legend */
+.notch-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.notch-row:last-child { border-bottom: none; }
+.notch-line { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+/* Scrollbar */
+.panel { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <h1>C&#x20D7; <span class="eq">=</span> A&#x20D7; + B&#x20D7; &nbsp;—&nbsp; Metodo Punta-Coda</h1>
+    <div class="mode-tabs">
+      <button class="tab active" id="tabAnim" onclick="setMode('anim')">▶ Animazione</button>
+      <button class="tab" id="tabFree" onclick="setMode('free')">✏ Esplora</button>
+      <button class="tab" id="tabQuiz" onclick="setMode('quiz')">🎯 Quiz</button>
+    </div>
+  </header>
+
+  <!-- CANVAS -->
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="c"></canvas>
+
+    <!-- step bar (anim mode) -->
+    <div id="stepBar">
+      <button class="step-btn active" id="sb0" onclick="goStep(0)">
+        <div class="step-dot">1</div>
+        <span>Disegna A&#x20D7; dall'origine</span>
+      </button>
+      <button class="step-btn" id="sb1" onclick="goStep(1)">
+        <div class="step-dot">2</div>
+        <span>Trasla B&#x20D7; alla punta di A&#x20D7;</span>
+      </button>
+      <button class="step-btn" id="sb2" onclick="goStep(2)">
+        <div class="step-dot">3</div>
+        <span>Disegna C&#x20D7; = A&#x20D7; + B&#x20D7;</span>
+      </button>
+    </div>
+
+    <div id="dragHint">Trascina la coda di B&#x20D7; (pallino blu) alla punta di A&#x20D7;</div>
+  </div>
+
+  <!-- PANEL -->
+  <div class="panel" id="panel">
+
+    <!-- ── ANIMATION MODE ── -->
+    <div id="panelAnim">
+      <div class="p-section">
+        <div class="p-title">Animazione</div>
+        <div class="anim-controls">
+          <button class="btn primary" id="btnPlay" onclick="togglePlay()">▶ Play</button>
+          <button class="btn" onclick="restartAnim()">↺</button>
+          <div class="prog-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+        </div>
+        <div style="font-size:0.76rem; color:var(--muted); line-height:1.6;" id="animExplain">
+          Premi Play per vedere il metodo punta-coda passo dopo passo.
+        </div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Vettori</div>
+        <div id="animVecControls"></div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Risultante C&#x20D7;</div>
+        <div class="result-card" id="animResult"></div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Legenda</div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--ca)"></div><span>A&#x20D7; — vettore A</span></div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--cb)"></div><span>B&#x20D7; — vettore B traslato</span></div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--cc)"></div><span>C&#x20D7; — risultante</span></div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--cb); opacity:0.3;"></div><span>B&#x20D7; — posizione originale (fantasma)</span></div>
+      </div>
+    </div>
+
+    <!-- ── FREE MODE ── -->
+    <div id="panelFree" style="display:none">
+      <div class="p-section">
+        <div class="p-title">Vettore A&#x20D7;</div>
+        <div class="vec-block">
+          <div class="ctrl-row">
+            <label>Modulo</label>
+            <input type="range" id="fAmod" min="1" max="6" step="0.5" value="3" oninput="freeUpdate()">
+            <span class="ctrl-val" id="fAmodV">3 cm</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Direzione</label>
+            <input type="range" id="fAdir" min="0" max="180" step="15" value="30" oninput="freeUpdate()">
+            <span class="ctrl-val" id="fAdirV">30°</span>
+          </div>
+          <div class="verso-row">
+            <label>Verso</label>
+            <div class="verso-btns" id="fAverso">
+              <button class="verso-btn active" onclick="setVerso('A',1,this)">+</button>
+              <button class="verso-btn" onclick="setVerso('A',-1,this)">−</button>
+            </div>
+            <span class="ctrl-val" id="fAversoV">+</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Vettore B&#x20D7;</div>
+        <div class="vec-block">
+          <div class="ctrl-row">
+            <label>Modulo</label>
+            <input type="range" id="fBmod" min="1" max="6" step="0.5" value="3" oninput="freeUpdate()">
+            <span class="ctrl-val" id="fBmodV">3 cm</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Direzione</label>
+            <input type="range" id="fBdir" min="0" max="180" step="15" value="80" oninput="freeUpdate()">
+            <span class="ctrl-val" id="fBdirV">80°</span>
+          </div>
+          <div class="verso-row">
+            <label>Verso</label>
+            <div class="verso-btns" id="fBverso">
+              <button class="verso-btn active" onclick="setVerso('B',1,this)">+</button>
+              <button class="verso-btn" onclick="setVerso('B',-1,this)">−</button>
+            </div>
+            <span class="ctrl-val" id="fBversoV">+</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Risultante C&#x20D7;</div>
+        <div class="result-card" id="freeResult"></div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Legenda</div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--ca)"></div><span>A&#x20D7; — dall'origine</span></div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--cb)"></div><span>B&#x20D7; — traslato alla punta di A&#x20D7;</span></div>
+        <div class="notch-row"><div class="notch-line" style="background:var(--cc)"></div><span>C&#x20D7; — risultante</span></div>
+      </div>
+    </div>
+
+    <!-- ── QUIZ MODE ── -->
+    <div id="panelQuiz" style="display:none">
+      <div class="p-section">
+        <div class="p-title">Vettore A&#x20D7;</div>
+        <div class="ctrl-row">
+          <label>Modulo</label>
+          <input type="range" id="qAmod" min="1" max="5" step="1" value="3" oninput="quizVecUpdate()">
+          <span class="ctrl-val" id="qAmodV">3 cm</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Direzione</label>
+          <input type="range" id="qAdir" min="0" max="180" step="15" value="30" oninput="quizVecUpdate()">
+          <span class="ctrl-val" id="qAdirV">30°</span>
+        </div>
+        <div class="verso-row">
+          <label>Verso</label>
+          <div class="verso-btns">
+            <button class="verso-btn active" onclick="setVerso('QA',1,this)">+</button>
+            <button class="verso-btn" onclick="setVerso('QA',-1,this)">−</button>
+          </div>
+          <span class="ctrl-val" id="qAversoV">+</span>
+        </div>
+      </div>
+      <div class="p-section">
+        <div class="p-title">Vettore B&#x20D7;</div>
+        <div class="ctrl-row">
+          <label>Modulo</label>
+          <input type="range" id="qBmod" min="1" max="5" step="1" value="3" oninput="quizVecUpdate()">
+          <span class="ctrl-val" id="qBmodV">3 cm</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Direzione</label>
+          <input type="range" id="qBdir" min="0" max="180" step="15" value="80" oninput="quizVecUpdate()">
+          <span class="ctrl-val" id="qBdirV">80°</span>
+        </div>
+        <div class="verso-row">
+          <label>Verso</label>
+          <div class="verso-btns">
+            <button class="verso-btn active" onclick="setVerso('QB',1,this)">+</button>
+            <button class="verso-btn" onclick="setVerso('QB',-1,this)">−</button>
+          </div>
+          <span class="ctrl-val" id="qBversoV">+</span>
+        </div>
+      </div>
+      <div class="p-section quiz-section">
+        <div class="p-title">Il tuo compito</div>
+        <div class="instr-box">
+          <strong>Traccia C&#x20D7; = A&#x20D7; + B&#x20D7;</strong> usando il metodo punta-coda:<br>
+          <span class="step-label">1</span> Trascina B&#x20D7; (pallino blu) così che la sua <strong>coda</strong> coincida con la <strong>punta</strong> di A&#x20D7;<br>
+          <span class="step-label">2</span> Poi trascina la <strong>punta di C&#x20D7;</strong> (pallino verde) dove pensi sia la risultante
+        </div>
+        <div class="feedback-box idle" id="quizFeedback">
+          Inizia trascinando il vettore B&#x20D7; sulla punta di A&#x20D7;.
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn primary" id="btnCheck" onclick="checkQuiz()" style="display:none">✓ Verifica</button>
+          <button class="btn success" id="btnShowCorr" onclick="showCorrection()" style="display:none">Mostra soluzione</button>
+          <button class="btn" id="btnNewQuiz" onclick="newQuiz()">Nuovo esercizio</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel -->
+
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CANVAS SETUP
+// ════════════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, CX, CY, SCALE, DPR = window.devicePixelRatio || 1;
+
+function resize() {
+  const area = document.getElementById('canvasArea');
+  const r = area.getBoundingClientRect();
+  // Subtract step bar height (44px) when in anim mode
+  const barH = (MODE === 'anim') ? 44 : 0;
+  const dw = r.width, dh = r.height - barH;
+  canvas.width  = dw * DPR;
+  canvas.height = dh * DPR;
+  canvas.style.width  = dw + 'px';
+  canvas.style.height = dh + 'px';
+  ctx.resetTransform();
+  ctx.scale(DPR, DPR);
+  W = dw; H = dh;
+  CX = W * 0.42; CY = H * 0.5;
+  SCALE = Math.min(W, H) / 14; // 1 cm = SCALE px
+  drawScene();
+}
+
+window.addEventListener('resize', () => setTimeout(resize, 40));
+
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let MODE = 'anim'; // 'anim' | 'free' | 'quiz'
+
+// Vectors are stored as { mod (cm), dir (0-179°), verso (+1/-1) }
+// Actual angle = verso > 0 ? dir : dir+180
+
+const vecs = {
+  A: { mod: 3, dir: 30,  verso:  1 },
+  B: { mod: 3, dir: 80,  verso:  1 },
+  QA:{ mod: 3, dir: 30,  verso:  1 },
+  QB:{ mod: 3, dir: 80,  verso:  1 },
+};
+
+function getAngle(v) {
+  return v.verso > 0 ? v.dir : v.dir + 180;
+}
+function comp(v) {
+  const r = getAngle(v) * Math.PI / 180;
+  return { x: v.mod * Math.cos(r), y: v.mod * Math.sin(r) };
+}
+
+// Free mode: B is always translated (tip of A)
+// Quiz mode: user drags B's tail and C's tip
+
+// Canvas coords
+function toC(gx, gy) { return { x: CX + gx * SCALE, y: CY - gy * SCALE }; }
+function toG(cx, cy) { return { x: (cx - CX) / SCALE, y: -(cy - CY) / SCALE }; }
+
+// ════════════════════════════════════════════════════════════
+// DRAWING PRIMITIVES
+// ════════════════════════════════════════════════════════════
+function drawGrid() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 0.7;
+  for (let i = -18; i <= 18; i++) {
+    const px = CX + i * SCALE, py = CY + i * SCALE;
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(0, CY); ctx.lineTo(W, CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX, 0); ctx.lineTo(CX, H); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let i = -7; i <= 7; i++) {
+    if (!i) continue;
+    ctx.fillText(i, CX + i * SCALE, CY + 4);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let i = -5; i <= 5; i++) {
+    if (!i) continue;
+    ctx.fillText(i, CX - 5, CY - i * SCALE);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = 'bold 10px JetBrains Mono, monospace';
+  ctx.textAlign = 'left'; ctx.fillText('x →', W - 28, CY - 16);
+  ctx.textAlign = 'center'; ctx.fillText('↑ y', CX + 12, 8);
+}
+
+function arrow(ox, oy, ex, ey, color, alpha, lw, label) {
+  if (alpha <= 0.01) return;
+  const dx = ex - ox, dy = ey - oy;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 2) return;
+  const ang = Math.atan2(dy, dx);
+  const HL = Math.min(14, len * 0.45);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.shadowBlur = 16; ctx.shadowColor = color;
+
+  // shaft
+  const sx = ex - HL * 0.7 * Math.cos(ang);
+  const sy = ey - HL * 0.7 * Math.sin(ang);
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(sx, sy); ctx.stroke();
+
+  // head
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - HL * Math.cos(ang - 0.44), ey - HL * Math.sin(ang - 0.44));
+  ctx.lineTo(ex - HL * Math.cos(ang + 0.44), ey - HL * Math.sin(ang + 0.44));
+  ctx.closePath(); ctx.fill();
+
+  ctx.restore();
+
+  if (label && alpha > 0.25) {
+    const perpX = Math.sin(ang), perpY = -Math.cos(ang);
+    const side = 1;
+    const mx = (ox + ex) / 2 + perpX * 22 * side;
+    const my = (oy + ey) / 2 + perpY * 22 * side;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur = 8; ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = 'bold 15px Outfit, sans-serif';
+    ctx.fillText(label, mx, my + 3);
+    ctx.font = 'bold 9px Outfit, sans-serif';
+    ctx.fillText('→', mx + 1, my - 10);
+    ctx.restore();
+  }
+}
+
+function dot(cx, cy, color, r, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.shadowBlur = 14; ctx.shadowColor = color;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function modLabel(ox, oy, ex, ey, text, color, alpha) {
+  if (alpha < 0.3) return;
+  const ang = Math.atan2(ey-oy, ex-ox);
+  const mx = (ox+ex)/2 + Math.sin(ang)*18;
+  const my = (oy+ey)/2 - Math.cos(ang)*18;
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = color;
+  ctx.font = '500 11px JetBrains Mono, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, mx, my);
+  ctx.restore();
+}
+
+function ghostArrow(ox, oy, ex, ey, color) {
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 5]);
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.setLineDash([]);
+  const ang = Math.atan2(ey-oy, ex-ox);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - 9*Math.cos(ang-0.44), ey - 9*Math.sin(ang-0.44));
+  ctx.lineTo(ex - 9*Math.cos(ang+0.44), ey - 9*Math.sin(ang+0.44));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════════════
+// RESULT CARD HTML
+// ════════════════════════════════════════════════════════════
+function resultHTML(vA, vB) {
+  const a = comp(vA), b = comp(vB);
+  const rx = a.x + b.x, ry = a.y + b.y;
+  const mod = Math.sqrt(rx*rx + ry*ry);
+  const ang = ((Math.atan2(ry, rx) * 180 / Math.PI) + 360) % 360;
+  return `
+    <div class="r-eq">C&#x20D7; = A&#x20D7; + B&#x20D7;</div>
+    <div class="r-row"><span class="rk">|C&#x20D7;|</span><span class="rv">${mod.toFixed(2)} cm</span></div>
+    <div class="r-row"><span class="rk">Angolo</span><span class="rv">${ang.toFixed(1)}°</span></div>
+    <div class="r-row"><span class="rk">Cx</span><span class="rv">${rx.toFixed(2)} cm</span></div>
+    <div class="r-row"><span class="rk">Cy</span><span class="rv">${ry.toFixed(2)} cm</span></div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// MODE SWITCHING
+// ════════════════════════════════════════════════════════════
+function setMode(m) {
+  MODE = m;
+  ['anim','free','quiz'].forEach(id => {
+    document.getElementById('panel' + id.charAt(0).toUpperCase() + id.slice(1)).style.display = (id === m) ? 'block' : 'none';
+    document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1)).className = 'tab' + (id === m ? ' active' : '');
+  });
+  document.getElementById('stepBar').style.display = (m === 'anim') ? 'flex' : 'none';
+  document.getElementById('dragHint').style.display = (m === 'quiz') ? 'block' : 'none';
+
+  // Stop animation if switching away
+  if (m !== 'anim') { ANIM.playing = false; cancelAnimationFrame(ANIM.raf); }
+
+  if (m === 'quiz') initQuiz();
+
+  setTimeout(resize, 20);
+}
+
+// ════════════════════════════════════════════════════════════
+// ANIMATION MODE
+// ════════════════════════════════════════════════════════════
+const ANIM = { step: 0, t: 0, playing: false, raf: null, lastTs: null };
+const STEP_DUR = 1300;
+
+const EXPLAINS = [
+  'Passo 1 — A&#x20D7; parte dall\'origine O. La sua lunghezza è il modulo, la punta indica il verso.',
+  'Passo 2 — B&#x20D7; viene traslato: la sua <strong>coda</strong> si collega alla <strong>punta</strong> di A&#x20D7;. Il fantasma mostra dove era B&#x20D7; prima della traslazione.',
+  'Passo 3 — C&#x20D7; va dall\'origine (coda di A&#x20D7;) fino alla punta di B&#x20D7; traslato. Questa è la risultante C&#x20D7; = A&#x20D7; + B&#x20D7;.',
+];
+
+function drawAnim() {
+  drawGrid();
+  const vA = vecs.A, vB = vecs.B;
+  const a = comp(vA), b = comp(vB);
+  const O    = toC(0,0);
+  const tipA = toC(a.x, a.y);
+  const tipC = toC(a.x + b.x, a.y + b.y);
+  const tipB_orig = toC(b.x, b.y);
+
+  const e = 1 - Math.pow(1 - Math.min(1, ANIM.t), 3);
+
+  // Before animation starts (step 0, t=0): show both A and B statically at origin
+  const isIdle = (ANIM.step === 0 && ANIM.t === 0 && !ANIM.playing);
+
+  if (isIdle) {
+    // A and B both from origin, fully visible
+    arrow(O.x, O.y, tipA.x, tipA.y, '#f97316', 1, 3, 'A');
+    modLabel(O.x, O.y, tipA.x, tipA.y, vA.mod+'cm', '#f97316', 1);
+    arrow(O.x, O.y, tipB_orig.x, tipB_orig.y, '#3b82f6', 1, 3, 'B');
+    modLabel(O.x, O.y, tipB_orig.x, tipB_orig.y, vB.mod+'cm', '#3b82f6', 1);
+    dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+  } else if (ANIM.step === 0) {
+    // Step 0 animating: B stays at origin while A grows
+    arrow(O.x, O.y, tipB_orig.x, tipB_orig.y, '#3b82f6', 0.4, 2, 'B');
+    modLabel(O.x, O.y, tipB_orig.x, tipB_orig.y, vB.mod+'cm', '#3b82f6', 0.4);
+    const cur = { x: O.x + (tipA.x-O.x)*e, y: O.y + (tipA.y-O.y)*e };
+    arrow(O.x, O.y, cur.x, cur.y, '#f97316', 1, 3, e > 0.5 ? 'A' : '');
+    modLabel(O.x, O.y, cur.x, cur.y, vA.mod+'cm', '#f97316', e);
+    dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+  } else if (ANIM.step === 1) {
+    // A fully drawn
+    arrow(O.x, O.y, tipA.x, tipA.y, '#f97316', 1, 3, 'A');
+    modLabel(O.x, O.y, tipA.x, tipA.y, vA.mod+'cm', '#f97316', 1);
+    dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+    // Ghost B at origin
+    ghostArrow(O.x, O.y, tipB_orig.x, tipB_orig.y, '#3b82f6');
+
+    // B translating
+    const tailBx = O.x + (tipA.x - O.x) * e;
+    const tailBy = O.y + (tipA.y - O.y) * e;
+    const tipBx  = tipB_orig.x + (tipC.x - tipB_orig.x) * e;
+    const tipBy  = tipB_orig.y + (tipC.y - tipB_orig.y) * e;
+    arrow(tailBx, tailBy, tipBx, tipBy, '#3b82f6', 1, 3, 'B');
+    modLabel(tailBx, tailBy, tipBx, tipBy, vB.mod+'cm', '#3b82f6', e);
+
+  } else { // step 2
+    arrow(O.x, O.y, tipA.x, tipA.y, '#f97316', 1, 3, 'A');
+    modLabel(O.x, O.y, tipA.x, tipA.y, vA.mod+'cm', '#f97316', 1);
+    ghostArrow(O.x, O.y, tipB_orig.x, tipB_orig.y, '#3b82f6');
+    arrow(tipA.x, tipA.y, tipC.x, tipC.y, '#3b82f6', 1, 3, 'B');
+    modLabel(tipA.x, tipA.y, tipC.x, tipC.y, vB.mod+'cm', '#3b82f6', 1);
+    dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+    // C growing
+    const curCx = O.x + (tipC.x-O.x)*e;
+    const curCy = O.y + (tipC.y-O.y)*e;
+    arrow(O.x, O.y, curCx, curCy, '#22c55e', 1, 3.5, e > 0.5 ? 'C' : '');
+    const ac = comp(vA), bc = comp(vB);
+    const rm = Math.sqrt((ac.x+bc.x)**2+(ac.y+bc.y)**2);
+    modLabel(O.x, O.y, curCx, curCy, rm.toFixed(1)+'cm', '#22c55e', e);
+  }
+
+  // Update result card
+  document.getElementById('animResult').innerHTML = resultHTML(vA, vB);
+}
+
+function animLoop(ts) {
+  if (!ANIM.playing) return;
+  if (!ANIM.lastTs) ANIM.lastTs = ts;
+  const dt = ts - ANIM.lastTs; ANIM.lastTs = ts;
+  ANIM.t = Math.min(1, ANIM.t + dt / STEP_DUR);
+  document.getElementById('progBar').style.width = ((ANIM.step + ANIM.t) / 3 * 100) + '%';
+  drawAnim();
+  if (ANIM.t >= 1) {
+    if (ANIM.step < 2) { ANIM.step++; ANIM.t = 0; ANIM.lastTs = null; updateStepBar(); }
+    else { ANIM.playing = false; document.getElementById('btnPlay').textContent = '▶ Play'; return; }
+  }
+  ANIM.raf = requestAnimationFrame(animLoop);
+}
+
+function togglePlay() {
+  if (ANIM.playing) {
+    ANIM.playing = false; ANIM.lastTs = null; cancelAnimationFrame(ANIM.raf);
+    document.getElementById('btnPlay').textContent = '▶ Play';
+  } else {
+    if (ANIM.step === 2 && ANIM.t >= 1) restartAnim();
+    ANIM.playing = true; ANIM.lastTs = null;
+    document.getElementById('btnPlay').textContent = '⏸ Pausa';
+    ANIM.raf = requestAnimationFrame(animLoop);
+  }
+}
+
+function restartAnim() {
+  ANIM.playing = false; cancelAnimationFrame(ANIM.raf); ANIM.lastTs = null;
+  ANIM.step = 0; ANIM.t = 0;
+  document.getElementById('btnPlay').textContent = '▶ Play';
+  document.getElementById('progBar').style.width = '0%';
+  updateStepBar();
+  drawAnim();
+}
+
+function goStep(n) {
+  ANIM.playing = false; cancelAnimationFrame(ANIM.raf); ANIM.lastTs = null;
+  document.getElementById('btnPlay').textContent = '▶ Play';
+  ANIM.step = n;
+  ANIM.t = (n === 0) ? 0 : 1;
+  updateStepBar();
+  drawAnim();
+  document.getElementById('progBar').style.width = ((n + ANIM.t) / 3 * 100) + '%';
+}
+
+function updateStepBar() {
+  for (let i = 0; i < 3; i++) {
+    const el = document.getElementById('sb'+i);
+    el.className = 'step-btn' + (i === ANIM.step ? ' active' : i < ANIM.step ? ' done' : '');
+    el.querySelector('.step-dot').textContent = i < ANIM.step ? '✓' : i + 1;
+  }
+  document.getElementById('animExplain').innerHTML = EXPLAINS[ANIM.step];
+}
+
+// Build animation vec controls
+function buildAnimControls() {
+  const el = document.getElementById('animVecControls');
+  el.innerHTML = `
+  <div class="vec-block">
+    <div class="vec-header"><div class="vec-pip" style="background:var(--ca)"></div>A&#x20D7;</div>
+    <div class="ctrl-row"><label>Modulo</label><input type="range" id="aAmod" min="1" max="5" step="1" value="3" oninput="animVecUpdate()"><span class="ctrl-val" id="aAmodV">3 cm</span></div>
+    <div class="ctrl-row"><label>Direzione</label><input type="range" id="aAdir" min="0" max="180" step="15" value="30" oninput="animVecUpdate()"><span class="ctrl-val" id="aAdirV">30°</span></div>
+    <div class="verso-row"><label>Verso</label><div class="verso-btns" id="aAverso"><button class="verso-btn active" onclick="setVerso('A',1,this)">+</button><button class="verso-btn" onclick="setVerso('A',-1,this)">−</button></div></div>
+  </div>
+  <div class="vec-block">
+    <div class="vec-header"><div class="vec-pip" style="background:var(--cb)"></div>B&#x20D7;</div>
+    <div class="ctrl-row"><label>Modulo</label><input type="range" id="aBmod" min="1" max="5" step="1" value="3" oninput="animVecUpdate()"><span class="ctrl-val" id="aBmodV">3 cm</span></div>
+    <div class="ctrl-row"><label>Direzione</label><input type="range" id="aBdir" min="0" max="180" step="15" value="80" oninput="animVecUpdate()"><span class="ctrl-val" id="aBdirV">80°</span></div>
+    <div class="verso-row"><label>Verso</label><div class="verso-btns" id="aBverso"><button class="verso-btn active" onclick="setVerso('B',1,this)">+</button><button class="verso-btn" onclick="setVerso('B',-1,this)">−</button></div></div>
+  </div>`;
+}
+
+function animVecUpdate() {
+  vecs.A.mod = +document.getElementById('aAmod').value; document.getElementById('aAmodV').textContent = vecs.A.mod + ' cm';
+  vecs.A.dir = +document.getElementById('aAdir').value; document.getElementById('aAdirV').textContent = vecs.A.dir + '°';
+  vecs.B.mod = +document.getElementById('aBmod').value; document.getElementById('aBmodV').textContent = vecs.B.mod + ' cm';
+  vecs.B.dir = +document.getElementById('aBdir').value; document.getElementById('aBdirV').textContent = vecs.B.dir + '°';
+  drawAnim();
+}
+
+// ════════════════════════════════════════════════════════════
+// FREE MODE
+// ════════════════════════════════════════════════════════════
+function drawFree() {
+  drawGrid();
+  const vA = vecs.A, vB = vecs.B;
+  const a = comp(vA), b = comp(vB);
+  const O    = toC(0, 0);
+  const tipA = toC(a.x, a.y);
+  const tipC = toC(a.x+b.x, a.y+b.y);
+
+  // A from origin
+  arrow(O.x, O.y, tipA.x, tipA.y, '#f97316', 1, 3, 'A');
+  modLabel(O.x, O.y, tipA.x, tipA.y, vA.mod+'cm', '#f97316', 1);
+  // B from tip of A
+  arrow(tipA.x, tipA.y, tipC.x, tipC.y, '#3b82f6', 1, 3, 'B');
+  modLabel(tipA.x, tipA.y, tipC.x, tipC.y, vB.mod+'cm', '#3b82f6', 1);
+  // C
+  arrow(O.x, O.y, tipC.x, tipC.y, '#22c55e', 0.95, 3.5, 'C');
+  const rm = Math.sqrt((a.x+b.x)**2 + (a.y+b.y)**2);
+  modLabel(O.x, O.y, tipC.x, tipC.y, rm.toFixed(1)+'cm', '#22c55e', 1);
+  dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+  document.getElementById('freeResult').innerHTML = resultHTML(vA, vB);
+}
+
+function freeUpdate() {
+  vecs.A.mod = +document.getElementById('fAmod').value; document.getElementById('fAmodV').textContent = vecs.A.mod+' cm';
+  vecs.A.dir = +document.getElementById('fAdir').value; document.getElementById('fAdirV').textContent = vecs.A.dir+'°';
+  vecs.B.mod = +document.getElementById('fBmod').value; document.getElementById('fBmodV').textContent = vecs.B.mod+' cm';
+  vecs.B.dir = +document.getElementById('fBdir').value; document.getElementById('fBdirV').textContent = vecs.B.dir+'°';
+  drawFree();
+}
+
+// ════════════════════════════════════════════════════════════
+// VERSO TOGGLE
+// ════════════════════════════════════════════════════════════
+function setVerso(key, val, btn) {
+  vecs[key].verso = val;
+  // update sibling buttons
+  const container = btn.parentElement;
+  container.querySelectorAll('.verso-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // update label if exists
+  const lbl = document.getElementById(
+    key === 'A' ? 'fAversoV' : key === 'B' ? 'fBversoV' :
+    key === 'QA' ? 'qAversoV' : key === 'QB' ? 'qBversoV' : null
+  );
+  if (lbl) lbl.textContent = val > 0 ? '+' : '−';
+  drawScene();
+}
+
+// ════════════════════════════════════════════════════════════
+// QUIZ MODE
+// ════════════════════════════════════════════════════════════
+const Q = {
+  // User-draggable: tail of B (in grid coords), and tip of C
+  tailB: { x: 0, y: 0 },   // user positions B's tail here
+  tipC:  { x: 0, y: 0 },   // user positions C's tip here
+  cTailBSet: false,
+  cTipCSet:  false,
+  dragging: null,           // null | 'tailB' | 'tipC'
+  checked: false,
+  showingCorr: false,
+};
+
+function initQuiz() {
+  // sync quiz vecs from sliders
+  quizVecUpdate();
+  // Reset user positions: place tailB at origin (needs moving), tipC at origin
+  const a = comp(vecs.QA);
+  Q.tailB = { x: 0, y: 0 };
+  Q.tipC  = { x: 0, y: 0 };
+  Q.cTailBSet = false; Q.cTipCSet = false;
+  Q.checked = false; Q.showingCorr = false;
+  document.getElementById('quizFeedback').textContent = 'Inizia trascinando il vettore B\u20d7 sulla punta di A\u20d7.';
+  document.getElementById('quizFeedback').className = 'feedback-box idle';
+  document.getElementById('btnCheck').style.display = 'none';
+  document.getElementById('btnShowCorr').style.display = 'none';
+  drawQuiz();
+}
+
+function newQuiz() {
+  Q.checked = false; Q.showingCorr = false;
+  // randomise
+  const dirs = [0,30,45,60,90,120,135,150];
+  vecs.QA = { mod: 2+Math.floor(Math.random()*4), dir: dirs[Math.floor(Math.random()*dirs.length)], verso: Math.random()<0.5?1:-1 };
+  vecs.QB = { mod: 2+Math.floor(Math.random()*4), dir: dirs[Math.floor(Math.random()*dirs.length)], verso: Math.random()<0.5?1:-1 };
+  // sync sliders
+  document.getElementById('qAmod').value = vecs.QA.mod; document.getElementById('qAmodV').textContent = vecs.QA.mod+' cm';
+  document.getElementById('qAdir').value = vecs.QA.dir; document.getElementById('qAdirV').textContent = vecs.QA.dir+'°';
+  document.getElementById('qBmod').value = vecs.QB.mod; document.getElementById('qBmodV').textContent = vecs.QB.mod+' cm';
+  document.getElementById('qBdir').value = vecs.QB.dir; document.getElementById('qBdirV').textContent = vecs.QB.dir+'°';
+  // reset verso buttons
+  ['QA','QB'].forEach(k => {
+    const v = vecs[k].verso;
+    const container = document.getElementById('q' + k.slice(1).toLowerCase() + 'verso') ||
+      document.querySelector('[onclick*="setVerso(\''+k+'\'"]')?.parentElement;
+  });
+  initQuiz();
+}
+
+function quizVecUpdate() {
+  vecs.QA.mod = +document.getElementById('qAmod').value; document.getElementById('qAmodV').textContent = vecs.QA.mod+' cm';
+  vecs.QA.dir = +document.getElementById('qAdir').value; document.getElementById('qAdirV').textContent = vecs.QA.dir+'°';
+  vecs.QB.mod = +document.getElementById('qBmod').value; document.getElementById('qBmodV').textContent = vecs.QB.mod+' cm';
+  vecs.QB.dir = +document.getElementById('qBdir').value; document.getElementById('qBdirV').textContent = vecs.QB.dir+'°';
+  if (!Q.checked) {
+    Q.cTailBSet = false; Q.cTipCSet = false;
+    Q.tailB = { x: 0, y: 0 }; Q.tipC = { x: 0, y: 0 };
+  }
+  drawQuiz();
+}
+
+function drawQuiz() {
+  drawGrid();
+  const vA = vecs.QA, vB = vecs.QB;
+  const a = comp(vA), b = comp(vB);
+  const O    = toC(0, 0);
+  const tipA = toC(a.x, a.y);
+  // Correct answers
+  const corrTailB = { x: a.x, y: a.y };
+  const corrTipC  = { x: a.x + b.x, y: a.y + b.y };
+
+  // Draw A (fixed)
+  arrow(O.x, O.y, tipA.x, tipA.y, '#f97316', 1, 3, 'A');
+  modLabel(O.x, O.y, tipA.x, tipA.y, vA.mod+'cm', '#f97316', 1);
+  dot(O.x, O.y, '#ffffff', 4, 0.5);
+
+  // Draw user-positioned B
+  const tailBC = toC(Q.tailB.x, Q.tailB.y);
+  const endBx  = Q.tailB.x + b.x;
+  const endBy  = Q.tailB.y + b.y;
+  const tipBC  = toC(endBx, endBy);
+  arrow(tailBC.x, tailBC.y, tipBC.x, tipBC.y, '#3b82f6', 1, 3, 'B');
+  modLabel(tailBC.x, tailBC.y, tipBC.x, tipBC.y, vB.mod+'cm', '#3b82f6', 1);
+
+  // Drag handle: tail of B (blue dot)
+  dot(tailBC.x, tailBC.y, '#3b82f6', 9, 0.9);
+
+  // Draw user C: from O to Q.tipC
+  const tipCC = toC(Q.tipC.x, Q.tipC.y);
+  if (Q.cTipCSet || Math.hypot(Q.tipC.x, Q.tipC.y) > 0.2) {
+    arrow(O.x, O.y, tipCC.x, tipCC.y, '#22c55e', 0.9, 3.5, 'C');
+  }
+  // Drag handle: tip of C (green dot)
+  dot(tipCC.x, tipCC.y, '#22c55e', 9, 0.85);
+
+  // If showing correction
+  if (Q.showingCorr) {
+    const cTB = toC(corrTailB.x, corrTailB.y);
+    const cTC = toC(corrTipC.x, corrTipC.y);
+    // Correct B (faint)
+    arrow(cTB.x, cTB.y, cTC.x, cTC.y, '#3b82f6', 0.4, 2, '');
+    // Correct C
+    arrow(O.x, O.y, cTC.x, cTC.y, '#22c55e', 0.5, 2.5, '');
+    dot(cTC.x, cTC.y, '#22c55e', 6, 0.6);
+  }
+
+  // Show "ready to check" indicator
+  const tailOk = Math.hypot(Q.tailB.x - corrTailB.x, Q.tailB.y - corrTailB.y) < 0.6;
+  const tipOk  = Math.hypot(Q.tipC.x  - corrTipC.x,  Q.tipC.y  - corrTipC.y)  < 0.6;
+
+  if (!Q.checked) {
+    const hasMoved = Math.hypot(Q.tailB.x, Q.tailB.y) > 0.3 || Math.hypot(Q.tipC.x, Q.tipC.y) > 0.3;
+    document.getElementById('btnCheck').style.display = hasMoved ? 'inline-block' : 'none';
+  }
+}
+
+function checkQuiz() {
+  const vA = vecs.QA, vB = vecs.QB;
+  const a = comp(vA), b = comp(vB);
+  const corrTailB = { x: a.x, y: a.y };
+  const corrTipC  = { x: a.x + b.x, y: a.y + b.y };
+  const TOL = 0.7; // cm tolerance
+
+  const tailOk = Math.hypot(Q.tailB.x - corrTailB.x, Q.tailB.y - corrTailB.y) < TOL;
+  const tipOk  = Math.hypot(Q.tipC.x  - corrTipC.x,  Q.tipC.y  - corrTipC.y)  < TOL;
+
+  Q.checked = true;
+  const fb = document.getElementById('quizFeedback');
+
+  if (tailOk && tipOk) {
+    fb.textContent = '🎉 Perfetto! Hai posizionato correttamente sia la coda di B\u20d7 sulla punta di A\u20d7, sia la punta di C\u20d7 nel punto giusto. C\u20d7 = A\u20d7 + B\u20d7!';
+    fb.className = 'feedback-box correct';
+    document.getElementById('btnShowCorr').style.display = 'none';
+  } else {
+    let msg = '';
+    if (!tailOk && !tipOk) msg = '✗ Sia la coda di B\u20d7 che la punta di C\u20d7 sono fuori posto. Ricorda: la coda di B\u20d7 deve coincidere con la punta di A\u20d7, e C\u20d7 deve andare dall\'origine alla punta di B\u20d7 traslato.';
+    else if (!tailOk) msg = '✗ La coda di B\u20d7 non è sulla punta di A\u20d7. Trascina il pallino blu esattamente alla punta della freccia arancione!';
+    else msg = '✗ La punta di C\u20d7 non è corretta. C\u20d7 deve arrivare esattamente dove finisce B\u20d7 dopo la traslazione!';
+    fb.innerHTML = msg;
+    fb.className = 'feedback-box wrong';
+    document.getElementById('btnShowCorr').style.display = 'inline-block';
+  }
+  document.getElementById('btnCheck').style.display = 'none';
+}
+
+function showCorrection() {
+  Q.showingCorr = true;
+  const vA = vecs.QA, vB = vecs.QB;
+  const a = comp(vA), b = comp(vB);
+  // Snap to correct positions
+  Q.tailB = { x: a.x, y: a.y };
+  Q.tipC  = { x: a.x + b.x, y: a.y + b.y };
+  drawQuiz();
+  document.getElementById('quizFeedback').innerHTML = '✅ Ecco la soluzione: B\u20d7 traslato parte dalla punta di A\u20d7, e C\u20d7 va dall\'origine alla punta di B\u20d7 traslato.';
+  document.getElementById('quizFeedback').className = 'feedback-box correct';
+  document.getElementById('btnShowCorr').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+// DRAG LOGIC (quiz mode)
+// ════════════════════════════════════════════════════════════
+function getCanvasXY(e) {
+  const r = canvas.getBoundingClientRect();
+  const cli = e.touches ? e.touches[0] : e;
+  return { x: cli.clientX - r.left, y: cli.clientY - r.top };
+}
+
+function distToPoint(cx, cy, px, py) {
+  return Math.hypot(cx - px, cy - py);
+}
+
+canvas.addEventListener('mousedown', startDrag);
+canvas.addEventListener('touchstart', startDrag, { passive: false });
+canvas.addEventListener('mousemove', moveDrag);
+canvas.addEventListener('touchmove', moveDrag, { passive: false });
+canvas.addEventListener('mouseup', endDrag);
+canvas.addEventListener('touchend', endDrag);
+
+function startDrag(e) {
+  if (MODE !== 'quiz') return;
+  e.preventDefault();
+  const { x, y } = getCanvasXY(e);
+  const vB = vecs.QB;
+  const b  = comp(vB);
+
+  const tailBC = toC(Q.tailB.x, Q.tailB.y);
+  const tipCC  = toC(Q.tipC.x, Q.tipC.y);
+
+  const GRAB = 20;
+  if (distToPoint(x, y, tailBC.x, tailBC.y) < GRAB) {
+    Q.dragging = 'tailB';
+  } else if (distToPoint(x, y, tipCC.x, tipCC.y) < GRAB) {
+    Q.dragging = 'tipC';
+  }
+}
+
+function moveDrag(e) {
+  if (MODE !== 'quiz' || !Q.dragging) return;
+  e.preventDefault();
+  const { x, y } = getCanvasXY(e);
+  const g = toG(x, y);
+  // snap to 0.5 grid
+  const snap = 0.5;
+  const gx = Math.round(g.x / snap) * snap;
+  const gy = Math.round(g.y / snap) * snap;
+
+  if (Q.dragging === 'tailB') {
+    Q.tailB = { x: gx, y: gy };
+    Q.cTailBSet = true;
+  } else if (Q.dragging === 'tipC') {
+    Q.tipC = { x: gx, y: gy };
+    Q.cTipCSet = true;
+  }
+  if (!Q.checked) drawQuiz();
+}
+
+function endDrag(e) {
+  if (MODE !== 'quiz') return;
+  Q.dragging = null;
+  if (!Q.checked) drawQuiz();
+}
+
+// ════════════════════════════════════════════════════════════
+// MAIN DRAW DISPATCHER
+// ════════════════════════════════════════════════════════════
+function drawScene() {
+  if (MODE === 'anim') drawAnim();
+  else if (MODE === 'free') drawFree();
+  else if (MODE === 'quiz') drawQuiz();
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+buildAnimControls();
+updateStepBar();
+
+setTimeout(() => {
+  resize();
+  drawAnim();
+}, 60);
+</script>
+</body>
+</html>
