@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forza Peso</title>
+<script>
+  window.MathJax = { tex:{inlineMath:[['$','$']]}, svg:{fontCache:'global'} };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root{--bg:#0d0a08;--copper:#b87333;--copper-bright:#e8983a;--text-primary:#e8d5b0;--text-secondary:#9a8060;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text-primary);font-family:'Crimson Text',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;user-select:none;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(184,115,51,.05)0%,transparent 60%);pointer-events:none;z-index:0;}
+  header{text-align:center;padding:1.4rem 2rem .6rem;position:relative;z-index:1;}
+  .year-badge{font-size:.8rem;letter-spacing:.42em;color:var(--copper);text-transform:uppercase;margin-bottom:.45rem;display:block;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3vw,2.3rem);font-weight:700;line-height:1.1;margin-bottom:.25rem;}
+  h1 em{color:var(--copper-bright);}
+  .ornament{display:flex;align-items:center;gap:1rem;justify-content:center;margin:.45rem 0;}
+  .ornament::before,.ornament::after{content:'';width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:6px;height:6px;background:var(--copper);transform:rotate(45deg);}
+  .stage{width:100%;max-width:1100px;padding:0 1.2rem 2rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;position:relative;z-index:1;}
+  .main-layout{display:flex;gap:1rem;width:100%;align-items:flex-start;}
+  .canvas-wrap{flex:1;border:1px solid rgba(184,115,51,.22);border-radius:5px;background:#1a1208;overflow:hidden;box-shadow:0 0 60px rgba(184,115,51,.07),inset 0 0 30px rgba(0,0,0,.6);}
+  canvas#c{display:block;width:100%;height:auto;cursor:grab;}
+  canvas#c.dragging{cursor:grabbing;}
+  .side-panel{width:205px;flex-shrink:0;display:flex;flex-direction:column;gap:.8rem;}
+  .panel-box{background:rgba(17,22,32,.8);border:1px solid rgba(184,115,51,.18);border-radius:4px;padding:.75rem .9rem;}
+  .panel-box h3{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--copper-bright);margin-bottom:.62rem;letter-spacing:.04em;}
+  .planet-btn{display:block;width:100%;text-align:left;background:none;border:1px solid rgba(184,115,51,.2);border-radius:3px;color:var(--text-secondary);font-family:'Crimson Text',serif;font-size:.85rem;padding:.32rem .62rem;cursor:pointer;margin-bottom:.28rem;transition:all .14s;}
+  .planet-btn:hover{border-color:var(--copper);color:var(--text-primary);}
+  .planet-btn.active{border-color:var(--copper-bright);color:var(--text-primary);background:rgba(184,115,51,.12);}
+  .planet-btn .g-val{float:right;color:var(--copper);font-size:.79rem;}
+  .controls-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:center;width:100%;}
+  .ctrl-group{display:flex;align-items:center;gap:.5rem;background:rgba(17,22,32,.8);border:1px solid rgba(184,115,51,.18);border-radius:4px;padding:.5rem .9rem;}
+  .ctrl-group label{font-size:.85rem;color:var(--text-secondary);}
+  .ctrl-group .val{color:var(--copper-bright);font-weight:600;min-width:48px;font-size:.88rem;}
+  input[type=range]{-webkit-appearance:none;width:110px;height:5px;background:rgba(184,115,51,.25);border-radius:3px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--copper);border-radius:50%;cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;background:var(--copper);border-radius:50%;border:none;cursor:pointer;}
+  .btn-reset{font-family:'Playfair Display',serif;font-size:.88rem;padding:.42rem 1.1rem;border-radius:3px;cursor:pointer;letter-spacing:.05em;background:none;border:1.5px solid var(--copper);color:var(--copper);transition:background .2s,color .2s;}
+  .btn-reset:hover{background:var(--copper);color:#0d0a08;}
+  .instruction{background:linear-gradient(135deg,rgba(184,115,51,.12),rgba(232,152,58,.07));border:1px solid rgba(184,115,51,.25);border-radius:4px;padding:.62rem 1rem;font-size:.85rem;line-height:1.55;text-align:center;width:100%;}
+  .scale-disp{margin-top:.45rem;text-align:center;}
+  .scale-disp .val-n{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--copper-bright);line-height:1;}
+  .scale-disp .lbl-n{font-size:.75rem;color:var(--text-secondary);margin-top:.1rem;}
+  .scale-disp .lbl-g{font-size:.79rem;color:var(--copper);margin-top:.2rem;}
+</style>
+</head>
+<body>
+<header>
+  <span class="year-badge">Newton · 1687 — Gravitazione Universale</span>
+  <h1>La <em>Forza Peso</em></h1>
+  <div style="font-size:1rem;color:var(--copper-bright);margin:.38rem 0;font-family:'Playfair Display',serif;font-style:italic;">
+    $\vec{F}_{peso} = m\,\vec{g} \qquad F_{peso} = m \cdot g$
+  </div>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+</header>
+
+<div class="stage">
+  <div class="main-layout">
+    <!-- Canvas + overlaid massa control -->
+    <div class="canvas-wrap" style="position:relative;">
+      <canvas id="c" width="860" height="500"></canvas>
+      <!-- Massa overlay — bottom-left corner of canvas -->
+      <div style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:8px;background:rgba(10,8,5,.72);border:1px solid rgba(184,115,51,.35);border-radius:4px;padding:5px 10px;backdrop-filter:blur(4px);">
+        <label for="massR" style="font-size:.82rem;color:var(--text-secondary);white-space:nowrap;">Massa:</label>
+        <input type="range" id="massR" min="30" max="300" step="5" value="70" style="width:120px;">
+        <span id="massV" style="font-family:'Courier New',monospace;font-size:.85rem;color:var(--copper-bright);min-width:46px;font-weight:600;">70 kg</span>
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    <div class="side-panel">
+      <!-- Pianeta -->
+      <div class="panel-box">
+        <h3>Pianeta</h3>
+        <button class="planet-btn" id="btn-mercury" onclick="setPlanet('mercury')">Mercurio <span class="g-val">3.7</span></button>
+        <button class="planet-btn" id="btn-venus"   onclick="setPlanet('venus')">Venere <span class="g-val">8.9</span></button>
+        <button class="planet-btn active" id="btn-earth" onclick="setPlanet('earth')">Terra <span class="g-val">9.8</span></button>
+        <button class="planet-btn" id="btn-moon"    onclick="setPlanet('moon')">Luna <span class="g-val">1.6</span></button>
+        <button class="planet-btn" id="btn-mars"    onclick="setPlanet('mars')">Marte <span class="g-val">3.7</span></button>
+        <button class="planet-btn" id="btn-jupiter" onclick="setPlanet('jupiter')">Giove <span class="g-val">24.8</span></button>
+        <button class="planet-btn" id="btn-saturn"  onclick="setPlanet('saturn')">Saturno <span class="g-val">10.4</span></button>
+        <button class="planet-btn" id="btn-uranus"  onclick="setPlanet('uranus')">Urano <span class="g-val">8.7</span></button>
+        <button class="planet-btn" id="btn-neptune" onclick="setPlanet('neptune')">Nettuno <span class="g-val">11.2</span></button>
+      </div>
+
+      <!-- Bilancia -->
+      <div class="panel-box">
+        <h3>Bilancia digitale</h3>
+        <div style="display:flex;flex-direction:column;gap:.38rem;margin-top:.1rem;">
+          <!-- kg row — always fixed -->
+          <div style="background:rgba(0,0,0,.35);border:1px solid rgba(100,200,100,.25);border-radius:3px;padding:.32rem .55rem;display:flex;align-items:baseline;justify-content:space-between;">
+            <span style="font-size:.75rem;color:#7abb7a;letter-spacing:.04em;">MASSA</span>
+            <span style="font-family:'Courier New',monospace;font-size:1.1rem;font-weight:700;color:#7eff7e;" id="scaleKg">—</span>
+            <span style="font-size:.72rem;color:#5a9a5a;margin-left:.2rem;">kg</span>
+          </div>
+          <!-- Newton row — changes with planet -->
+          <div style="background:rgba(0,0,0,.35);border:1px solid rgba(255,100,200,.25);border-radius:3px;padding:.32rem .55rem;display:flex;align-items:baseline;justify-content:space-between;">
+            <span style="font-size:.75rem;color:#cc88cc;letter-spacing:.04em;">FORZA PESO</span>
+            <span style="font-family:'Courier New',monospace;font-size:1.1rem;font-weight:700;color:#ff88ee;" id="scaleNewton">—</span>
+            <span style="font-size:.72rem;color:#aa66aa;margin-left:.2rem;">N</span>
+          </div>
+        </div>
+        <div style="font-size:.72rem;color:var(--text-secondary);margin-top:.45rem;line-height:1.45;">
+          <span style="color:#7eff7e;">kg</span> invariati · <span style="color:#ff88ee;">N</span> cambiano col pianeta
+        </div>
+        <div class="lbl-g" id="scaleG" style="font-size:.79rem;color:var(--copper);margin-top:.28rem;">g = — m/s²</div>
+      </div>
+
+      <button class="btn-reset" onclick="resetAll()">↺ Ripristina</button>
+    </div><!-- /side-panel -->
+
+  </div><!-- /main-layout -->
+
+  <!-- Instruction bar -->
+  <div class="instruction">
+    <strong>Trascina</strong> il personaggio per farlo saltare.
+    Portalo sulla <span style="color:var(--copper-bright)">bilancia</span> per pesarlo.
+    Osserva: i <span style="color:#7eff7e;">kg</span> restano sempre uguali, ma i <span style="color:#ff88ee;">Newton</span> cambiano da pianeta a pianeta!
+  </div>
+
+</div><!-- /stage -->
+
+<script>
+// ── Planets ───────────────────────────────────────────────────────────────
+const PLANETS = {
+  mercury:{ name:'Mercurio', g:3.70, sky:['#130a18','#221630'], ground:'#8a7060', groundTop:'#c4a882', star:true  },
+  venus:  { name:'Venere',   g:8.87, sky:['#1a1005','#352508'], ground:'#c8a060', groundTop:'#e8c878', star:false },
+  earth:  { name:'Terra',    g:9.81, sky:['#07111c','#0c2038'], ground:'#3a6030', groundTop:'#5a8848', star:false },
+  moon:   { name:'Luna',     g:1.62, sky:['#04060a','#080e18'], ground:'#888070', groundTop:'#b0a890', star:true  },
+  mars:   { name:'Marte',    g:3.72, sky:['#160804','#281005'], ground:'#8a4020', groundTop:'#c06030', star:false },
+  jupiter:{ name:'Giove',    g:24.8, sky:['#0a0810','#181022'], ground:'#c8b060', groundTop:'#e8d090', star:false },
+  saturn: { name:'Saturno',  g:10.4, sky:['#0e0b16','#1c1532'], ground:'#b09060', groundTop:'#d4b880', star:true  },
+  uranus: { name:'Urano',    g:8.69, sky:['#040e14','#081c28'], ground:'#507080', groundTop:'#7098a8', star:true  },
+  neptune:{ name:'Nettuno',  g:11.2, sky:['#040408','#080820'], ground:'#304060', groundTop:'#4060a0', star:true  },
+};
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W=860, H=500;
+const GROUND_Y = H-75;
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const SCALE_CX   = 680;
+const SCALE_GBOT = GROUND_Y;
+
+const S_BASE_H  = 36;
+const S_BODY_H  = 116;
+const S_PLATE_W = 160;
+const S_PLATE_H = 18;
+const S_PLATE_REST_Y = SCALE_GBOT - S_BASE_H - S_BODY_H - S_PLATE_H;
+const S_PLATE_MAX_SINK = 80;
+
+const G_PX_PER_MS2 = 0.52;
+const SPEED_SCALE  = 0.62;
+
+let planet = PLANETS.earth;
+let mass   = 70;
+let tick   = 0;
+
+// Stars
+const stars = Array.from({length:140},()=>({
+  x:Math.random()*W, y:Math.random()*(GROUND_Y-15),
+  r:Math.random()*1.3+0.3, a:Math.random()
+}));
+
+// ── Person state ──────────────────────────────────────────────────────────
+let person = {
+  state:   'ground',
+  x:       300,
+  y:       GROUND_Y,
+  vx:      0,
+  vy:      0,
+  facingRight: true,
+};
+
+let scalePlateY     = S_PLATE_REST_Y;
+let scaleNeedle     = 0;
+let scaleNeedleTgt  = 0;
+let personOnScale   = false;
+
+// ── Drag state ────────────────────────────────────────────────────────────
+let dragActive   = false;
+let dragOffX     = 0, dragOffY = 0;
+let dragPrevX    = 0, dragPrevY = 0;
+let dragVX       = 0, dragVY   = 0;
+
+// ── Person size ────────────────────────────────────────────────────────────
+function personH(){ return 70 * Math.cbrt(mass/70); }
+function grabR(){  return personH()*0.4; }
+function torsoCX(){ return person.x; }
+function torsoCY(){ return person.y - personH()*0.55; }
+
+// ── Canvas coords ─────────────────────────────────────────────────────────
+function toC(e){
+  const r=canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) };
+}
+function toCtouch(t){
+  const r=canvas.getBoundingClientRect();
+  return { x:(t.clientX-r.left)*(W/r.width), y:(t.clientY-r.top)*(H/r.height) };
+}
+
+// ── Input ──────────────────────────────────────────────────────────────────
+function onDown(cx,cy){
+  if(person.state==='flying') return;
+  const tx=torsoCX(), ty=torsoCY(), r=grabR();
+  if(Math.hypot(cx-tx,cy-ty)<r+10){
+    dragActive=true;
+    dragOffX=cx-person.x; dragOffY=cy-person.y;
+    dragPrevX=cx; dragPrevY=cy;
+    dragVX=0; dragVY=0;
+    person.state='dragging';
+    canvas.classList.add('dragging');
+  }
+}
+function onMove(cx,cy){
+  if(!dragActive) return;
+  dragVX = cx-dragPrevX;
+  dragVY = cy-dragPrevY;
+  dragPrevX=cx; dragPrevY=cy;
+  person.x = cx-dragOffX;
+  person.y = cy-dragOffY;
+}
+function onUp(){
+  if(!dragActive) return;
+  dragActive=false;
+  canvas.classList.remove('dragging');
+  const speedScale = 0.55;
+  person.vx = dragVX * speedScale;
+  person.vy = dragVY * speedScale;
+  person.state='flying';
+  personOnScale=false;
+  scaleNeedleTgt=0;
+  updateSideScale();
+}
+
+canvas.addEventListener('mousedown', e=>{ const p=toC(e); onDown(p.x,p.y); });
+canvas.addEventListener('mousemove', e=>{ const p=toC(e); onMove(p.x,p.y); });
+canvas.addEventListener('mouseup',   ()=>onUp());
+canvas.addEventListener('mouseleave',()=>{ if(dragActive) onUp(); });
+canvas.addEventListener('touchstart',e=>{ e.preventDefault(); const p=toCtouch(e.touches[0]); onDown(p.x,p.y); },{passive:false});
+canvas.addEventListener('touchmove', e=>{ e.preventDefault(); const p=toCtouch(e.touches[0]); onMove(p.x,p.y); },{passive:false});
+canvas.addEventListener('touchend',  e=>{ e.preventDefault(); onUp(); },{passive:false});
+
+// ── Controls ──────────────────────────────────────────────────────────────
+document.getElementById('massR').addEventListener('input',function(){
+  mass=parseInt(this.value);
+  document.getElementById('massV').textContent=mass+' kg';
+  if(personOnScale) refreshScaleReading();
+  updateSideScale();
+});
+function setPlanet(k){
+  planet=PLANETS[k];
+  document.querySelectorAll('.planet-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+k).classList.add('active');
+  if(personOnScale) refreshScaleReading();
+  updateSideScale();
+}
+function resetAll(){
+  person.state='ground'; person.x=300; person.y=GROUND_Y;
+  person.vx=0; person.vy=0; person.facingRight=true;
+  dragActive=false; canvas.classList.remove('dragging');
+  personOnScale=false; scaleNeedleTgt=0;
+  scalePlateY=S_PLATE_REST_Y; scaleNeedle=0;
+  jumpFlying=false;
+  updateSideScale();
+}
+
+function refreshScaleReading(){
+  // kg = always the real mass (invariant)
+  document.getElementById('scaleKg').textContent = mass.toFixed(1);
+  // Newton = m * g (changes with planet)
+  document.getElementById('scaleNewton').textContent = (mass * planet.g).toFixed(1);
+}
+function updateSideScale(){
+  document.getElementById('scaleG').textContent='g = '+planet.g.toFixed(2)+' m/s²';
+  if(!personOnScale){
+    document.getElementById('scaleKg').textContent='—';
+    document.getElementById('scaleNewton').textContent='—';
+  }
+}
+
+// ── Scale mode (removed — now always shows both kg and N) ─────────────────
+
+function shadeCol(hex,pct){
+  const n=parseInt(hex.replace('#',''),16),a=Math.round(2.55*pct);
+  const R=Math.max(0,Math.min(255,(n>>16)+a)),G=Math.max(0,Math.min(255,(n>>8&0xFF)+a)),B=Math.max(0,Math.min(255,(n&0xFF)+a));
+  return'#'+(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1);
+}
+
+// ── Arrow / label ──────────────────────────────────────────────────────────
+function arrow(x1,y1,x2,y2,col,lw,hs){
+  const dx=x2-x1,dy=y2-y1,a=Math.atan2(dy,dx);
+  if(Math.hypot(dx,dy)<5) return;
+  ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=lw;
+  ctx.shadowColor=col; ctx.shadowBlur=9;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hs*Math.cos(a-Math.PI/6),y2-hs*Math.sin(a-Math.PI/6));
+  ctx.lineTo(x2-hs*Math.cos(a+Math.PI/6),y2-hs*Math.sin(a+Math.PI/6));
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+// ── Background ─────────────────────────────────────────────────────────────
+function drawBg(){
+  const p=planet;
+  const grad=ctx.createLinearGradient(0,0,0,GROUND_Y);
+  grad.addColorStop(0,p.sky[0]); grad.addColorStop(1,p.sky[1]);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,GROUND_Y);
+  if(p.star){
+    stars.forEach(s=>{
+      const tw=0.38+0.62*Math.sin(tick*.038+s.a*9);
+      ctx.fillStyle=`rgba(232,213,176,${s.a*tw})`;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    });
+  }
+  const hz=ctx.createLinearGradient(0,GROUND_Y-80,0,GROUND_Y);
+  hz.addColorStop(0,'transparent'); hz.addColorStop(1,p.groundTop+'44');
+  ctx.fillStyle=hz; ctx.fillRect(0,GROUND_Y-80,W,80);
+  const gg=ctx.createLinearGradient(0,GROUND_Y,0,H);
+  gg.addColorStop(0,p.groundTop); gg.addColorStop(.22,p.ground); gg.addColorStop(1,'#080604');
+  ctx.fillStyle=gg; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+  ctx.strokeStyle=p.groundTop+'aa'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
+}
+
+// ── World digital scale ────────────────────────────────────────────────────
+function drawWorldScale(){
+  const cx=SCALE_CX, bot=SCALE_GBOT;
+  const bodyTop=bot-S_BASE_H-S_BODY_H;
+
+  const bG=ctx.createLinearGradient(cx-S_PLATE_W/2-8,bot-S_BASE_H,cx+S_PLATE_W/2+8,bot);
+  bG.addColorStop(0,'#6a3818'); bG.addColorStop(.5,'#9a5828'); bG.addColorStop(1,'#6a3818');
+  ctx.fillStyle=bG; ctx.strokeStyle='#3a1a06'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(cx-S_PLATE_W/2-8,bot-S_BASE_H,S_PLATE_W+16,S_BASE_H,6); ctx.fill(); ctx.stroke();
+
+  const hG=ctx.createLinearGradient(cx-44,bodyTop,cx+44,bodyTop+S_BODY_H);
+  hG.addColorStop(0,'#aaa'); hG.addColorStop(.35,'#e2e2e2'); hG.addColorStop(1,'#747474');
+  ctx.fillStyle=hG; ctx.strokeStyle='#555'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(cx-44,bodyTop,88,S_BODY_H,8); ctx.fill(); ctx.stroke();
+
+  const dispX=cx-38, dispY=bodyTop+10, dispW=76, dispH=56;
+  ctx.fillStyle='#061006';
+  ctx.beginPath(); ctx.roundRect(dispX,dispY,dispW,dispH,5); ctx.fill();
+  ctx.strokeStyle='#0e280e'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(dispX,dispY,dispW,dispH,5); ctx.stroke();
+
+  if(personOnScale){
+    const kgVal = mass.toFixed(1);
+    const nVal  = (mass * planet.g).toFixed(1);
+    ctx.save();
+    // --- kg line (green, fixed) ---
+    ctx.shadowColor='#00ff55'; ctx.shadowBlur=10;
+    ctx.fillStyle='#00ff55';
+    ctx.font=`bold 17px 'Courier New',monospace`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(kgVal, dispX+5, dispY+dispH*0.30);
+    ctx.shadowBlur=0;
+    ctx.font=`bold 10px 'Courier New',monospace`;
+    ctx.fillStyle='rgba(0,210,70,.7)';
+    ctx.textAlign='right';
+    ctx.fillText('kg', dispX+dispW-4, dispY+dispH*0.30);
+    // separator
+    ctx.strokeStyle='rgba(0,150,40,.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(dispX+4,dispY+dispH*0.52); ctx.lineTo(dispX+dispW-4,dispY+dispH*0.52); ctx.stroke();
+    // --- N line (pink, variable) ---
+    const nFs = nVal.length>=6?13:nVal.length>=5?15:17;
+    ctx.shadowColor='#ff44cc'; ctx.shadowBlur=10;
+    ctx.fillStyle='#ff88ee';
+    ctx.font=`bold ${nFs}px 'Courier New',monospace`;
+    ctx.textAlign='left';
+    ctx.fillText(nVal, dispX+5, dispY+dispH*0.76);
+    ctx.shadowBlur=0;
+    ctx.font=`bold 10px 'Courier New',monospace`;
+    ctx.fillStyle='rgba(255,100,200,.7)';
+    ctx.textAlign='right';
+    ctx.fillText('N', dispX+dispW-4, dispY+dispH*0.76);
+    ctx.restore();
+  } else {
+    ctx.save();
+    ctx.fillStyle='rgba(0,150,45,.28)';
+    ctx.font=`bold 13px 'Courier New',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('- - -', cx, dispY+dispH*0.30);
+    ctx.strokeStyle='rgba(0,120,35,.25)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(dispX+4,dispY+dispH*0.52); ctx.lineTo(dispX+dispW-4,dispY+dispH*0.52); ctx.stroke();
+    ctx.fillText('- - -', cx, dispY+dispH*0.76);
+    ctx.restore();
+  }
+
+  ctx.fillStyle='rgba(255,255,255,.04)';
+  ctx.beginPath(); ctx.roundRect(dispX+4,dispY+4,dispW*.35,5,3); ctx.fill();
+
+  ctx.fillStyle='rgba(60,60,60,.7)'; ctx.font='bold 8px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('DIGITAL SCALE', cx, bodyTop+S_BODY_H-10);
+
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.moveTo(cx,bodyTop+S_BODY_H); ctx.lineTo(cx,scalePlateY+S_PLATE_H); ctx.stroke();
+
+  const pG=ctx.createLinearGradient(cx-S_PLATE_W/2,scalePlateY,cx+S_PLATE_W/2,scalePlateY+S_PLATE_H);
+  pG.addColorStop(0,'#aaa'); pG.addColorStop(.5,'#e8e8e8'); pG.addColorStop(1,'#888');
+  ctx.fillStyle=pG; ctx.strokeStyle='#666'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(cx-S_PLATE_W/2,scalePlateY,S_PLATE_W,S_PLATE_H,4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.22)';
+  ctx.beginPath(); ctx.roundRect(cx-S_PLATE_W/2+8,scalePlateY+3,S_PLATE_W-16,5,3); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.15)';
+  ctx.beginPath(); ctx.roundRect(cx-S_PLATE_W/2,scalePlateY+S_PLATE_H-3,S_PLATE_W,4,2); ctx.fill();
+}
+
+// ── Person drawing ─────────────────────────────────────────────────────────
+function drawPerson(footX, footY, facingR, airborne, onScale){
+  const sc = Math.cbrt(mass/70);
+  ctx.save();
+  ctx.translate(footX, footY);
+  if(!facingR) ctx.scale(-1,1);
+  if(planet === PLANETS.earth){
+    drawHuman(sc, airborne, onScale);
+  } else {
+    drawAstronaut(sc, airborne, onScale);
+  }
+  ctx.restore();
+}
+
+// ── Human (Earth) ──────────────────────────────────────────────────────────
+function drawHuman(sc, airborne, onScale){
+  const s=sc;
+  const legSpread = airborne ? 18*s : (onScale ? 4*s : 6*s);
+  const armRaise  = airborne ? -0.7 : (onScale ? -0.2 : 0.15);
+  const bob       = onScale  ? Math.sin(tick*.08)*1.5 : (airborne?0:Math.sin(tick*.055)*1.2);
+
+  const skin='#e8b87a', skinD='#c8906a';
+  const trouserC='#3a4a6a', trouserD='#1e2a46';
+  const shirtC='#c04020',   shirtD='#8a2010';
+  const shoeC='#2a1a10',    hairC='#2a1808';
+
+  const topY = -68*s + bob;
+
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.22)';
+  ctx.beginPath(); ctx.ellipse(0, 3, 18*s, 5*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  [-legSpread, legSpread].forEach((lx,i)=>{
+    ctx.save(); ctx.translate(lx*0.5,0);
+    ctx.fillStyle=shoeC;
+    ctx.beginPath(); ctx.ellipse(0,-4*s,14*s,6*s,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  [-legSpread, legSpread].forEach((lx,i)=>{
+    const kx=lx*0.4, ky=-22*s+Math.abs(legSpread)*0.2;
+    ctx.strokeStyle=trouserD; ctx.lineWidth=11*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(lx*0.35, -4*s); ctx.quadraticCurveTo(kx,ky,0,-40*s+bob); ctx.stroke();
+    ctx.strokeStyle=trouserC; ctx.lineWidth=8*s;
+    ctx.beginPath(); ctx.moveTo(lx*0.35, -4*s); ctx.quadraticCurveTo(kx,ky,0,-40*s+bob); ctx.stroke();
+  });
+
+  const torsoW=18*s, torsoH=26*s;
+  ctx.save(); ctx.translate(0, -53*s+bob);
+  const tg=ctx.createLinearGradient(-torsoW,0,torsoW,0);
+  tg.addColorStop(0,shirtD); tg.addColorStop(.4,shirtC); tg.addColorStop(.7,'#e05030'); tg.addColorStop(1,shirtD);
+  ctx.fillStyle=tg; ctx.strokeStyle=shirtD; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(-torsoW,-torsoH*.5,torsoW*2,torsoH,5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=skinD;
+  ctx.beginPath(); ctx.ellipse(0,-torsoH*.38,7*s,5*s,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  const armLen=20*s;
+  [-1,1].forEach(side=>{
+    const shoulderX=side*15*s, shoulderY=-60*s+bob;
+    const handX=shoulderX+side*armLen*Math.cos(armRaise);
+    const handY=shoulderY+armLen*Math.abs(Math.sin(armRaise+0.3));
+    ctx.strokeStyle=shirtD; ctx.lineWidth=9*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(shoulderX,shoulderY); ctx.lineTo(handX,handY); ctx.stroke();
+    ctx.strokeStyle=shirtC; ctx.lineWidth=6*s;
+    ctx.beginPath(); ctx.moveTo(shoulderX,shoulderY); ctx.lineTo(handX,handY); ctx.stroke();
+    ctx.fillStyle=skin; ctx.strokeStyle=skinD; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(handX,handY,5*s,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+
+  ctx.fillStyle=skinD;
+  ctx.beginPath(); ctx.roundRect(-5*s,-68*s+bob,10*s,10*s,2); ctx.fill();
+
+  const headCY=-78*s+bob;
+  const hg=ctx.createRadialGradient(-3*s,headCY-4*s,2,0,headCY,14*s);
+  hg.addColorStop(0,skin); hg.addColorStop(1,skinD);
+  ctx.fillStyle=hg; ctx.strokeStyle=skinD; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(0,headCY,12*s,14*s,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=hairC;
+  ctx.beginPath(); ctx.ellipse(0,headCY-8*s,12*s,8*s,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-11*s,headCY-2*s,5*s,9*s,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a0a00';
+  ctx.beginPath(); ctx.ellipse(-4*s,headCY-2*s,2.5*s,2.5*s,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 3*s,headCY-2*s,2.5*s,2.5*s,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  ctx.beginPath(); ctx.arc(-3*s,headCY-3*s,1*s,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#8a3010'; ctx.lineWidth=1.5*s; ctx.lineCap='round';
+  ctx.beginPath();
+  if(airborne){
+    ctx.ellipse(0,headCY+4*s,3*s,3*s,0,0,Math.PI*2);
+    ctx.fillStyle='#3a1008'; ctx.fill(); ctx.stroke();
+  } else {
+    ctx.arc(0,headCY+4*s,4*s,0.1,Math.PI-0.1); ctx.stroke();
+  }
+  ctx.strokeStyle=hairC; ctx.lineWidth=1.5*s;
+  ctx.beginPath(); ctx.arc(-4*s,headCY-5*s,3*s,Math.PI*1.1,Math.PI*1.7); ctx.stroke();
+  ctx.beginPath(); ctx.arc( 3*s,headCY-5*s,3*s,Math.PI*1.3,Math.PI*1.9); ctx.stroke();
+}
+
+// ── Astronaut (non-Earth) ──────────────────────────────────────────────────
+function drawAstronaut(sc, airborne, onScale){
+  const s=sc;
+  const suitCol='#d8d8d8';
+  const dark  = shadeCol(suitCol,-50);
+  const mid   = shadeCol(suitCol,-20);
+  const light = shadeCol(suitCol, 45);
+  const bob   = onScale?Math.sin(tick*.08)*1.5:(airborne?0:Math.sin(tick*.055)*1.2);
+
+  const legSpread=airborne?16*s:(onScale?4*s:6*s);
+  const armRaise =airborne?0.6:0.1;
+
+  ctx.fillStyle='rgba(0,0,0,.2)';
+  ctx.beginPath(); ctx.ellipse(0,3,22*s,6*s,0,0,Math.PI*2); ctx.fill();
+
+  [-1,1].forEach(side=>{
+    const bx=side*legSpread*.5;
+    ctx.fillStyle=dark;
+    ctx.beginPath(); ctx.ellipse(bx,-3*s,13*s,6*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=mid;
+    ctx.beginPath(); ctx.ellipse(bx,-4.5*s,9*s,3.5*s,0,0,Math.PI*2); ctx.fill();
+  });
+
+  [-legSpread,legSpread].forEach((lx,i)=>{
+    const kBend=airborne?(i===0?-0.35:0.35):0;
+    const kx=lx*0.4, ky=-24*s+Math.abs(legSpread)*.18;
+    ctx.strokeStyle=dark; ctx.lineWidth=13*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(lx*.38,-4*s); ctx.quadraticCurveTo(kx+kBend*8,ky,0,-44*s+bob); ctx.stroke();
+    ctx.strokeStyle=suitCol; ctx.lineWidth=9*s;
+    ctx.beginPath(); ctx.moveTo(lx*.38,-4*s); ctx.quadraticCurveTo(kx+kBend*8,ky,0,-44*s+bob); ctx.stroke();
+    ctx.strokeStyle=light; ctx.lineWidth=5*s;
+    ctx.beginPath(); ctx.moveTo(lx*.4,-5*s); ctx.quadraticCurveTo(kx+kBend*6,ky-2,-2,-44*s+bob); ctx.stroke();
+    ctx.strokeStyle=dark; ctx.lineWidth=4*s;
+    ctx.beginPath(); ctx.arc(kx+kBend*5,ky,6*s,0,Math.PI*2); ctx.stroke();
+  });
+
+  {
+    const jx=14*s, jy=-60*s+bob, jw=12*s, jh=24*s;
+    const pg=ctx.createLinearGradient(jx,jy,jx+jw,jy+jh);
+    pg.addColorStop(0,'#b0b0b0'); pg.addColorStop(.4,'#e8e8e8'); pg.addColorStop(1,'#888');
+    ctx.fillStyle=pg; ctx.strokeStyle='#555'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(jx,jy,jw,jh,4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.32)';
+    ctx.beginPath(); ctx.roundRect(jx+2,jy+3,jw*.35,jh*.5,2); ctx.fill();
+    const nbx=jx+jw;
+    [jy+jh*.28,jy+jh*.72].forEach(ny=>{
+      ctx.fillStyle='#777'; ctx.strokeStyle='#444'; ctx.lineWidth=.8;
+      ctx.beginPath(); ctx.roundRect(nbx,ny-2.5*s,9*s,5*s,2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#555';
+      ctx.beginPath();
+      ctx.moveTo(nbx+7*s,ny-2.5*s); ctx.lineTo(nbx+12*s,ny-4.5*s);
+      ctx.lineTo(nbx+12*s,ny+4.5*s); ctx.lineTo(nbx+7*s,ny+2.5*s);
+      ctx.closePath(); ctx.fill();
+      if(airborne || onScale){
+        const fl=8+20*s, fw=3+8*s;
+        const fy2=Math.sin(tick*.35+ny)*3*s;
+        const og=ctx.createLinearGradient(nbx+12*s,ny,nbx+12*s+fl,ny+fy2);
+        og.addColorStop(0,'rgba(255,180,20,.95)'); og.addColorStop(.5,'rgba(255,80,0,.7)'); og.addColorStop(1,'rgba(255,40,0,0)');
+        ctx.fillStyle=og; ctx.shadowColor='#ff8800'; ctx.shadowBlur=12*s;
+        ctx.beginPath();
+        ctx.moveTo(nbx+12*s,ny-fw);
+        ctx.quadraticCurveTo(nbx+12*s+fl*.5,ny+fy2-fw*.5,nbx+12*s+fl,ny+fy2*.7);
+        ctx.quadraticCurveTo(nbx+12*s+fl*.5,ny+fy2+fw*.5,nbx+12*s,ny+fw);
+        ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
+      }
+    });
+  }
+
+  const tw=20*s, th=34*s;
+  ctx.save(); ctx.translate(0,-60*s+bob);
+  const tg=ctx.createLinearGradient(-tw,0,tw,0);
+  tg.addColorStop(0,dark); tg.addColorStop(.4,suitCol); tg.addColorStop(.65,light); tg.addColorStop(1,mid);
+  ctx.fillStyle=tg; ctx.strokeStyle=dark; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(-tw,-th*.5,tw*2,th,7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=dark; ctx.strokeStyle=mid; ctx.lineWidth=.8;
+  ctx.beginPath(); ctx.roundRect(-tw*.45,-th*.28,tw*.9,th*.5,3); ctx.fill(); ctx.stroke();
+  [[-tw*.28,-th*.08,'#ff4444'],[-tw*.04,-th*.08,'#44ff88'],[tw*.18,-th*.08,'#ffaa00']].forEach(([lx,ly,lc])=>{
+    ctx.fillStyle=lc; ctx.shadowColor=lc; ctx.shadowBlur=5;
+    ctx.beginPath(); ctx.arc(lx,ly,2.2*s,0,Math.PI*2); ctx.fill();
+  });
+  ctx.shadowBlur=0;
+  ctx.strokeStyle=dark; ctx.lineWidth=4*s;
+  ctx.beginPath(); ctx.arc(-tw,-th*.38,4.5*s,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc( tw,-th*.38,4.5*s,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  [-1,1].forEach(side=>{
+    const shX=side*tw, shY=-74*s+bob;
+    const reachX=side*(22+14*armRaise)*s, reachY=(10+12*armRaise)*s;
+    ctx.strokeStyle=dark; ctx.lineWidth=11*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(shX+reachX,shY+reachY); ctx.stroke();
+    ctx.strokeStyle=suitCol; ctx.lineWidth=7*s;
+    ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(shX+reachX,shY+reachY); ctx.stroke();
+    ctx.strokeStyle=dark; ctx.lineWidth=3.5*s;
+    ctx.beginPath(); ctx.arc(shX+reachX,shY+reachY,5.5*s,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle=suitCol; ctx.strokeStyle=dark; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(shX+reachX,shY+reachY,4.5*s,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+
+  ctx.fillStyle=dark; ctx.strokeStyle=mid; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(0,-76*s+bob,9*s,5*s,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+  const hcx=0, hcy=-92*s+bob;
+  const hg=ctx.createRadialGradient(hcx-3*s,hcy-5*s,3,hcx,hcy,18*s);
+  hg.addColorStop(0,light); hg.addColorStop(.55,suitCol); hg.addColorStop(1,dark);
+  ctx.fillStyle=hg; ctx.strokeStyle=dark; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(hcx,hcy,18*s,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.translate(hcx,hcy);
+  const vg=ctx.createLinearGradient(-12*s,-9*s,3*s,7*s);
+  vg.addColorStop(0,'#88ddff'); vg.addColorStop(.5,'#22aaee'); vg.addColorStop(1,'#115577');
+  ctx.fillStyle=vg; ctx.strokeStyle='#0a3344'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.ellipse(-2*s,1*s,12*s,10*s,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='rgba(200,240,255,.4)';
+  ctx.beginPath(); ctx.ellipse(-6*s,-4*s,4*s,2.5*s,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  if(airborne){
+    ctx.fillStyle='#ff2200'; ctx.shadowColor='#ff4400'; ctx.shadowBlur=9;
+    ctx.beginPath(); ctx.arc(hcx+11*s,hcy-10*s,3*s,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  }
+}
+
+let jumpFlying = false;
+
+// ── Physics ────────────────────────────────────────────────────────────────
+// Visual gravity mapping: Earth is the perceptual reference.
+// We want Luna to feel ~10x slower than Earth visually (not just ~6x as real ratio).
+// Formula: visualG = G_PX_PER_MS2 * G_EARTH_REF * (g / G_EARTH_REF)^EXP
+// We solve for EXP such that visualG(1.62) / visualG(9.81) = 1/10:
+//   (1.62/9.81)^EXP = 1/10  →  EXP = log(0.1) / log(1.62/9.81) = 1.309
+// But that makes high-g planets feel unreasonably heavy, so we cap it:
+// Instead we use a two-segment approach: below Earth, use EXP=1.4 (very steep);
+// above Earth, use EXP=0.6 (compressed). This gives Luna ~10x slower than Earth
+// while Giove stays about 1.8x faster.
+const G_EARTH_REF = 9.81;
+function visualG(realG){
+  const ratio = realG / G_EARTH_REF;
+  const exp = ratio < 1 ? 1.5 : 0.55;
+  return G_PX_PER_MS2 * G_EARTH_REF * Math.pow(ratio, exp);
+}
+function physicsUpdate(){
+  if(person.state==='flying'){
+    const gPx = visualG(planet.g);
+    person.vy += gPx;
+    person.x  += person.vx;
+    person.y  += person.vy;
+    person.vx *= 0.995;
+
+    const plateLeft  = SCALE_CX - S_PLATE_W/2;
+    const plateRight = SCALE_CX + S_PLATE_W/2;
+    if(person.vy>0
+      && person.x>plateLeft && person.x<plateRight
+      && person.y >= scalePlateY && person.y < scalePlateY+20){
+      person.y=scalePlateY;
+      person.vy=0; person.vx=0;
+      person.state='onscale';
+      personOnScale=true;
+      refreshScaleReading();
+    }
+
+    if(person.y >= GROUND_Y){
+      person.y=GROUND_Y;
+      person.vy=0; person.vx=0;
+      person.state='ground';
+    }
+
+    if(person.x<20){ person.x=20; person.vx=Math.abs(person.vx)*0.5; }
+    if(person.x>W-20){ person.x=W-20; person.vx=-Math.abs(person.vx)*0.5; }
+    if(Math.abs(person.vx)>0.3) person.facingRight = person.vx>0;
+
+    jumpFlying = true;
+  } else {
+    if(jumpFlying){ jumpFlying = false; }
+  }
+
+  if(person.state==='onscale'){
+    person.y=scalePlateY;
+  }
+
+  const G_EARTH = 9.81;
+  const targetSink = personOnScale
+    ? Math.min( (planet.g / G_EARTH) * S_PLATE_MAX_SINK, S_PLATE_MAX_SINK )
+    : 0;
+  scalePlateY += (S_PLATE_REST_Y + targetSink - scalePlateY)*0.1;
+  const targetNeedle = personOnScale ? Math.min((mass*planet.g)/1500,1) : 0;
+  scaleNeedle += (targetNeedle - scaleNeedle)*0.08;
+  if(personOnScale){ refreshScaleReading(); }
+}
+
+// ── Info overlay ──────────────────────────────────────────────────────────
+function drawInfo(){
+  ctx.save(); ctx.font='13px Crimson Text,serif'; ctx.textAlign='left';
+  ctx.fillStyle='rgba(232,152,58,.85)'; ctx.fillText('Pianeta: '+planet.name,14,24);
+  ctx.fillStyle='rgba(232,213,176,.7)';  ctx.fillText('g = '+planet.g.toFixed(2)+' m/s²',14,42);
+  ctx.fillStyle='rgba(232,213,176,.7)';  ctx.fillText('m = '+mass+' kg',14,58);
+  const Fpeso = mass*planet.g;
+  const kgApp = Fpeso/9.81;
+  ctx.fillStyle='rgba(255,68,204,.85)'; ctx.fillText('F_peso = '+Fpeso.toFixed(1)+' N  ('+kgApp.toFixed(1)+' kg)',14,74);
+  ctx.restore();
+}
+
+// ── Grab handle ───────────────────────────────────────────────────────────
+function drawGrabHandle(){
+  if(person.state==='flying') return;
+  const tx=torsoCX(), ty=torsoCY();
+  ctx.save();
+  ctx.strokeStyle='rgba(184,115,51,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(tx,ty,grabR()+8,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  if(!dragActive && tick < 300){
+    ctx.fillStyle='rgba(184,115,51,.5)';
+    ctx.font='italic 11px Playfair Display,serif';
+    ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText('trascina', tx, ty-grabR()-12);
+  }
+  ctx.restore();
+}
+
+// ── Weight arrow ──────────────────────────────────────────────────────────
+function drawWeightArrow(){
+  if(person.state!=='flying') return;
+  const tx=torsoCX(), ty=torsoCY();
+  const P=mass*planet.g;
+  const alen=Math.min(14+P*0.5, 90);
+  arrow(tx, ty, tx, ty+alen, '#ff44cc',3,11);
+  ctx.save();
+  ctx.fillStyle='#ff44cc';
+  ctx.font=`italic bold 13px 'Playfair Display',serif`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  const lx=tx+14, ly=ty+alen/2;
+  ctx.fillText('F', lx, ly);
+  const fw=ctx.measureText('F').width;
+  ctx.font=`italic bold 9px 'Playfair Display',serif`;
+  ctx.fillText('peso', lx+fw+1, ly+4);
+  ctx.strokeStyle='#ff44cc'; ctx.lineWidth=1.2; ctx.lineCap='round';
+  const aw=ctx.measureText('F').width*1.1;
+  ctx.beginPath(); ctx.moveTo(lx-1,ly-8); ctx.lineTo(lx+aw+1,ly-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx+aw+1,ly-8);
+  ctx.lineTo(lx+aw-2,ly-11); ctx.lineTo(lx+aw-2,ly-5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ── Main loop ──────────────────────────────────────────────────────────────
+function loop(){
+  tick++;
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  physicsUpdate();
+  drawWorldScale();
+  const airborne = person.state==='flying';
+  const onScale  = person.state==='onscale';
+  drawPerson(person.x, person.y, person.facingRight, airborne, onScale);
+  drawWeightArrow();
+  drawGrabHandle();
+  drawInfo();
+  requestAnimationFrame(loop);
+}
+
+// Init
+updateSideScale();
+loop();
+</script>
+</body>
+</html>
