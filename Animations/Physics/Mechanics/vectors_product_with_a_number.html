@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>k · v⃗ — Moltiplicazione di un Vettore per uno Scalare</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:       #0d0f14;
+  --surface:  #13161d;
+  --surface2: #1a1e28;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --text:     #e4e8f0;
+  --muted:    #606880;
+  --cv:   #f97316;   /* original vector  — orange */
+  --cw:   #22c55e;   /* result vector    — green  */
+  --ck:   #a78bfa;   /* scalar highlight — violet */
+  --gold: #f59e0b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; overflow:hidden; }
+body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; }
+
+/* ═══ LAYOUT ═══ */
+.app {
+  display:grid;
+  grid-template-rows:52px 1fr;
+  grid-template-columns:1fr 308px;
+  height:100vh;
+}
+
+/* ═══ HEADER ═══ */
+header {
+  grid-column:1/-1;
+  display:flex; align-items:center; gap:18px;
+  padding:0 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+header h1 { font-size:.98rem; font-weight:700; letter-spacing:-.3px; }
+header h1 .eq { color:var(--cw); font-weight:800; }
+.mode-tabs { display:flex; gap:4px; margin-left:auto; }
+.tab {
+  padding:5px 14px; border-radius:6px;
+  font-size:.78rem; font-weight:600; cursor:pointer;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--muted); transition:all .18s; letter-spacing:.3px;
+}
+.tab:hover { color:var(--text); }
+.tab.active { background:var(--text); color:var(--bg); border-color:var(--text); }
+
+/* ═══ CANVAS ═══ */
+#canvas-area {
+  position:relative; background:var(--bg); overflow:hidden;
+}
+canvas { position:absolute; top:0;left:0; }
+
+/* ═══ PANEL ═══ */
+#panel {
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.panel-inner { padding:18px 16px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex:1; }
+
+.section-title {
+  font-family:'JetBrains Mono',monospace;
+  font-size:.65rem; letter-spacing:2.5px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:4px;
+}
+
+/* Scalar display */
+.scalar-display {
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:12px 14px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.scalar-value {
+  font-size:2rem; font-weight:800;
+  color:var(--ck); text-align:center;
+  font-family:'JetBrains Mono',monospace;
+  line-height:1;
+}
+.scalar-slider {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:4px;
+  background: linear-gradient(90deg, #1e1040, #a78bfa);
+  border-radius:2px; outline:none; cursor:pointer;
+}
+.scalar-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px;
+  border-radius:50%; background:var(--ck);
+  border:2.5px solid var(--bg);
+  box-shadow:0 0 8px rgba(167,139,250,.6);
+  cursor:grab;
+}
+.scalar-neg-wrap {
+  display:flex; align-items:center; gap:8px;
+  font-size:.8rem; color:var(--muted);
+}
+.scalar-neg-wrap input[type=checkbox] { accent-color:var(--ck); width:14px;height:14px; cursor:pointer; }
+
+/* Vector info */
+.vec-info {
+  background:var(--surface2); border:1px solid var(--border2);
+  border-radius:8px; padding:10px 14px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.vec-row { display:flex; justify-content:space-between; align-items:center; }
+.vec-label { font-size:.82rem; font-weight:600; }
+.vec-label.v { color:var(--cv); }
+.vec-label.w { color:var(--cw); }
+.vec-label.k { color:var(--ck); }
+.vec-num {
+  font-family:'JetBrains Mono',monospace; font-size:.82rem; color:var(--text);
+}
+
+/* Sliders for vector */
+.ctrl-group { display:flex; flex-direction:column; gap:10px; }
+.slider-row {
+  display:flex; flex-direction:column; gap:4px;
+}
+.slider-label {
+  display:flex; justify-content:space-between;
+  font-size:.75rem; color:var(--muted);
+}
+.slider-label span:last-child { font-family:'JetBrains Mono',monospace; color:var(--text); }
+input[type=range].ctrl {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:3px; border-radius:2px; outline:none; cursor:pointer;
+  background:var(--border2);
+}
+input[type=range].ctrl::-webkit-slider-thumb {
+  -webkit-appearance:none; width:13px; height:13px;
+  border-radius:50%; background:var(--text);
+  border:2px solid var(--bg); cursor:grab;
+}
+
+/* Step bar (anim) */
+.step-bar { display:flex; gap:6px; }
+.step-btn {
+  flex:1; padding:6px 4px; border-radius:6px;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--muted); font-size:.72rem; font-weight:600;
+  cursor:pointer; transition:all .18s; display:flex;
+  flex-direction:column; align-items:center; gap:2px;
+  font-family:'Outfit',sans-serif;
+}
+.step-btn .snum { font-size:.85rem; font-weight:800; }
+.step-btn:hover { color:var(--text); border-color:var(--border2); }
+.step-btn.active { border-color:var(--cw); color:var(--cw); box-shadow:0 0 10px rgba(34,197,94,.18); }
+.step-btn.done   { border-color:rgba(34,197,94,.35); color:rgba(34,197,94,.5); }
+
+/* Play button */
+.play-row { display:flex; gap:8px; }
+#btnPlay {
+  flex:1; padding:9px; border-radius:7px;
+  border:1.5px solid var(--cw); background:rgba(34,197,94,.07);
+  color:var(--cw); font-weight:700; font-size:.88rem; cursor:pointer;
+  transition:all .2s; font-family:'Outfit',sans-serif;
+}
+#btnPlay:hover { background:rgba(34,197,94,.15); box-shadow:0 0 14px rgba(34,197,94,.25); }
+#btnRestart {
+  padding:9px 12px; border-radius:7px;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--muted); font-size:.82rem; cursor:pointer;
+  transition:all .2s; font-family:'Outfit',sans-serif;
+}
+#btnRestart:hover { color:var(--text); }
+
+/* Explain box */
+.explain-box {
+  background:var(--surface2); border:1px solid var(--border2);
+  border-radius:8px; padding:10px 12px;
+  font-size:.8rem; line-height:1.65; color:var(--muted);
+}
+.explain-box strong { color:var(--text); font-weight:600; }
+.explain-box em     { color:var(--ck); font-style:normal; }
+.explain-box .green { color:var(--cw); font-weight:600; }
+
+/* Progress bar */
+.prog-wrap { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+#progBar { height:100%; width:0%; background:var(--cw); border-radius:2px; transition:width .05s; }
+
+/* ── QUIZ ── */
+.quiz-section { display:flex; flex-direction:column; gap:10px; }
+.feedback-box {
+  border-radius:8px; padding:10px 12px;
+  font-size:.82rem; line-height:1.55;
+  border:1px solid transparent;
+}
+.feedback-box.idle    { background:var(--surface2); border-color:var(--border2); color:var(--muted); }
+.feedback-box.correct { background:rgba(34,197,94,.08); border-color:rgba(34,197,94,.35); color:#86efac; }
+.feedback-box.wrong   { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.35); color:#fca5a5; }
+.quiz-btns { display:flex; gap:8px; }
+#btnCheck {
+  flex:1; padding:9px; border-radius:7px;
+  border:1.5px solid var(--cw); background:rgba(34,197,94,.07);
+  color:var(--cw); font-weight:700; font-size:.88rem; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition:all .2s; display:none;
+}
+#btnCheck:hover { background:rgba(34,197,94,.15); }
+#btnNewQuiz {
+  padding:9px 14px; border-radius:7px;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--muted); font-size:.82rem; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition:all .2s;
+}
+#btnNewQuiz:hover { color:var(--text); }
+
+/* score pill */
+.score-pill {
+  display:flex; gap:12px; justify-content:center;
+  padding:8px; background:var(--surface2); border-radius:8px;
+  border:1px solid var(--border2);
+}
+.score-item { display:flex; flex-direction:column; align-items:center; gap:1px; }
+.score-item .sval { font-size:1.2rem; font-weight:800; font-family:'JetBrains Mono',monospace; }
+.score-item .slab { font-size:.65rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+.score-item .sval.ok  { color:var(--cw); }
+.score-item .sval.err { color:#f87171; }
+.score-item .sval.str { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <h1>Moltiplicazione di un Vettore per uno Scalare &nbsp;<span class="eq">k · v⃗ = w⃗</span></h1>
+  <div class="mode-tabs">
+    <button class="tab active" onclick="setMode('anim')" id="tabAnim">Animazione</button>
+    <button class="tab"        onclick="setMode('quiz')" id="tabQuiz">Quiz</button>
+  </div>
+</header>
+
+<div id="canvas-area"><canvas id="cv"></canvas></div>
+
+<!-- ══════════════ PANEL ══════════════ -->
+<div id="panel">
+  <div class="panel-inner" id="panelInner"></div>
+</div>
+
+</div><!-- .app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CANVAS SETUP
+// ═══════════════════════════════════════════════════════════
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const area = document.getElementById('canvas-area');
+
+function resize(){
+  cv.width  = area.clientWidth;
+  cv.height = area.clientHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); drawScene(); });
+
+// ═══════════════════════════════════════════════════════════
+// COORDINATE SYSTEM
+// ═══════════════════════════════════════════════════════════
+// Dynamic scale: fit the longest vector (v and w) with comfortable margin
+function computeScale(){
+  const k  = (MODE==='anim') ? getK() : Q.k;
+  const vv = (MODE==='anim') ? vecV   : Q.vecV;
+  const vMod = vv.mod;
+  const wMod = Math.abs(k) * vMod;
+  const longest = Math.max(vMod, wMod, 1);   // cm
+  const margin  = 0.72;                        // fraction of half-canvas to use
+  const maxPx   = Math.min(cv.width, cv.height) * 0.5 * margin;
+  return Math.min(52, Math.max(14, maxPx / longest));
+}
+
+function getScale(){ return computeScale(); }
+
+function toC(gx, gy){
+  const S=getScale();
+  return { x: cv.width/2  + gx*S, y: cv.height/2 - gy*S };
+}
+function toG(px, py){
+  const S=getScale();
+  return { x: (px - cv.width/2)/S, y: -(py - cv.height/2)/S };
+}
+
+function comp(v){
+  const rad = v.dir * Math.PI/180;
+  return { x: v.mod * Math.cos(rad) * v.verso, y: v.mod * Math.sin(rad) * v.verso };
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let MODE = 'anim';
+
+// Anim vectors
+let vecV = { mod:3, dir:45, verso:1 };
+let scalarK = 2;   // positive part
+let scalarNeg = false; // sign flip
+
+function getK(){ return scalarNeg ? -scalarK : scalarK; }
+
+const ANIM = { step:0, t:0, playing:false, raf:null, lastTs:null };
+const STEP_DUR = 1800; // ms per step
+
+// Quiz state
+const Q = {
+  vecV:   { mod:3, dir:0, verso:1 },
+  k:      2,
+  tipW:   { x:0, y:0 },   // user drag
+  dragging: false,
+  checked: false,
+  showCorr: false,
+};
+let qScore = { ok:0, err:0, streak:0 };
+
+// ═══════════════════════════════════════════════════════════
+// DRAWING PRIMITIVES
+// ═══════════════════════════════════════════════════════════
+function drawGrid(){
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0f14'; ctx.fillRect(0,0,W,H);
+
+  // grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.7;
+  for(let i=-18;i<=18;i++){
+    const _S=getScale(); const px=cv.width/2+i*_S, py=cv.height/2+i*_S;
+    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+  }
+  // axes
+  ctx.strokeStyle='rgba(255,255,255,0.16)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(0,cv.height/2); ctx.lineTo(W,cv.height/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cv.width/2,0);  ctx.lineTo(cv.width/2,H);  ctx.stroke();
+  // tick labels
+  ctx.fillStyle='rgba(255,255,255,0.16)'; ctx.font='8px JetBrains Mono,monospace';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  const _Sg=getScale();
+  for(let i=-18;i<=18;i++){ if(!i||Math.abs(i*_Sg)>cv.width/2-4)continue; ctx.fillText(i, cv.width/2+i*_Sg, cv.height/2+4); }
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let i=-12;i<=12;i++){ if(!i||Math.abs(i*_Sg)>cv.height/2-4)continue; ctx.fillText(i, cv.width/2-5, cv.height/2-i*_Sg); }
+}
+
+function arrow(ox,oy,ex,ey,color,alpha,lw,label,labelSide){
+  if(alpha<=0.01)return;
+  const dx=ex-ox, dy=ey-oy, len=Math.sqrt(dx*dx+dy*dy);
+  if(len<4)return;
+  const ang=Math.atan2(dy,dx), HL=Math.min(14,len*0.42);
+  ctx.save();
+  ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.fillStyle=color;
+  ctx.lineWidth=lw; ctx.lineCap='round';
+  ctx.shadowBlur=14; ctx.shadowColor=color;
+  ctx.beginPath(); ctx.moveTo(ox,oy);
+  ctx.lineTo(ex-HL*0.7*Math.cos(ang), ey-HL*0.7*Math.sin(ang)); ctx.stroke();
+  ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-HL*Math.cos(ang-.44), ey-HL*Math.sin(ang-.44));
+  ctx.lineTo(ex-HL*Math.cos(ang+.44), ey-HL*Math.sin(ang+.44));
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0;
+  if(label && alpha>0.25){
+    const side=labelSide!==undefined?labelSide:1;
+    const px=Math.sin(ang), py=-Math.cos(ang);
+    const lx=ox+(ex-ox)*.80 + px*22*side;
+    const ly=oy+(ey-oy)*.80 + py*22*side;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.shadowBlur=6; ctx.shadowColor=color;
+    ctx.font='bold 15px Outfit,sans-serif'; ctx.fillText(label,lx,ly+3);
+    ctx.font='bold 9px Outfit,sans-serif';  ctx.fillText('→',lx+1,ly-10);
+    ctx.shadowBlur=0;
+  }
+  ctx.restore();
+}
+
+function modLabel(ox,oy,ex,ey,text,color,alpha){
+  if(alpha===undefined)alpha=1;
+  if(alpha<0.28)return;
+  const ang=Math.atan2(ey-oy,ex-ox);
+  const mx=(ox+ex)/2 - Math.sin(ang)*20;
+  const my=(oy+ey)/2 + Math.cos(ang)*20;
+  ctx.save(); ctx.globalAlpha=alpha*.88;
+  ctx.fillStyle=color; ctx.font='500 11px JetBrains Mono,monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text,mx,my); ctx.restore();
+}
+
+function dot(cx,cy,color,r,alpha){
+  ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color;
+  ctx.shadowBlur=12; ctx.shadowColor=color;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0; ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANIM DRAW FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+const EXPLAINS = [
+  'Passo 1 — Il vettore <strong>v⃗</strong> parte dall\'origine. Osserva il suo modulo e la sua direzione.',
+  'Passo 2 — Si moltiplica il modulo di <strong>v⃗</strong> per lo scalare <em>k</em>. Il risultato <span class="green">w⃗</span> ha modulo <em>|k|·|v⃗|</em>. Se k &lt; 0, il verso si inverte.',
+  'Passo 3 — <span class="green">w⃗</span> = <em>k</em> · <strong>v⃗</strong>: la direzione è la stessa (o opposta se k < 0), il modulo è scalato di <em>|k|</em>.',
+];
+
+function drawAnim(){
+  drawGrid();
+  const k   = getK();
+  const v   = comp(vecV);
+  const O   = toC(0,0);
+  const tipV = toC(v.x, v.y);
+  const wx  = k*v.x, wy = k*v.y;
+  const tipW = toC(wx, wy);
+  const e   = 1 - Math.pow(1-Math.min(1,ANIM.t),3); // ease-out cubic
+  const idle= ANIM.step===0 && ANIM.t===0 && !ANIM.playing;
+
+  if(idle || ANIM.step===0){
+    const alpha = idle ? 1 : e;
+    arrow(O.x,O.y,tipV.x,tipV.y,'#f97316',alpha,3,'v⃗');
+    modLabel(O.x,O.y,tipV.x,tipV.y,vecV.mod+'cm','#f97316',alpha);
+    dot(O.x,O.y,'#ffffff',4,.5);
+  }
+
+  if(ANIM.step===1){
+    // v stays full; w grows from v direction (same or flipped)
+    arrow(O.x,O.y,tipV.x,tipV.y,'#f97316',1,3,'v⃗');
+    modLabel(O.x,O.y,tipV.x,tipV.y,vecV.mod+'cm','#f97316');
+
+    // Ghost of v to show stretching
+    if(e > 0.1){
+      const ge = Math.min(1,(e-0.1)/.9);
+      const curWx = O.x + (tipW.x-O.x)*ge;
+      const curWy = O.y + (tipW.y-O.y)*ge;
+      arrow(O.x,O.y,curWx,curWy,'#22c55e',ge,3,ge>0.55?'w⃗':'');
+      const dispMod = (Math.abs(k)*vecV.mod*ge).toFixed(1);
+      modLabel(O.x,O.y,curWx,curWy,dispMod+'cm','#22c55e',ge);
+    }
+    dot(O.x,O.y,'#ffffff',4,.5);
+  }
+
+  if(ANIM.step===2){
+    // Show both final, plus a subtle "scale" indicator
+    arrow(O.x,O.y,tipV.x,tipV.y,'#f97316',.55,2,'v⃗');
+    modLabel(O.x,O.y,tipV.x,tipV.y,vecV.mod+'cm','#f97316',.5);
+    arrow(O.x,O.y,tipW.x,tipW.y,'#22c55e',e,3.5,'w⃗');
+    const wMod = (Math.abs(k)*vecV.mod).toFixed(2);
+    modLabel(O.x,O.y,tipW.x,tipW.y,wMod+'cm','#22c55e',e);
+
+    // Draw a dashed arc connecting v tip to w tip to show the scale factor
+    if(e > 0.5){
+      const ae=(e-.5)/.5;
+      ctx.save(); ctx.globalAlpha=ae*.25; ctx.strokeStyle='#a78bfa';
+      ctx.lineWidth=1.2; ctx.setLineDash([4,5]);
+      // Draw line from tip of v to tip of w
+      ctx.beginPath(); ctx.moveTo(tipV.x,tipV.y); ctx.lineTo(tipW.x,tipW.y); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+
+      // Scalar label mid-way
+      ctx.save(); ctx.globalAlpha=ae*.7;
+      const mx=(tipV.x+tipW.x)/2, my=(tipV.y+tipW.y)/2;
+      ctx.fillStyle='#a78bfa'; ctx.font='bold 13px Outfit,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('×'+k, mx+12, my-12);
+      ctx.restore();
+    }
+    dot(O.x,O.y,'#ffffff',4,.5);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUIZ DRAW
+// ═══════════════════════════════════════════════════════════
+function drawQuiz(){
+  drawGrid();
+  const k    = Q.k;
+  const v    = comp(Q.vecV);
+  const O    = toC(0,0);
+  const tipV = toC(v.x, v.y);
+  const corrWx = k*v.x, corrWy = k*v.y;
+  const corrTip = toC(corrWx, corrWy);
+
+  // Always show v
+  arrow(O.x,O.y,tipV.x,tipV.y,'#f97316',1,3,'v⃗');
+  modLabel(O.x,O.y,tipV.x,tipV.y,Q.vecV.mod+'cm','#f97316');
+
+  // User's draggable w
+  const uW = toC(Q.tipW.x, Q.tipW.y);
+  const wMoved = Math.hypot(Q.tipW.x, Q.tipW.y) > 0.15;
+  if(wMoved){
+    arrow(O.x,O.y,uW.x,uW.y,'#22c55e',0.9,3,'w⃗');
+    modLabel(O.x,O.y,uW.x,uW.y,Math.hypot(Q.tipW.x,Q.tipW.y).toFixed(1)+'cm','#22c55e');
+  }
+  dot(uW.x, uW.y, '#22c55e', 10, 0.85);
+
+  // Correction overlay
+  if(Q.showCorr){
+    arrow(O.x,O.y,corrTip.x,corrTip.y,'#22c55e',0.55,2.5,'');
+    dot(corrTip.x,corrTip.y,'#22c55e',6,.7);
+  }
+
+  // k label in canvas
+  ctx.save();
+  ctx.fillStyle='rgba(167,139,250,.85)';
+  ctx.font='bold 16px Outfit,sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('k = '+k, 14, 14);
+  ctx.restore();
+
+  dot(O.x,O.y,'#ffffff',4,.5);
+
+  // Show check button
+  if(!Q.checked){
+    const _bc=document.getElementById('btnCheck');
+    if(_bc) _bc.style.display = wMoved ? 'block' : 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANIM LOOP
+// ═══════════════════════════════════════════════════════════
+function animLoop(ts){
+  if(!ANIM.playing)return;
+  if(!ANIM.lastTs) ANIM.lastTs=ts;
+  const dt=ts-ANIM.lastTs; ANIM.lastTs=ts;
+  ANIM.t=Math.min(1,ANIM.t+dt/STEP_DUR);
+  const _pb=document.getElementById('progBar');
+  if(_pb) _pb.style.width=((ANIM.step+ANIM.t)/3*100)+'%';
+  drawScene();
+  updateStepBar();
+  if(ANIM.t>=1){
+    if(ANIM.step<2){ ANIM.step++; ANIM.t=0; ANIM.lastTs=null; }
+    else { ANIM.playing=false; const _bp=document.getElementById('btnPlay'); if(_bp)_bp.textContent='▶ Play'; return; }
+  }
+  ANIM.raf=requestAnimationFrame(animLoop);
+}
+
+function togglePlay(){
+  const _bp=()=>document.getElementById('btnPlay');
+  if(ANIM.playing){
+    ANIM.playing=false; ANIM.lastTs=null;
+    cancelAnimationFrame(ANIM.raf);
+    if(_bp()) _bp().textContent='▶ Play';
+  } else {
+    if(ANIM.step===2 && ANIM.t>=1) restartAnim();
+    ANIM.playing=true; ANIM.lastTs=null;
+    if(_bp()) _bp().textContent='⏸ Pausa';
+    ANIM.raf=requestAnimationFrame(animLoop);
+  }
+}
+function restartAnim(){
+  ANIM.playing=false; cancelAnimationFrame(ANIM.raf); ANIM.lastTs=null;
+  ANIM.step=0; ANIM.t=0;
+  const _bp=document.getElementById('btnPlay'); if(_bp)_bp.textContent='▶ Play';
+  const _pb=document.getElementById('progBar'); if(_pb)_pb.style.width='0%';
+  updateStepBar(); drawScene();
+}
+function goStep(n){
+  ANIM.playing=false; cancelAnimationFrame(ANIM.raf); ANIM.lastTs=null;
+  const _bp=document.getElementById('btnPlay'); if(_bp)_bp.textContent='▶ Play';
+  ANIM.step=n; ANIM.t=n===0?0:1;
+  const _pb=document.getElementById('progBar'); if(_pb)_pb.style.width=((n+ANIM.t)/3*100)+'%';
+  updateStepBar(); drawScene();
+}
+function updateStepBar(){
+  if(MODE!=='anim') return;
+  for(let i=0;i<3;i++){
+    const b=document.getElementById('sb'+i);
+    if(!b) return;
+    b.className='step-btn'+(i===ANIM.step?' active':i<ANIM.step?' done':'');
+    b.querySelector('.snum').textContent=i<ANIM.step?'✓':i+1;
+  }
+  const ex=document.getElementById('animExplain');
+  if(ex) ex.innerHTML=EXPLAINS[ANIM.step];
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUIZ LOGIC
+// ═══════════════════════════════════════════════════════════
+function newQuiz(){
+  const mods=[2,3,4,5]; const dirs=[0,30,45,60,90,120,135,150,180];
+  const versi=[1,-1];
+  Q.vecV = { mod:mods[Math.floor(Math.random()*mods.length)],
+             dir:dirs[Math.floor(Math.random()*dirs.length)],
+             verso:versi[Math.floor(Math.random()*versi.length)] };
+  // k: integer from -3..3 excluding 0 and 1
+  const ks=[-3,-2,2,3, 0.5,-0.5]; 
+  Q.k = ks[Math.floor(Math.random()*ks.length)];
+  Q.tipW  = {x:0,y:0};
+  Q.checked=false; Q.showCorr=false;
+  rebuildPanel();
+  drawScene();
+}
+
+function checkQuiz(){
+  const k=Q.k, v=comp(Q.vecV);
+  const corrX=k*v.x, corrY=k*v.y;
+  const TOL=0.75;
+  const modOk  = Math.abs(Math.hypot(Q.tipW.x,Q.tipW.y)-Math.hypot(corrX,corrY)) < TOL;
+  const dirOk  = Math.abs(Q.tipW.x-corrX)<TOL && Math.abs(Q.tipW.y-corrY)<TOL;
+  const fb=document.getElementById('quizFeedback');
+  if(!fb)return;
+  Q.checked=true;
+  const _bc2=document.getElementById('btnCheck'); if(_bc2)_bc2.style.display='none';
+  if(dirOk){
+    fb.textContent='🎉 Perfetto! w⃗ = k·v⃗ è nel punto esatto.';
+    fb.className='feedback-box correct';
+    qScore.ok++; qScore.streak++;
+    const _bsc0=document.getElementById('btnShowCorr'); if(_bsc0)_bsc0.style.display='none';
+  } else {
+    let msgs=[];
+    const userMod=Math.hypot(Q.tipW.x,Q.tipW.y);
+    const corrMod=Math.hypot(corrX,corrY);
+    if(Math.abs(userMod-corrMod)>TOL) msgs.push(`il modulo dovrebbe essere ${corrMod.toFixed(2)} cm`);
+    else msgs.push('la direzione o il verso non sono corretti');
+    fb.textContent='✗ Non esatto — '+msgs.join('; ')+'. k='+k+', |w⃗|='+corrMod.toFixed(2)+' cm.';
+    fb.className='feedback-box wrong';
+    qScore.err++; qScore.streak=0;
+    const _bsc1=document.getElementById('btnShowCorr'); if(_bsc1)_bsc1.style.display='inline-block';
+  }
+  updateScore();
+}
+
+function showCorr(){
+  Q.showCorr=true; drawScene();
+  const _qf=document.getElementById('quizFeedback');
+  if(_qf){ _qf.textContent='✅ Ecco la soluzione corretta in verde chiaro.'; _qf.className='feedback-box correct'; }
+  const _bsc2=document.getElementById('btnShowCorr'); if(_bsc2)_bsc2.style.display='none';
+}
+function updateScore(){
+  const _so=document.getElementById('scoreOk'); if(_so)_so.textContent=qScore.ok;
+  const _se=document.getElementById('scoreErr'); if(_se)_se.textContent=qScore.err;
+  const _ss=document.getElementById('scoreStr'); if(_ss)_ss.textContent=qScore.streak;
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAG (quiz)
+// ═══════════════════════════════════════════════════════════
+function getXY(e){ const r=cv.getBoundingClientRect(),c=e.touches?e.touches[0]:e; return {x:c.clientX-r.left,y:c.clientY-r.top}; }
+function snapG(g,s=0.1){ return {x:Math.round(g.x/s)*s, y:Math.round(g.y/s)*s}; }
+
+cv.addEventListener('mousedown', startDrag);
+cv.addEventListener('touchstart', startDrag, {passive:false});
+cv.addEventListener('mousemove', moveDrag);
+cv.addEventListener('touchmove', moveDrag, {passive:false});
+cv.addEventListener('mouseup', endDrag);
+cv.addEventListener('touchend', endDrag);
+
+function startDrag(e){
+  if(MODE!=='quiz')return; e.preventDefault();
+  const p=getXY(e);
+  const uW=toC(Q.tipW.x,Q.tipW.y);
+  if(Math.hypot(p.x-uW.x,p.y-uW.y)<24){ Q.dragging=true; }
+}
+function moveDrag(e){
+  if(MODE!=='quiz'||!Q.dragging)return; e.preventDefault();
+  const p=getXY(e);
+  const raw=toG(p.x,p.y);
+  // clamp so the tip stays well inside the canvas in grid coords
+  const S=getScale();
+  const maxGx=(cv.width/2  - 20)/S;
+  const maxGy=(cv.height/2 - 20)/S;
+  raw.x=Math.max(-maxGx, Math.min(maxGx, raw.x));
+  raw.y=Math.max(-maxGy, Math.min(maxGy, raw.y));
+  Q.tipW=snapG(raw);
+  if(!Q.checked){ drawScene(); }
+}
+function endDrag(){ Q.dragging=false; }
+
+// ═══════════════════════════════════════════════════════════
+// SCENE DISPATCHER
+// ═══════════════════════════════════════════════════════════
+function drawScene(){
+  if(MODE==='anim') drawAnim();
+  else              drawQuiz();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PANEL BUILDER
+// ═══════════════════════════════════════════════════════════
+function updateAnimInfo(){
+  // Update the result row and k display without full panel rebuild
+  const k=getK();
+  const v=comp(vecV);
+  const wMod=(Math.abs(k)*vecV.mod).toFixed(2);
+  const wAng=((Math.atan2(k<0?-v.y:v.y, k<0?-v.x:v.x)*180/Math.PI)+360)%360;
+  // These may not exist if panel was just rebuilt, so guard all
+  const _kd=document.getElementById('kDisplay'); if(_kd)_kd.textContent=k;
+  const _kv=document.getElementById('kVal');     if(_kv)_kv.textContent=k;
+  // Rebuild the result row would require DOM surgery; just skip — vec info row
+  // is rebuilt on the next rebuildPanel call triggered by any meaningful action
+}
+
+function rebuildPanel(){
+  const pi=document.getElementById('panelInner');
+  pi.innerHTML='';
+  if(MODE==='anim') buildAnimPanel(pi);
+  else              buildQuizPanel(pi);
+}
+
+function buildAnimPanel(pi){
+  const k=getK();
+  const v=comp(vecV);
+  const wMod=(Math.abs(k)*vecV.mod).toFixed(2);
+  const wAng=((Math.atan2(k<0?-v.y:v.y, k<0?-v.x:v.x)*180/Math.PI)+360)%360;
+
+  pi.innerHTML=`
+  <!-- Scalar -->
+  <div>
+    <div class="section-title">Scalare k</div>
+    <div class="scalar-display">
+      <div class="scalar-value" id="kDisplay">${k}</div>
+      <input type="range" class="scalar-slider" id="kSlider" min="0.5" max="4" step="0.5" value="${scalarK}">
+      <div class="scalar-neg-wrap">
+        <input type="checkbox" id="kNeg" ${scalarNeg?'checked':''}>
+        <label for="kNeg" style="cursor:pointer">Inverti segno (k negativo)</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vector v controls -->
+  <div class="ctrl-group">
+    <div class="section-title">Vettore v⃗</div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Modulo</span><span id="vModV">${vecV.mod} cm</span></div>
+      <input type="range" class="ctrl" id="vMod" min="1" max="5" step="1" value="${vecV.mod}">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Direzione</span><span id="vDirV">${vecV.dir}°</span></div>
+      <input type="range" class="ctrl" id="vDir" min="0" max="180" step="15" value="${vecV.dir}">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Verso</span><span id="vVersoV">${vecV.verso>0?'+':'−'}</span></div>
+      <input type="range" class="ctrl" id="vVerso" min="-1" max="1" step="2" value="${vecV.verso}">
+    </div>
+  </div>
+
+  <!-- Vec info -->
+  <div class="vec-info">
+    <div class="vec-row">
+      <span class="vec-label v">v⃗</span>
+      <span class="vec-num">${vecV.mod} cm · ${vecV.dir}° ${vecV.verso<0?'(−)':''}</span>
+    </div>
+    <div class="vec-row">
+      <span class="vec-label k">k</span>
+      <span class="vec-num" id="kVal">${k}</span>
+    </div>
+    <div class="vec-row" style="margin-top:4px;padding-top:8px;border-top:1px solid var(--border)">
+      <span class="vec-label w">w⃗ = k·v⃗</span>
+      <span class="vec-num">${wMod} cm · ${wAng.toFixed(0)}°</span>
+    </div>
+  </div>
+
+  <!-- Step bar -->
+  <div>
+    <div class="section-title">Passi</div>
+    <div class="step-bar">
+      <button class="step-btn" id="sb0" onclick="goStep(0)"><span class="snum">1</span><span style="font-size:.62rem">v⃗</span></button>
+      <button class="step-btn" id="sb1" onclick="goStep(1)"><span class="snum">2</span><span style="font-size:.62rem">scala</span></button>
+      <button class="step-btn" id="sb2" onclick="goStep(2)"><span class="snum">3</span><span style="font-size:.62rem">w⃗</span></button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="prog-wrap"><div id="progBar"></div></div>
+
+  <!-- Play/Restart -->
+  <div class="play-row">
+    <button id="btnPlay" onclick="togglePlay()">▶ Play</button>
+    <button id="btnRestart" onclick="restartAnim()">↺</button>
+  </div>
+
+  <!-- Explain -->
+  <div class="explain-box" id="animExplain">${EXPLAINS[0]}</div>
+  `;
+
+  // Bind controls
+  document.getElementById('kSlider').oninput = e => {
+    scalarK=+e.target.value;
+    const _kd=document.getElementById('kDisplay'); if(_kd)_kd.textContent=getK();
+    const _kv=document.getElementById('kVal'); if(_kv)_kv.textContent=getK();
+    drawScene();
+  };
+  document.getElementById('kNeg').onchange = e => {
+    scalarNeg=e.target.checked;
+    const _kd2=document.getElementById('kDisplay'); if(_kd2)_kd2.textContent=getK();
+    const _kv2=document.getElementById('kVal'); if(_kv2)_kv2.textContent=getK();
+    drawScene();
+  };
+  document.getElementById('vMod').oninput = e => {
+    vecV.mod=+e.target.value;
+    document.getElementById('vModV').textContent=vecV.mod+' cm';
+    updateAnimInfo(); drawScene();
+  };
+  document.getElementById('vDir').oninput = e => {
+    vecV.dir=+e.target.value;
+    document.getElementById('vDirV').textContent=vecV.dir+'°';
+    updateAnimInfo(); drawScene();
+  };
+  document.getElementById('vVerso').oninput = e => {
+    vecV.verso=+e.target.value;
+    document.getElementById('vVersoV').textContent=vecV.verso>0?'+':'−';
+    updateAnimInfo(); drawScene();
+  };
+
+  updateStepBar();
+}
+
+function buildQuizPanel(pi){
+  const k=Q.k, v=comp(Q.vecV);
+  const corrMod=(Math.abs(k)*Q.vecV.mod).toFixed(2);
+
+  pi.innerHTML=`
+  <div class="section-title">Quiz — Trova w⃗ = k · v⃗</div>
+
+  <!-- Score -->
+  <div class="score-pill">
+    <div class="score-item">
+      <span class="sval ok" id="scoreOk">${qScore.ok}</span>
+      <span class="slab">Corretti</span>
+    </div>
+    <div class="score-item">
+      <span class="sval err" id="scoreErr">${qScore.err}</span>
+      <span class="slab">Errori</span>
+    </div>
+    <div class="score-item">
+      <span class="sval str" id="scoreStr">${qScore.streak}</span>
+      <span class="slab">Serie 🔥</span>
+    </div>
+  </div>
+
+  <!-- Current problem -->
+  <div class="vec-info">
+    <div class="vec-row">
+      <span class="vec-label v">v⃗</span>
+      <span class="vec-num">${Q.vecV.mod} cm · ${Q.vecV.dir}° ${Q.vecV.verso<0?'(−)':''}</span>
+    </div>
+    <div class="vec-row">
+      <span class="vec-label k">k</span>
+      <span class="vec-num" style="font-size:1rem;font-weight:700;color:var(--ck)">${k}</span>
+    </div>
+    <div class="vec-row" style="margin-top:4px;padding-top:8px;border-top:1px solid var(--border)">
+      <span class="vec-label w">w⃗ = ?</span>
+      <span class="vec-num" style="color:var(--muted)">trascina la punta verde</span>
+    </div>
+  </div>
+
+  <!-- Hints -->
+  <div class="explain-box">
+    Trascina il pallino <strong style="color:var(--cw)">verde</strong> sulla punta del vettore risultante.<br>
+    Ricorda: <em>|w⃗| = |k| · |v⃗|</em>${k<0?' e il verso si inverte':''}.
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback-box idle" id="quizFeedback">
+    Trascina la punta del vettore verde (w⃗) dove pensi sia k·v⃗.
+  </div>
+
+  <!-- Buttons -->
+  <div class="quiz-btns">
+    <button id="btnCheck" onclick="checkQuiz()" style="display:none">✓ Verifica</button>
+    <button id="btnNewQuiz" onclick="newQuiz()">Nuovo →</button>
+  </div>
+  <button id="btnShowCorr" onclick="showCorr()" style="display:none;width:100%;padding:8px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:.82rem;cursor:pointer;font-family:Outfit,sans-serif;">
+    Mostra soluzione
+  </button>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODE SWITCH
+// ═══════════════════════════════════════════════════════════
+function setMode(m){
+  MODE=m;
+  document.getElementById('tabAnim').className='tab'+(m==='anim'?' active':'');
+  document.getElementById('tabQuiz').className='tab'+(m==='quiz'?' active':'');
+  if(m==='quiz'){
+    if(!Q.checked && Q.tipW.x===0 && Q.tipW.y===0) newQuiz();
+    else rebuildPanel();
+  } else {
+    rebuildPanel();
+  }
+  drawScene();
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+rebuildPanel();
+drawScene();
+updateStepBar();
+</script>
+</body>
+</html>
