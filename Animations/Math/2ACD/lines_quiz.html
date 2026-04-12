@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Rette</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f13;
+  --surface: #17171e;
+  --surface2: #1e1e28;
+  --border: #2a2a38;
+  --border2: #3a3a52;
+  --text: #f0eef8;
+  --muted: #7a7898;
+  --accent: #7c5cfc;
+  --accent2: #c084fc;
+  --red: #f05a5a;
+  --green: #4ecca3;
+  --blue: #5aabf0;
+}
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  gap: 1.5rem;
+}
+
+.logo {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scores {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+}
+
+.score-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.score-pill .val { color: var(--text); font-weight: 500; }
+
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+}
+
+.tab {
+  padding: 0.85rem 1.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-family: 'Syne', sans-serif;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  min-height: calc(100vh - 105px);
+}
+
+.canvas-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  background: var(--bg);
+  position: relative;
+}
+
+.canvas-glow {
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,92,252,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+canvas {
+  display: block;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+.controls-side {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.section { display: none; flex-direction: column; height: 100%; }
+.section.active { display: flex; }
+
+.section-top {
+  padding: 1.8rem 2rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.section-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-label::before {
+  content: '';
+  display: block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.section-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.section-desc strong { color: var(--text); font-weight: 600; }
+
+.progress-wrap {
+  padding: 1.2rem 2rem 0;
+  flex-shrink: 0;
+}
+
+.progress-bar-bg {
+  height: 3px;
+  background: var(--border);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 100px;
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+
+.progress-label {
+  font-size: 0.67rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 0.35rem;
+}
+
+.big-input-wrap {
+  padding: 1.2rem 2rem;
+  flex-shrink: 0;
+}
+
+.big-input {
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.35rem;
+  font-weight: 500;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: var(--accent);
+}
+
+.big-input::placeholder { color: var(--muted); font-size: 0.9rem; font-weight: 400; }
+.big-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,92,252,0.15); }
+.big-input:disabled { opacity: 0.45; }
+
+.draw-eq-card {
+  margin: 1.5rem 2rem 0;
+  padding: 1.2rem 1.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.draw-eq-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--accent), var(--accent2));
+  border-radius: 3px 0 0 3px;
+}
+
+.draw-eq-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 0.5rem;
+}
+
+.draw-eq-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.pts-area {
+  padding: 1rem 2rem 0;
+  flex-shrink: 0;
+}
+
+.pts-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.pts-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 26px;
+}
+
+.chip {
+  background: rgba(90,171,240,0.1);
+  border: 1px solid rgba(90,171,240,0.25);
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 100px;
+}
+
+.btn-area {
+  padding: 1rem 2rem;
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.btn-verify {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.3rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 0 16px rgba(124,92,252,0.3);
+}
+
+.btn-verify:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 0 24px rgba(192,132,252,0.4); }
+.btn-verify:active { transform: translateY(0); }
+
+.btn-sec {
+  padding: 0.65rem 1rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-sec:hover { color: var(--text); border-color: var(--muted); }
+
+.feedback-area {
+  padding: 0 2rem;
+  flex-shrink: 0;
+}
+
+.feedback {
+  display: none;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  line-height: 1.5;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.feedback.correct {
+  background: rgba(78,204,163,0.08);
+  border: 1px solid rgba(78,204,163,0.25);
+  color: var(--green);
+  display: flex;
+}
+
+.feedback.wrong {
+  background: rgba(240,90,90,0.08);
+  border: 1px solid rgba(240,90,90,0.25);
+  color: var(--red);
+  display: flex;
+}
+
+.fb-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+.tips {
+  margin-top: auto;
+  padding: 1.3rem 2rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tips-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.7rem;
+}
+
+.tip {
+  font-size: 0.77rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  line-height: 1.5;
+  margin-bottom: 0.35rem;
+}
+
+.tip-kw {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Rette nel Piano</div>
+  <div class="subtitle">Quiz Interattivo</div>
+  <div class="scores">
+    <div class="score-pill">Equazione <span class="val" id="sc-eq">0/0</span></div>
+    <div class="score-pill">Disegno <span class="val" id="sc-draw">0/0</span></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('eq')">📐 Trova l'equazione</button>
+  <button class="tab" onclick="switchTab('draw')">✏️ Disegna la retta</button>
+</div>
+
+<div class="main">
+  <div class="canvas-side">
+    <div class="canvas-glow"></div>
+    <canvas id="main-canvas" width="440" height="440"></canvas>
+  </div>
+
+  <div class="controls-side">
+
+    <!-- EQ SECTION -->
+    <div class="section active" id="sec-eq">
+      <div class="section-top">
+        <div class="section-label">Trova l'equazione</div>
+        <div class="section-desc">Osserva la retta nel grafico e scrivi la sua equazione.<br>
+        <strong>Suggerimento:</strong> individua dove attraversa l'asse y e calcola Δy/Δx.</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-eq"></div></div>
+        <div class="progress-label" id="prog-eq-label">—</div>
+      </div>
+
+      <div class="big-input-wrap">
+        <input class="big-input" id="eq-input" placeholder="es.  y = 2x + 1  oppure  x = 3" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="btn-area">
+        <button class="btn-verify" onclick="checkEq()">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Verifica
+        </button>
+        <button class="btn-sec" onclick="newEq()">Nuova retta</button>
+      </div>
+
+      <div class="feedback-area">
+        <div class="feedback" id="fb-eq">
+          <span class="fb-icon"></span>
+          <span id="fb-eq-msg"></span>
+        </div>
+      </div>
+
+      <div class="tips">
+        <div class="tips-label">Come si legge il grafico</div>
+        <div class="tip"><span class="tip-kw">Pendenza</span>scegli 2 punti interi → calcola Δy ÷ Δx</div>
+        <div class="tip"><span class="tip-kw">Intercetta y</span>il punto (0, b) dove la retta taglia l'asse y</div>
+        <div class="tip"><span class="tip-kw">Verticale</span>scrivi  x = k  (tutti i punti hanno stessa x)</div>
+        <div class="tip"><span class="tip-kw">Orizzontale</span>scrivi  y = k  (tutti i punti hanno stessa y)</div>
+      </div>
+    </div>
+
+    <!-- DRAW SECTION -->
+    <div class="section" id="sec-draw">
+      <div class="section-top">
+        <div class="section-label">Disegna la retta</div>
+        <div class="section-desc">Clicca sulla griglia per posizionare almeno <strong>2 punti</strong> che appartengono alla retta.</div>
+      </div>
+
+      <div class="draw-eq-card">
+        <div class="draw-eq-label">Equazione da disegnare</div>
+        <div class="draw-eq-text" id="draw-eq-text">—</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-draw"></div></div>
+        <div class="progress-label" id="prog-draw-label">—</div>
+      </div>
+
+      <div class="pts-area">
+        <div class="pts-label">Punti selezionati</div>
+        <div class="pts-chips" id="pts-chips">
+          <span style="font-size:0.77rem;color:var(--muted)">Nessun punto ancora</span>
+        </div>
+      </div>
+
+      <div class="btn-area">
+        <button class="btn-verify" onclick="checkDraw()">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Verifica
+        </button>
+        <button class="btn-sec" onclick="clearPts()">Cancella</button>
+        <button class="btn-sec" onclick="newDraw()">Nuova retta</button>
+      </div>
+
+      <div class="feedback-area">
+        <div class="feedback" id="fb-draw">
+          <span class="fb-icon"></span>
+          <span id="fb-draw-msg"></span>
+        </div>
+      </div>
+
+      <div class="tips">
+        <div class="tips-label">Come si disegna</div>
+        <div class="tip"><span class="tip-kw">y = mx+b</span>parti dall'intercetta b, poi applica la pendenza m</div>
+        <div class="tip"><span class="tip-kw">x = k</span>tutti i punti devono avere la stessa coordinata x</div>
+        <div class="tip"><span class="tip-kw">y = k</span>tutti i punti devono avere la stessa coordinata y</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+const W = 440, H = 440, CELLS = 10, STEP = W/CELLS, O = W/2;
+
+let mode = 'eq';
+let eqQuiz = null, eqC = 0, eqT = 0;
+let drawQuiz = null, drawC = 0, drawT = 0, drawnPts = [];
+let lastEqIdx = -1, lastDrawIdx = -1;
+
+function gx(x) { return O + x*STEP; }
+function gy(y) { return O - y*STEP; }
+function px(cx) { return (cx-O)/STEP; }
+function py(cy) { return -(cy-O)/STEP; }
+function snap(v) { return Math.round(v); }
+
+const QUIZZES = [
+  {type:'slope', m:1, b:0},
+  {type:'slope', m:2, b:1},
+  {type:'slope', m:-1, b:3},
+  {type:'slope', m:0.5, b:-2},
+  {type:'slope', m:-2, b:-1},
+  {type:'slope', m:1, b:-4},
+  {type:'slope', m:3, b:0},
+  {type:'slope', m:-0.5, b:2},
+  {type:'slope', m:1, b:2},
+  {type:'slope', m:-1, b:0},
+  {type:'slope', m:2, b:-3},
+  {type:'slope', m:-3, b:1},
+  {type:'slope', m:0, b:3},
+  {type:'slope', m:0, b:-2},
+  {type:'slope', m:0, b:1},
+  {type:'vertical', k:3},
+  {type:'vertical', k:-2},
+  {type:'vertical', k:4},
+  {type:'vertical', k:-3},
+  {type:'vertical', k:1},
+];
+
+function randomQuiz(lastIdx) {
+  let idx;
+  do { idx = Math.floor(Math.random()*QUIZZES.length); } while(idx===lastIdx);
+  return { quiz: QUIZZES[idx], idx };
+}
+
+function eqLabel(q) {
+  if (q.type==='vertical') return `x = ${q.k}`;
+  if (q.m===0) return `y = ${q.b}`;
+  let ms = q.m===1?'': q.m===-1?'-': (Number.isInteger(q.m)?`${q.m}`:`${q.m}`);
+  let bs = q.b===0?'': q.b>0?` + ${q.b}`:` \u2212 ${Math.abs(q.b)}`;
+  return `y = ${ms}x${bs}`;
+}
+
+function drawGrid(quiz, userPoints, revealLine) {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#0c0c12';
+  ctx.fillRect(0,0,W,H);
+
+  // grid
+  for (let i=0; i<=CELLS; i++) {
+    let v = i*STEP;
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(v,0); ctx.lineTo(v,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,v); ctx.lineTo(W,v); ctx.stroke();
+  }
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(O,0); ctx.lineTo(O,H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,O); ctx.lineTo(W,O); ctx.stroke();
+
+  // numbers
+  ctx.font = '500 10px "JetBrains Mono", monospace';
+  ctx.textBaseline = 'top';
+  for (let i=-CELLS/2; i<=CELLS/2; i++) {
+    if (i===0) continue;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(i, gx(i), O+5);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i, O-6, gy(i));
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('0', O-5, O+4);
+
+  // axis labels
+  ctx.font = '600 12px "Syne", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('x', W-10, O-13);
+  ctx.fillText('y', O+13, 10);
+
+  // arrows
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.moveTo(O,2); ctx.lineTo(O-4,12); ctx.lineTo(O+4,12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(W-2,O); ctx.lineTo(W-12,O-4); ctx.lineTo(W-12,O+4); ctx.closePath(); ctx.fill();
+
+  // quiz line
+  if (quiz && (mode==='eq' || revealLine)) {
+    ctx.save();
+    ctx.shadowColor = '#7c5cfc';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = '#9d7afe';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    if (quiz.type==='vertical') {
+      ctx.moveTo(gx(quiz.k), 0); ctx.lineTo(gx(quiz.k), H);
+    } else {
+      let x1=-CELLS/2, x2=CELLS/2;
+      ctx.moveTo(gx(x1), gy(quiz.m*x1+quiz.b));
+      ctx.lineTo(gx(x2), gy(quiz.m*x2+quiz.b));
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // intercept dot
+    if (mode==='eq' && quiz.type!=='vertical') {
+      ctx.save();
+      ctx.shadowColor = '#c084fc'; ctx.shadowBlur = 12;
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath(); ctx.arc(gx(0), gy(quiz.b), 5.5, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = '500 10px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#c084fc';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      let lx = gx(0)+9, ly = gy(quiz.b)-4;
+      if (quiz.b<=-4) ly = gy(quiz.b)+16;
+      ctx.fillText(`(0, ${quiz.b})`, lx, ly);
+      ctx.restore();
+    }
+  }
+
+  // user points
+  if (userPoints && userPoints.length>0) {
+    if (userPoints.length>=2) {
+      let p0=userPoints[0], p1=userPoints[userPoints.length-1];
+      let dx=p1.x-p0.x, dy=p1.y-p0.y, len=Math.sqrt(dx*dx+dy*dy);
+      if (len>0) {
+        ctx.save();
+        ctx.strokeStyle = '#5aabf0'; ctx.lineWidth = 2;
+        ctx.setLineDash([6,4]);
+        ctx.shadowColor = '#5aabf0'; ctx.shadowBlur = 8;
+        let ux=dx/len, uy=dy/len, ext=6;
+        ctx.beginPath();
+        ctx.moveTo(gx(p0.x-ux*ext), gy(p0.y-uy*ext));
+        ctx.lineTo(gx(p1.x+ux*ext), gy(p1.y+uy*ext));
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    userPoints.forEach(p => {
+      ctx.save();
+      ctx.shadowColor = '#5aabf0'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#5aabf0';
+      ctx.beginPath(); ctx.arc(gx(p.x), gy(p.y), 5, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+  }
+}
+
+// EQ MODE
+function newEq() {
+  let r = randomQuiz(lastEqIdx);
+  eqQuiz = r.quiz; lastEqIdx = r.idx;
+  let inp = document.getElementById('eq-input');
+  inp.value = ''; inp.disabled = false;
+  inp.style.borderColor = ''; inp.style.boxShadow = '';
+  hideFeedback('eq');
+  drawGrid(eqQuiz, [], false);
+}
+
+function parseUserEq(raw) {
+  raw = raw.trim().replace(/\s+/g,'').toLowerCase()
+           .replace(/\u2212/g,'-').replace(/\u00d7/g,'*');
+  let mv = raw.match(/^x=(-?\d+(\.\d+)?)$/);
+  if (mv) return {type:'vertical', k:parseFloat(mv[1])};
+  let mh = raw.match(/^(?:y=)?(-?\d+(\.\d+)?)$/);
+  if (mh && !raw.includes('x')) return {type:'slope', m:0, b:parseFloat(mh[1])};
+  let s = raw.replace(/^y=/,'');
+  s = s.replace(/(\d+)\/(\d+)/g, (_,a,b)=>(parseInt(a)/parseInt(b)).toString());
+  let re = /^(-?\d*\.?\d*)?x([+-]\d+\.?\d*)?$/;
+  let mm = s.match(re);
+  if (mm) {
+    let mStr=mm[1], bStr=mm[2];
+    let m=(!mStr||mStr==='')?1:mStr==='-'?-1:parseFloat(mStr);
+    let b=(!bStr||bStr==='')?0:parseFloat(bStr);
+    if (!isNaN(m)&&!isNaN(b)) return {type:'slope', m, b};
+  }
+  return null;
+}
+
+function quizMatch(q1,q2) {
+  if (!q1||!q2) return false;
+  if (q1.type==='vertical'&&q2.type==='vertical') return Math.abs(q1.k-q2.k)<0.01;
+  if (q1.type==='slope'&&q2.type==='slope') return Math.abs(q1.m-q2.m)<0.01&&Math.abs(q1.b-q2.b)<0.01;
+  return false;
+}
+
+function checkEq() {
+  if (!eqQuiz) return;
+  let inp = document.getElementById('eq-input');
+  let parsed = parseUserEq(inp.value);
+  eqT++; inp.disabled = true;
+  if (quizMatch(parsed, eqQuiz)) {
+    eqC++;
+    inp.style.borderColor = '#4ecca3';
+    inp.style.boxShadow = '0 0 0 3px rgba(78,204,163,0.15)';
+    showFeedback('eq', true, `Esatto! ${eqLabel(eqQuiz)}`);
+  } else {
+    inp.style.borderColor = '#f05a5a';
+    inp.style.boxShadow = '0 0 0 3px rgba(240,90,90,0.15)';
+    showFeedback('eq', false, (!parsed?'Formato non riconosciuto. ':'Non corretto. ')+'La risposta era: '+eqLabel(eqQuiz));
+  }
+  updateScores();
+}
+
+// DRAW MODE
+function newDraw() {
+  let r = randomQuiz(lastDrawIdx);
+  drawQuiz = r.quiz; lastDrawIdx = r.idx;
+  drawnPts = [];
+  hideFeedback('draw');
+  updatePtsList();
+  document.getElementById('draw-eq-text').textContent = eqLabel(drawQuiz);
+  drawGrid(drawQuiz, drawnPts, false);
+}
+
+canvas.addEventListener('click', function(e) {
+  if (mode!=='draw') return;
+  let rect = canvas.getBoundingClientRect();
+  let cx = (e.clientX-rect.left)*(W/rect.width);
+  let cy = (e.clientY-rect.top)*(H/rect.height);
+  let gx2=snap(px(cx)), gy2=snap(py(cy));
+  if (gx2<-CELLS/2||gx2>CELLS/2||gy2<-CELLS/2||gy2>CELLS/2) return;
+  if (drawnPts.some(p=>p.x===gx2&&p.y===gy2)) return;
+  drawnPts.push({x:gx2,y:gy2});
+  updatePtsList();
+  drawGrid(drawQuiz, drawnPts, false);
+});
+
+function clearPts() {
+  drawnPts = []; updatePtsList(); hideFeedback('draw');
+  drawGrid(drawQuiz, drawnPts, false);
+}
+
+function updatePtsList() {
+  let el = document.getElementById('pts-chips');
+  if (!drawnPts.length) {
+    el.innerHTML = '<span style="font-size:0.77rem;color:var(--muted)">Nessun punto ancora</span>';
+    return;
+  }
+  el.innerHTML = drawnPts.map(p=>`<span class="chip">(${p.x}, ${p.y})</span>`).join('');
+}
+
+function ptOnQuiz(p,q) {
+  if (q.type==='vertical') return Math.abs(p.x-q.k)<0.01;
+  return Math.abs(p.y-(q.m*p.x+q.b))<0.01;
+}
+
+function checkDraw() {
+  if (!drawQuiz) return;
+  if (drawnPts.length<2) { showFeedback('draw',false,'Aggiungi almeno 2 punti prima di verificare.'); return; }
+  let allOk = drawnPts.every(p=>ptOnQuiz(p,drawQuiz));
+  drawT++;
+  if (allOk) {
+    drawC++;
+    showFeedback('draw', true, `Perfetto! Tutti i punti appartengono a ${eqLabel(drawQuiz)}.`);
+    drawGrid(drawQuiz, drawnPts, true);
+  } else {
+    let wrong = drawnPts.filter(p=>!ptOnQuiz(p,drawQuiz)).map(p=>`(${p.x}, ${p.y})`).join(', ');
+    showFeedback('draw', false, `Punti errati: ${wrong}. La retta è ${eqLabel(drawQuiz)}.`);
+    drawGrid(drawQuiz, drawnPts, true);
+  }
+  updateScores();
+}
+
+function showFeedback(which, correct, msg) {
+  let fb = document.getElementById(`fb-${which}`);
+  fb.querySelector('.fb-icon').textContent = correct?'✓':'✗';
+  document.getElementById(`fb-${which}-msg`).textContent = msg;
+  fb.className = `feedback ${correct?'correct':'wrong'}`;
+}
+
+function hideFeedback(which) {
+  let fb = document.getElementById(`fb-${which}`);
+  fb.className = 'feedback';
+}
+
+function updateScores() {
+  document.getElementById('sc-eq').textContent = `${eqC}/${eqT}`;
+  document.getElementById('sc-draw').textContent = `${drawC}/${drawT}`;
+  let pEq = eqT>0?(eqC/eqT)*100:0;
+  let pDr = drawT>0?(drawC/drawT)*100:0;
+  document.getElementById('prog-eq').style.width = pEq+'%';
+  document.getElementById('prog-draw').style.width = pDr+'%';
+  document.getElementById('prog-eq-label').textContent = eqT>0?`${eqC} corrette su ${eqT}`:'—';
+  document.getElementById('prog-draw-label').textContent = drawT>0?`${drawC} corrette su ${drawT}`:'—';
+}
+
+function switchTab(t) {
+  mode = t;
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='eq'&&i===0)||(t==='draw'&&i===1)));
+  document.getElementById('sec-eq').classList.toggle('active', t==='eq');
+  document.getElementById('sec-draw').classList.toggle('active', t==='draw');
+  canvas.style.cursor = t==='draw'?'crosshair':'default';
+  if (t==='eq') drawGrid(eqQuiz,[],false);
+  else drawGrid(drawQuiz,drawnPts,false);
+}
+
+document.getElementById('eq-input').addEventListener('keydown', e=>{ if(e.key==='Enter') checkEq(); });
+newEq(); newDraw();
+drawGrid(eqQuiz, [], false);
+</script>
+</body>
+</html>
