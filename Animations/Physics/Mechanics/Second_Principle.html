@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secondo Principio della Dinamica</title>
+<script>
+  window.MathJax = { tex:{inlineMath:[['$','$']]}, svg:{fontCache:'global'} };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root{--bg:#0d0a08;--copper:#b87333;--copper-bright:#e8983a;--text-primary:#e8d5b0;--text-secondary:#9a8060;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text-primary);font-family:'Crimson Text',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;user-select:none;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(184,115,51,.05)0%,transparent 60%);pointer-events:none;z-index:0;}
+  header{text-align:center;padding:1.6rem 2rem .8rem;position:relative;z-index:1;}
+  .year-badge{font-size:.8rem;letter-spacing:.42em;color:var(--copper);text-transform:uppercase;margin-bottom:.5rem;display:block;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,3.5vw,2.5rem);font-weight:700;line-height:1.1;margin-bottom:.3rem;}
+  h1 em{color:var(--copper-bright);}
+  .ornament{display:flex;align-items:center;gap:1rem;justify-content:center;margin:.6rem 0;}
+  .ornament::before,.ornament::after{content:'';width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:6px;height:6px;background:var(--copper);transform:rotate(45deg);}
+  .stage{width:100%;max-width:1050px;padding:0 1.2rem 2rem;display:flex;flex-direction:column;align-items:center;gap:1rem;position:relative;z-index:1;}
+  .canvas-wrap{width:100%;border:1px solid rgba(184,115,51,.22);border-radius:5px;background:#1a1208;overflow:hidden;box-shadow:0 0 60px rgba(184,115,51,.07),inset 0 0 30px rgba(0,0,0,.6);}
+  canvas{display:block;width:100%;height:auto;cursor:default;}
+  .controls-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:center;width:100%;}
+  .ctrl-group{display:flex;align-items:center;gap:.5rem;background:rgba(17,22,32,.8);border:1px solid rgba(184,115,51,.18);border-radius:4px;padding:.5rem .9rem;}
+  .ctrl-group label{font-size:.85rem;color:var(--text-secondary);}
+  .ctrl-group .val{color:var(--copper-bright);font-weight:600;min-width:52px;font-size:.88rem;}
+  input[type=range]{-webkit-appearance:none;width:110px;height:5px;background:rgba(184,115,51,.25);border-radius:3px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--copper);border-radius:50%;cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;background:var(--copper);border-radius:50%;border:none;cursor:pointer;}
+  .btn{font-family:'Playfair Display',serif;font-size:.88rem;padding:.42rem 1.1rem;border-radius:3px;cursor:pointer;letter-spacing:.05em;transition:background .2s,color .2s,box-shadow .2s;}
+  .btn-fvecs{background:none;border:1.5px solid #ff8866;color:#ff8866;}
+  .btn-fvecs:hover{background:#ff8866;color:#0d0a08;}
+  .btn-fvecs.active{background:#ff8866;color:#0d0a08;box-shadow:0 0 14px rgba(255,136,102,.4);}
+  .btn-ftot{background:none;border:1.5px solid #ccff44;color:#ccff44;}
+  .btn-ftot:hover{background:#ccff44;color:#0d0a08;}
+  .btn-ftot.active{background:#ccff44;color:#0d0a08;box-shadow:0 0 14px rgba(200,255,68,.4);}
+  .btn-go{background:none;border:1.5px solid var(--copper-bright);color:var(--copper-bright);}
+  .btn-go:hover{background:var(--copper-bright);color:#0d0a08;}
+  .btn-go.active{background:var(--copper-bright);color:#0d0a08;}
+  .btn-reset{background:none;border:1.5px solid var(--copper);color:var(--copper);}
+  .btn-reset:hover{background:var(--copper);color:#0d0a08;}
+  .legend{display:flex;gap:1.4rem;flex-wrap:wrap;justify-content:center;font-size:.85rem;}
+  .leg-item{display:flex;align-items:center;gap:.4rem;}
+  .leg-line{width:22px;height:3px;border-radius:2px;}
+  .instruction{background:linear-gradient(135deg,rgba(184,115,51,.12),rgba(232,152,58,.07));border:1px solid rgba(184,115,51,.25);border-radius:4px;padding:.7rem 1rem;font-size:.88rem;line-height:1.55;text-align:center;width:100%;}
+</style>
+</head>
+<body>
+<header>
+  <span class="year-badge">Inghilterra · 1687 — Isaac Newton</span>
+  <h1>Il <em>Secondo Principio</em> della Dinamica</h1>
+  <div style="font-size:1.05rem;color:var(--copper-bright);margin:.5rem 0;font-family:'Playfair Display',serif;font-style:italic;">
+    $\vec{F}_{tot} = \displaystyle\sum_{i=1}^{n} \vec{F}_i \qquad \vec{a} = \dfrac{\vec{F}_{tot}}{m}$
+  </div>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+</header>
+
+<div class="stage">
+  <div class="canvas-wrap"><canvas id="c" width="1050" height="520"></canvas></div>
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <label>Massa:</label>
+      <input type="range" id="massRange" min="1" max="30" step="0.5" value="8">
+      <span class="val" id="massVal">8.0 kg</span>
+    </div>
+    <button class="btn btn-fvecs" id="btnFvecs" onclick="toggleFvecs()">Disegna $\vec{F}_1$ e $\vec{F}_2$</button>
+    <button class="btn btn-ftot" id="btnFtot" onclick="toggleFtot()">Disegna F<sub>tot</sub></button>
+    <button class="btn btn-go"   id="btnGo"   onclick="toggleSim()">▶ Avvia simulazione</button>
+    <button class="btn btn-reset"              onclick="resetSim()">↺ Ripristina</button>
+  </div>
+  <div class="legend">
+    <div class="leg-item"><div class="leg-line" style="background:#ff6644"></div><span style="color:#ff8866">$\vec{F}_1$</span></div>
+    <div class="leg-item"><div class="leg-line" style="background:#44aaff"></div><span style="color:#66bbff">$\vec{F}_2$</span></div>
+    <div class="leg-item"><div class="leg-line" style="background:#ccff44"></div><span style="color:#ccff44">$\vec{F}_{tot}$</span></div>
+    <div class="leg-item"><div class="leg-line" style="background:#ff44cc"></div><span style="color:#ff77dd">$\vec{a}$</span></div>
+  </div>
+  <div class="instruction">
+    <strong>Statica:</strong> trascina le punte di <span style="color:#ff8866;font-weight:600">F₁</span> e
+    <span style="color:#66bbff;font-weight:600">F₂</span> — gli omini ruotano attorno alla cassa.
+    Attiva <em>Disegna F<sub>tot</sub></em> per vedere risultante e parallelogramma.
+    <em>Avvia simulazione</em> per vedere la cassa accelerare.
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 1050, H = 520;
+const CW = 74, CH = 64;
+
+let crateX = 525, crateY = 260;
+const crateX0 = 525, crateY0 = 260;
+
+// Force vectors stored as polar from crate centre
+let f1 = { ang: Math.atan2(-120,-230), mag: 250 };
+let f2 = { ang: Math.atan2( 115,-200), mag: 230 };
+
+// Cartesian tip of each force vector (world coords), computed each frame
+function tip1(){ return { x: crateX + Math.cos(f1.ang)*f1.mag, y: crateY + Math.sin(f1.ang)*f1.mag }; }
+function tip2(){ return { x: crateX + Math.cos(f2.ang)*f2.mag, y: crateY + Math.sin(f2.ang)*f2.mag }; }
+
+let simRunning=false, showFtot=false, showForces=false;
+let crateVX=0, crateVY=0;
+let mass=8, tick=0;
+let trailPoints=[];
+let dragging=null;
+
+// ── Controls ──────────────────────────────────────────────────────────────
+document.getElementById('massRange').addEventListener('input',function(){
+  mass=parseFloat(this.value);
+  document.getElementById('massVal').textContent=mass.toFixed(1)+' kg';
+});
+function toggleFvecs(){ showForces=!showForces; document.getElementById('btnFvecs').classList.toggle('active',showForces); }
+function toggleFtot(){ showFtot=!showFtot; document.getElementById('btnFtot').classList.toggle('active',showFtot); }
+function toggleSim(){
+  simRunning=!simRunning;
+  const b=document.getElementById('btnGo');
+  b.textContent=simRunning?'⏸ Pausa':'▶ Avvia simulazione';
+  b.classList.toggle('active',simRunning);
+}
+function resetSim(){
+  simRunning=false; crateX=crateX0; crateY=crateY0;
+  crateVX=0; crateVY=0; trailPoints=[];
+  document.getElementById('btnGo').textContent='▶ Avvia simulazione';
+  document.getElementById('btnGo').classList.remove('active');
+}
+
+// ── Input — hit test directly on tip position ─────────────────────────────
+function toC(src){ const r=canvas.getBoundingClientRect(); return{x:(src.clientX-r.left)*(W/r.width),y:(src.clientY-r.top)*(H/r.height)}; }
+
+function tryStart(px,py){
+  if(simRunning) return;
+  const t1=tip1(), t2=tip2();
+  if(Math.hypot(px-t1.x,py-t1.y)<18) dragging='f1';
+  else if(Math.hypot(px-t2.x,py-t2.y)<18) dragging='f2';
+}
+function doMove(px,py){
+  if(!dragging) return;
+  const f = dragging==='f1' ? f1 : f2;
+  f.ang = Math.atan2(py-crateY, px-crateX);
+  const raw = Math.hypot(px-crateX, py-crateY);
+  // clamp so tip stays inside canvas with 20px margin
+  const cx=px, cy=py;
+  const roomX = cx>crateX ? W-20-crateX : crateX-20;
+  const roomY = cy>crateY ? H-20-crateY : crateY-20;
+  const cosA=Math.abs(Math.cos(f.ang))||0.001, sinA=Math.abs(Math.sin(f.ang))||0.001;
+  const maxMag = Math.min(raw, roomX/cosA, roomY/sinA, 480);
+  f.mag = Math.max(60, maxMag);
+}
+
+canvas.addEventListener('mousedown',  e=>{ const p=toC(e); tryStart(p.x,p.y); });
+canvas.addEventListener('mousemove',  e=>{ if(dragging){ const p=toC(e); doMove(p.x,p.y); }});
+canvas.addEventListener('mouseup',    ()=>dragging=null);
+canvas.addEventListener('mouseleave', ()=>dragging=null);
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const p=toC(e.touches[0]); tryStart(p.x,p.y); },{passive:false});
+canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); if(dragging){ const p=toC(e.touches[0]); doMove(p.x,p.y); }},{passive:false});
+canvas.addEventListener('touchend',   ()=>dragging=null);
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function shadeCol(hex,pct){
+  const n=parseInt(hex.replace('#',''),16),a=Math.round(2.55*pct);
+  const R=Math.max(0,Math.min(255,(n>>16)+a)),G=Math.max(0,Math.min(255,(n>>8&0xFF)+a)),B=Math.max(0,Math.min(255,(n&0xFF)+a));
+  return'#'+(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1);
+}
+function arrow(x1,y1,x2,y2,col,lw,hs){
+  const dx=x2-x1,dy=y2-y1,a=Math.atan2(dy,dx);
+  if(Math.hypot(dx,dy)<6)return;
+  ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw;ctx.shadowColor=col;ctx.shadowBlur=10;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hs*Math.cos(a-Math.PI/6),y2-hs*Math.sin(a-Math.PI/6));
+  ctx.lineTo(x2-hs*Math.cos(a+Math.PI/6),y2-hs*Math.sin(a+Math.PI/6));
+  ctx.closePath();ctx.fill();ctx.restore();
+}
+function vecLabel(lbl,x,y,col,fs){
+  ctx.save();ctx.fillStyle=col;ctx.font=`italic bold ${fs}px 'Playfair Display',serif`;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText(lbl,x,y);
+  const lw=ctx.measureText(lbl).width,aw=lw*.82,ay=y-fs*.86,th=fs*.13;
+  ctx.strokeStyle=col;ctx.lineWidth=fs*.09;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x-aw/2,ay);ctx.lineTo(x+aw/2,ay);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+aw/2,ay);ctx.lineTo(x+aw/2-th*1.3,ay-th);ctx.lineTo(x+aw/2-th*1.3,ay+th);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+function perp(dx,dy){ const l=Math.hypot(dx,dy)||1; return{x:-dy/l,y:dx/l}; }
+
+// ── Background ─────────────────────────────────────────────────────────────
+function drawBg(){
+  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#16120e');bg.addColorStop(1,'#0a0806');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(184,115,51,.07)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=44){ctx.beginPath();ctx.moveTo(x,H-10);ctx.lineTo(x+22,H+2);ctx.stroke();}
+}
+function drawTrail(){
+  if(trailPoints.length<2)return;
+  ctx.save();
+  for(let i=1;i<trailPoints.length;i++){
+    ctx.strokeStyle=`rgba(200,255,68,${i/trailPoints.length*.65})`;ctx.lineWidth=2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(trailPoints[i-1].x,trailPoints[i-1].y);ctx.lineTo(trailPoints[i].x,trailPoints[i].y);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── Crate ──────────────────────────────────────────────────────────────────
+function drawCrate(lurch){
+  ctx.save();ctx.translate(crateX+lurch*2,crateY);ctx.rotate(lurch*.022);
+  ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(0,CH/2+5,CW*.65,8,0,0,Math.PI*2);ctx.fill();
+  const g=ctx.createLinearGradient(-CW/2,-CH/2,CW/2,CH/2);
+  g.addColorStop(0,'#a0622a');g.addColorStop(.5,'#b87333');g.addColorStop(1,'#7a4220');
+  ctx.fillStyle=g;ctx.strokeStyle='#5a3010';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-CW/2,-CH/2,CW,CH,4);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='rgba(90,48,16,.5)';ctx.lineWidth=1.2;
+  [-CH/3,0,CH/3].forEach(ly=>{ctx.beginPath();ctx.moveTo(-CW/2,ly);ctx.lineTo(CW/2,ly);ctx.stroke();});
+  ctx.beginPath();ctx.moveTo(0,-CH/2);ctx.lineTo(0,CH/2);ctx.stroke();
+  ctx.fillStyle='rgba(255,200,140,.18)';ctx.beginPath();ctx.roundRect(-CW/2,-CH/2,CW,CH/4,4);ctx.fill();
+  ctx.fillStyle='rgba(232,213,176,.85)';ctx.font='bold 11px Playfair Display,serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${mass.toFixed(1)} kg`,0,2);
+  ctx.restore();
+}
+
+// ── Astronaut ──────────────────────────────────────────────────────────────
+function drawMan(handWX, handWY, faceDir, effort, suitCol, t){
+  const lean   = effort * 0.25;
+  const stride = Math.sin(t * 0.13) * effort * 14;
+  const dark   = shadeCol(suitCol, -50);
+  const mid    = shadeCol(suitCol, -20);
+  const light  = shadeCol(suitCol,  45);
+  const visor  = '#22aaee';
+  const visorG = '#88ddff';
+
+  const hipX = -lean*10, hipY = -56 + lean*4;
+  const shX  = hipX - lean*18, shY = hipY - 38;
+  const reachX = -26 - effort*24, reachY = -effort*8;
+  const fhX = shX + reachX, fhY = shY + reachY - 4;
+
+  const c = Math.cos(faceDir), s = Math.sin(faceDir);
+  const footX = handWX - (fhX*c - fhY*s);
+  const footY = handWY - (fhX*s + fhY*c);
+
+  ctx.save();
+  ctx.translate(footX, footY);
+  ctx.rotate(faceDir);
+
+  // ── BOOTS ──
+  ctx.fillStyle = dark;
+  ctx.beginPath(); ctx.ellipse(-stride*.28-5, 2, 12, 6, lean*.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( stride*.28+3, 2, 13, 6, lean*.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = mid;
+  ctx.beginPath(); ctx.ellipse(-stride*.28-5, 0, 8, 3, lean*.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( stride*.28+3, 0, 9, 3, lean*.2, 0, Math.PI*2); ctx.fill();
+
+  // ── LEGS ──
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.lineWidth=13; ctx.strokeStyle=dark;
+  ctx.beginPath(); ctx.moveTo(hipX-3, hipY);
+  ctx.quadraticCurveTo(-stride*.45-lean*10, -28+Math.abs(stride)*.15, -stride*.28-5, -2);
+  ctx.stroke();
+  ctx.lineWidth=9; ctx.strokeStyle=mid;
+  ctx.beginPath(); ctx.moveTo(hipX-3, hipY);
+  ctx.quadraticCurveTo(-stride*.45-lean*10, -28+Math.abs(stride)*.15, -stride*.28-5, -2);
+  ctx.stroke();
+  ctx.lineWidth=13; ctx.strokeStyle=suitCol;
+  ctx.beginPath(); ctx.moveTo(hipX+3, hipY);
+  ctx.quadraticCurveTo(stride*.45-lean*10, -28+Math.abs(stride)*.2, stride*.28+3, -2);
+  ctx.stroke();
+  ctx.lineWidth=9; ctx.strokeStyle=light;
+  ctx.beginPath(); ctx.moveTo(hipX+5, hipY);
+  ctx.quadraticCurveTo(stride*.45-lean*8, -26+Math.abs(stride)*.2, stride*.28+5, -3);
+  ctx.stroke();
+  [{ kx:-stride*.45-lean*10, ky:-28 }, { kx:stride*.45-lean*10, ky:-28 }].forEach(({kx,ky})=>{
+    ctx.strokeStyle=dark; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(kx, ky, 6, 0, Math.PI*2); ctx.stroke();
+  });
+
+  // ── JETPACK (flames parallel to force vector = shoot in +x local = away from crate) ──
+  drawJetpack(shX, shY, hipX, hipY, effort);
+
+  // ── TORSO ──
+  const tw=22, th=38;
+  ctx.save();
+  ctx.translate(shX+tw*.05, shY+th*.3);
+  ctx.rotate(lean*.3);
+  const tg=ctx.createLinearGradient(-tw,0,tw,0);
+  tg.addColorStop(0,dark); tg.addColorStop(.45,suitCol); tg.addColorStop(.7,light); tg.addColorStop(1,mid);
+  ctx.fillStyle=tg; ctx.strokeStyle=dark; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(-tw,-th*.5,tw*2,th,8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=dark; ctx.strokeStyle=mid; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(-tw*.5,-th*.3,tw,th*.55,4); ctx.fill(); ctx.stroke();
+  [[-tw*.3,-th*.1,'#ff4444'],[-tw*.05,-th*.1,'#44ff88'],[tw*.2,-th*.1,'#ffaa00']].forEach(([lx,ly,lc])=>{
+    ctx.fillStyle=lc; ctx.shadowColor=lc; ctx.shadowBlur=6;
+    ctx.beginPath(); ctx.arc(lx,ly,2.5,0,Math.PI*2); ctx.fill();
+  });
+  ctx.shadowBlur=0;
+  ctx.strokeStyle=dark; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(-tw, -th*.4, 5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc( tw, -th*.4, 5,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  // ── HELMET ──
+  const helmX = shX - lean*3, helmY = shY - 44;
+  const hg=ctx.createRadialGradient(helmX-4,helmY-6,4,helmX,helmY,20);
+  hg.addColorStop(0,light); hg.addColorStop(.6,suitCol); hg.addColorStop(1,dark);
+  ctx.fillStyle=hg; ctx.strokeStyle=dark; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(helmX,helmY,19,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=dark; ctx.strokeStyle=mid; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(shX,shY-10,10,6,lean*.2,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.save();
+  ctx.translate(helmX,helmY);
+  const vg=ctx.createLinearGradient(-14,-10,4,8);
+  vg.addColorStop(0,visorG); vg.addColorStop(.5,visor); vg.addColorStop(1,'#115577');
+  ctx.fillStyle=vg; ctx.strokeStyle='#0a3344'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.ellipse(-3,1,13,11,0,0,Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle='rgba(200,240,255,0.45)';
+  ctx.beginPath(); ctx.ellipse(-7,-4,5,3,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  if(effort>0.45){
+    ctx.fillStyle='#ff2200'; ctx.shadowColor='#ff4400'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(helmX+12,helmY-12,3.5,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+
+  // ── ARMS ──
+  const bhX = shX+reachX, bhY = shY+12+reachY;
+  ctx.lineWidth=11; ctx.strokeStyle=dark; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(shX-4,shY-th*.1+5);
+  ctx.quadraticCurveTo(shX+reachX*.5,shY+6+reachY*.3,bhX,bhY); ctx.stroke();
+  ctx.lineWidth=7; ctx.strokeStyle=mid;
+  ctx.beginPath(); ctx.moveTo(shX-4,shY-th*.1+5);
+  ctx.quadraticCurveTo(shX+reachX*.5,shY+6+reachY*.3,bhX,bhY); ctx.stroke();
+  ctx.lineWidth=11; ctx.strokeStyle=suitCol; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(shX+4,shY-th*.1);
+  ctx.quadraticCurveTo(shX+reachX*.5,shY+reachY*.4,fhX,fhY); ctx.stroke();
+  ctx.lineWidth=7; ctx.strokeStyle=light;
+  ctx.beginPath(); ctx.moveTo(shX+6,shY-th*.1);
+  ctx.quadraticCurveTo(shX+reachX*.5+2,shY+reachY*.4,fhX+1,fhY); ctx.stroke();
+  [[bhX,bhY,dark],[fhX,fhY,suitCol]].forEach(([gx,gy,gc])=>{
+    ctx.strokeStyle=dark; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(gx,gy,6,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle=gc; ctx.lineWidth=1; ctx.strokeStyle=dark;
+    ctx.beginPath(); ctx.arc(gx,gy,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
+// ── Jetpack: pack on back, nozzles + flames shoot in +x local direction ──
+// In local astronaut space: +x points AWAY from the crate (opposite to faceDir).
+// This means the thrust is parallel to the force vector (reaction = opposite to force dir).
+function drawJetpack(shX, shY, hipX, hipY, effort){
+  ctx.save();
+
+  // Pack body sits on the back side (+x in local = away from crate)
+  // Oriented so its long axis runs vertically on the astronaut's back
+  const jx = shX + 16;   // horizontal offset: away from crate
+  const jy = shY - 22;   // vertical: mid-torso height
+  const jw = 14;         // pack depth (in +x direction)
+  const jh = 28;         // pack height
+
+  // Main pack body
+  const pg = ctx.createLinearGradient(jx, jy, jx+jw, jy+jh);
+  pg.addColorStop(0,  '#b0b0b0');
+  pg.addColorStop(.4, '#e8e8e8');
+  pg.addColorStop(1,  '#888');
+  ctx.fillStyle = pg; ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(jx, jy, jw, jh, 4); ctx.fill(); ctx.stroke();
+
+  // Highlight strip
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.roundRect(jx+2, jy+3, jw*0.35, jh*0.55, 2); ctx.fill();
+
+  // Two nozzles at the right edge of the pack (+x side), stacked vertically
+  const nozzleBaseX = jx + jw;
+  const nozzlePosY  = [jy + jh*0.28, jy + jh*0.72];
+
+  nozzlePosY.forEach(ny => {
+    // Nozzle housing — horizontal tube pointing in +x
+    ctx.fillStyle = '#777'; ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(nozzleBaseX, ny-3, 10, 6, 2); ctx.fill(); ctx.stroke();
+    // Nozzle bell — flared, opening in +x direction
+    ctx.fillStyle = '#555'; ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(nozzleBaseX+8,  ny-3);
+    ctx.lineTo(nozzleBaseX+14, ny-5.5);
+    ctx.lineTo(nozzleBaseX+14, ny+5.5);
+    ctx.lineTo(nozzleBaseX+8,  ny+3);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  });
+
+  // ── Flames — extend in +x direction (away from crate = parallel to force) ──
+  if(effort > 0.02){
+    const flameLen = 14 + effort * 65;
+    const flameW   =  4 + effort * 16;
+
+    nozzlePosY.forEach((ny, ni) => {
+      const baseX = nozzleBaseX + 14; // tip of nozzle bell
+      // flicker in y (transverse to thrust direction)
+      const flickY = Math.sin(tick * 0.35 + ni * 2.1) * effort * 5;
+      const flickW = Math.cos(tick * 0.28 + ni) * effort * 3;
+
+      // Outer flame
+      const og = ctx.createLinearGradient(baseX, ny, baseX + flameLen, ny + flickY);
+      og.addColorStop(0,   'rgba(255,180,20,0.95)');
+      og.addColorStop(0.4, 'rgba(255,100,10,0.85)');
+      og.addColorStop(0.8, 'rgba(255,60,0,0.5)');
+      og.addColorStop(1,   'rgba(255,40,0,0)');
+      ctx.fillStyle = og;
+      ctx.shadowColor = '#ff8800'; ctx.shadowBlur = 18 * effort;
+      ctx.beginPath();
+      ctx.moveTo(baseX, ny - flameW - flickW);
+      ctx.quadraticCurveTo(
+        baseX + flameLen * 0.5, ny + flickY - flameW * 0.6,
+        baseX + flameLen,       ny + flickY * 0.8
+      );
+      ctx.quadraticCurveTo(
+        baseX + flameLen * 0.5, ny + flickY + flameW * 0.6,
+        baseX,                  ny + flameW + flickW
+      );
+      ctx.closePath(); ctx.fill();
+
+      // Inner core flame
+      const coreLen = flameLen * 0.55;
+      const coreW   = flameW * 0.42;
+      const ig = ctx.createLinearGradient(baseX, ny, baseX + coreLen, ny);
+      ig.addColorStop(0,   'rgba(255,255,255,1)');
+      ig.addColorStop(0.5, 'rgba(255,240,120,0.9)');
+      ig.addColorStop(1,   'rgba(255,180,30,0)');
+      ctx.fillStyle = ig; ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(baseX, ny - coreW);
+      ctx.quadraticCurveTo(
+        baseX + coreLen * 0.6, ny + flickY * 0.4,
+        baseX + coreLen,       ny + flickY * 0.5
+      );
+      ctx.quadraticCurveTo(
+        baseX + coreLen * 0.6, ny + flickY * 0.6,
+        baseX,                 ny + coreW
+      );
+      ctx.closePath(); ctx.fill();
+    });
+
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.restore();
+}
+
+function drawRope(x1,y1,x2,y2){
+  const mx=(x1+x2)/2, my=(y1+y2)/2+10;
+  ctx.save();ctx.strokeStyle='#c8a050';ctx.lineWidth=2.6;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);ctx.stroke();ctx.restore();
+}
+
+// ── Forces ─────────────────────────────────────────────────────────────────
+function drawForces(v1x,v1y,v2x,v2y){
+  const ox=crateX, oy=crateY;
+
+  const p1=perp(v1x,v1y);
+  arrow(ox,oy,ox+v1x,oy+v1y,'#ff6644',3.5,14);
+  vecLabel('F₁',ox+v1x/2+p1.x*24,oy+v1y/2+p1.y*24-4,'#ff6644',17);
+
+  const p2=perp(v2x,v2y);
+  arrow(ox,oy,ox+v2x,oy+v2y,'#44aaff',3.5,14);
+  vecLabel('F₂',ox+v2x/2-p2.x*24,oy+v2y/2-p2.y*24-4,'#44aaff',17);
+
+  if(showFtot){
+    const rx=v1x+v2x, ry=v1y+v2y;
+    const rtx=ox+rx, rty=oy+ry;
+    ctx.save();
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+v1x,oy+v1y);ctx.lineTo(rtx,rty);ctx.lineTo(ox+v2x,oy+v2y);ctx.closePath();
+    ctx.fillStyle='rgba(200,255,80,.05)';ctx.fill();
+    ctx.setLineDash([6,5]);ctx.strokeStyle='rgba(200,255,80,.28)';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(ox+v1x,oy+v1y);ctx.lineTo(rtx,rty);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ox+v2x,oy+v2y);ctx.lineTo(rtx,rty);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+    const pR=perp(rx,ry);
+    arrow(ox,oy,rtx,rty,'#ccff44',5,17);
+    vecLabel('Ftot',ox+rx/2+pR.x*30,oy+ry/2+pR.y*30-4,'#ccff44',18);
+  }
+
+  if(simRunning){
+    const rx=v1x+v2x, ry=v1y+v2y, rMag=Math.hypot(rx,ry)||1;
+    const aLen = rMag/mass * 8;
+    const pA=perp(rx,ry);
+    const atx=ox+rx/rMag*aLen, aty=oy+ry/rMag*aLen;
+    arrow(ox,oy,atx,aty,'#ff44cc',3.5,13);
+    vecLabel('a',ox+rx/rMag*aLen/2+pA.x*22,oy+ry/rMag*aLen/2+pA.y*22-4,'#ff44cc',16);
+  }
+
+  ctx.save();ctx.font='13px Crimson Text,serif';ctx.textAlign='left';
+  ctx.fillStyle='rgba(255,102,68,.85)';ctx.fillText(`|F₁| = ${Math.hypot(v1x,v1y).toFixed(0)} u`,14,24);
+  ctx.fillStyle='rgba(68,170,255,.85)'; ctx.fillText(`|F₂| = ${Math.hypot(v2x,v2y).toFixed(0)} u`,14,42);
+  if(showFtot){ctx.fillStyle='rgba(200,255,68,.9)';ctx.fillText(`|Ftot| = ${Math.hypot(v1x+v2x,v1y+v2y).toFixed(0)} u`,14,60);}
+  ctx.restore();
+}
+
+// Drag handles always visible (when not simulating), regardless of showForces
+function drawDragHandles(v1x,v1y,v2x,v2y){
+  if(simRunning) return;
+  const ox=crateX, oy=crateY;
+  [{tx:ox+v1x,ty:oy+v1y,col:'#ff6644'},{tx:ox+v2x,ty:oy+v2y,col:'#44aaff'}].forEach(({tx,ty,col})=>{
+    // Outer glow ring
+    ctx.save();
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowColor=col; ctx.shadowBlur=16;
+    ctx.beginPath(); ctx.arc(tx,ty,11,0,Math.PI*2); ctx.stroke();
+    ctx.shadowBlur=0;
+    // Inner filled circle
+    ctx.fillStyle='rgba(13,10,8,.85)'; ctx.strokeStyle=col; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(tx,ty,7,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    // Centre dot
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(tx,ty,3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ── Physics ─────────────────────────────────────────────────────────────────
+function updatePhysics(v1x,v1y,v2x,v2y){
+  if(!simRunning)return;
+  const rx=v1x+v2x, ry=v1y+v2y;
+  crateVX+=rx/(mass*1600);
+  crateVY+=ry/(mass*1600);
+  crateX+=crateVX; crateY+=crateVY;
+  trailPoints.push({x:crateX,y:crateY});
+  if(trailPoints.length>400)trailPoints.shift();
+  if(crateX<-150||crateX>W+150||crateY<-150||crateY>H+150)resetSim();
+}
+
+// ── Main loop ──────────────────────────────────────────────────────────────
+function loop(){
+  tick++;
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTrail();
+
+  const v1x=Math.cos(f1.ang)*f1.mag, v1y=Math.sin(f1.ang)*f1.mag;
+  const v2x=Math.cos(f2.ang)*f2.mag, v2y=Math.sin(f2.ang)*f2.mag;
+
+  const t1x=crateX+v1x, t1y=crateY+v1y;
+  const t2x=crateX+v2x, t2y=crateY+v2y;
+
+  const eff1=Math.min(1,f1.mag/280), eff2=Math.min(1,f2.mag/280);
+  const lurch=simRunning?0:Math.sin(tick*.09)*(Math.hypot(v1x+v2x,v1y+v2y)/700)*1.3;
+
+  const face1=f1.ang+Math.PI, face2=f2.ang+Math.PI;
+
+  drawCrate(lurch);
+
+  const ca1x=crateX+Math.cos(f1.ang)*CW*.48, ca1y=crateY+Math.sin(f1.ang)*CH*.48;
+  const ca2x=crateX+Math.cos(f2.ang)*CW*.48, ca2y=crateY+Math.sin(f2.ang)*CH*.48;
+  drawRope(t1x,t1y,ca1x,ca1y);
+  drawRope(t2x,t2y,ca2x,ca2y);
+
+  drawMan(t1x,t1y,face1,eff1,'#d8d8d8',tick);
+  drawMan(t2x,t2y,face2,eff2,'#e0e0e0',tick+40);
+
+  drawDragHandles(v1x,v1y,v2x,v2y);
+  if(showForces) drawForces(v1x,v1y,v2x,v2y);
+  updatePhysics(v1x,v1y,v2x,v2y);
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
