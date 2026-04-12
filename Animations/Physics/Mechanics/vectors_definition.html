@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VettoriLab — Esplora i Vettori</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --grid: rgba(255,255,255,0.045);
+    --accent: #00ffe0;
+    --accent2: #ff4d6d;
+    --accent3: #ffe066;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,255,224,0.05) 0%, transparent 70%);
+    top: -100px; left: -100px;
+    pointer-events: none;
+    animation: drift 10s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+
+  @keyframes drift {
+    from { transform: translate(0,0); }
+    to { transform: translate(80px, 60px); }
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 18px 32px 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,255,224,0.4);
+  }
+
+  header span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .main {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 18px;
+    padding: 18px 32px;
+    height: calc(100vh - 60px);
+  }
+
+  .canvas-wrap {
+    position: relative;
+    background: rgba(10,10,20,0.7);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  canvas {
+    display: block;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .canvas-label {
+    position: absolute;
+    top: 12px; left: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  /* Glossary bar at bottom of canvas */
+  .glossary {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .glos-item {
+    flex: 1;
+    padding: 8px 10px;
+    border-right: 1px solid var(--border);
+    font-size: 0.68rem;
+    line-height: 1.4;
+  }
+  .glos-item:last-child { border-right: none; }
+  .glos-item .glos-key {
+    font-weight: 800;
+    font-size: 0.72rem;
+    margin-bottom: 1px;
+  }
+  .glos-item .glos-val { color: var(--muted); }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    backdrop-filter: blur(4px);
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .vec-info {
+    border-radius: 7px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    font-size: 0.8rem;
+  }
+  .vec-info:last-child { margin-bottom: 0; }
+
+  .vec-info .vec-name {
+    font-weight: 800;
+    font-size: 0.96rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .vec-info .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .vec-info .row:last-child { border-bottom: none; }
+  .vec-info .row .k { color: var(--muted); font-size: 0.71rem; display: flex; align-items: center; gap: 4px; }
+  .vec-info .row .v { font-family: 'Space Mono', monospace; font-size: 0.72rem; text-align: right; max-width: 110px; }
+
+  .dot-icon {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .quiz-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .question-box {
+    background: rgba(0,255,224,0.05);
+    border: 1px solid rgba(0,255,224,0.18);
+    border-radius: 8px;
+    padding: 13px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 11px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+  }
+
+  .question-box .highlight {
+    color: var(--accent3);
+    border-bottom: 2px solid var(--accent3);
+    padding-bottom: 1px;
+    margin: 0 2px;
+  }
+
+  .answers {
+    display: flex;
+    gap: 9px;
+    margin-bottom: 11px;
+  }
+
+  .btn-ans {
+    flex: 1;
+    padding: 10px 8px;
+    border: 2px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.86rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-ans:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(0,255,224,0.07);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,255,224,0.12);
+  }
+
+  .btn-ans.correct {
+    border-color: #00ff88;
+    background: rgba(0,255,136,0.1);
+    color: #00ff88;
+    animation: pop 0.3s ease;
+  }
+
+  .btn-ans.wrong {
+    border-color: var(--accent2);
+    background: rgba(255,77,109,0.08);
+    color: var(--accent2);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .feedback {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    min-height: 44px;
+    transition: all 0.3s;
+    font-weight: 600;
+  }
+
+  .feedback.correct {
+    background: rgba(0,255,136,0.07);
+    border: 1px solid rgba(0,255,136,0.22);
+    color: #00ff88;
+  }
+
+  .feedback.wrong {
+    background: rgba(255,77,109,0.07);
+    border: 1px solid rgba(255,77,109,0.22);
+    color: var(--accent2);
+  }
+
+  .feedback.idle {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.76rem;
+  }
+
+  .btn-next {
+    margin-top: 9px;
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.83rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .btn-next:hover {
+    background: #00ffcc;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,255,224,0.28);
+  }
+
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .score-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .score-label { font-size: 0.7rem; color: var(--muted); }
+
+  .intro-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,8,16,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 20;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    padding: 24px;
+  }
+
+  .intro-overlay h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .intro-overlay p {
+    color: var(--muted);
+    text-align: center;
+    max-width: 380px;
+    font-size: 0.84rem;
+    line-height: 1.65;
+  }
+
+  .btn-start {
+    padding: 12px 32px;
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.92rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .btn-start:hover {
+    background: #00ffcc;
+    transform: scale(1.04);
+    box-shadow: 0 8px 30px rgba(0,255,224,0.35);
+  }
+
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-width: 400px;
+    width: 100%;
+  }
+  .concept-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .concept-card .cname { font-weight: 800; font-size: 0.86rem; }
+  .concept-card .cdesc { color: var(--muted); font-size: 0.72rem; margin-top: 3px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VettoriLab</h1>
+  <span>1 quadretto = 1 cm · origine comune · quiz interattivo</span>
+</header>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <span class="canvas-label">piano cartesiano</span>
+    <canvas id="c"></canvas>
+
+    <div class="glossary">
+      <div class="glos-item">
+        <div class="glos-key" style="color:var(--accent3)">📏 Modulo</div>
+        <div class="glos-val">Lunghezza in cm</div>
+      </div>
+      <div class="glos-item">
+        <div class="glos-key" style="color:#a78bfa">— Direzione</div>
+        <div class="glos-val">La retta tratteggiata viola — l'inclinazione, non il senso</div>
+      </div>
+      <div class="glos-item">
+        <div class="glos-key" style="color:#fb923c">➤ Verso</div>
+        <div class="glos-val">Dove punta la punta della freccia</div>
+      </div>
+      <div class="glos-item">
+        <div class="glos-key" style="color:#ffffff">● Origine</div>
+        <div class="glos-val">Punto di partenza O(0,0)</div>
+      </div>
+    </div>
+
+    <div class="intro-overlay" id="intro">
+      <h2>VettoriLab</h2>
+      <p>Impara a distinguere le quattro proprietà di un vettore attraverso quiz progettati per trarre in inganno — e farti capire davvero.</p>
+      <div class="concepts-grid">
+        <div class="concept-card">
+          <div class="cname" style="color:var(--accent3)">📏 Modulo</div>
+          <div class="cdesc">Lunghezza del vettore, in cm (1 quadretto = 1 cm)</div>
+        </div>
+        <div class="concept-card">
+          <div class="cname" style="color:#a78bfa">— Direzione</div>
+          <div class="cdesc">La retta su cui giace. Stessa inclinazione = stessa direzione, anche se i versi sono opposti!</div>
+        </div>
+        <div class="concept-card">
+          <div class="cname" style="color:#fb923c">➤ Verso</div>
+          <div class="cdesc">Il senso della freccia. Su o giù? Destra o sinistra? Dipende dalla punta.</div>
+        </div>
+        <div class="concept-card">
+          <div class="cname">● Origine</div>
+          <div class="cdesc">Punto di partenza. Qui entrambi partono da O(0,0).</div>
+        </div>
+      </div>
+      <button class="btn-start" onclick="startQuiz()">Inizia il Quiz →</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <div class="card-title">Punteggio</div>
+      <div class="score-row">
+        <div>
+          <div class="score-val" id="scoreVal">0 / 0</div>
+          <div class="score-label">risposte corrette</div>
+        </div>
+        <div style="text-align:right">
+          <div class="score-val" id="streakVal" style="color:var(--accent3)">🔥 0</div>
+          <div class="score-label">serie</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="vecCard" style="display:none">
+      <div class="card-title">Proprietà dei vettori</div>
+      <div id="vecA" class="vec-info" style="background:rgba(0,255,224,0.06);border:1px solid rgba(0,255,224,0.14)">
+        <div class="vec-name" style="color:var(--accent)">
+          A&#x20D7; <span style="font-size:0.68rem;color:var(--muted);font-weight:400">(ciano)</span>
+        </div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:var(--accent3)"></span>Modulo</span><span class="v" id="aModulo">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#a78bfa"></span>Direzione</span><span class="v" id="aDirezione">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#fb923c"></span>Verso</span><span class="v" id="aVerso">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#fff"></span>Origine</span><span class="v" id="aOrigine">—</span></div>
+      </div>
+      <div id="vecB" class="vec-info" style="background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.14)">
+        <div class="vec-name" style="color:var(--accent2)">
+          B&#x20D7; <span style="font-size:0.68rem;color:var(--muted);font-weight:400">(rosso)</span>
+        </div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:var(--accent3)"></span>Modulo</span><span class="v" id="bModulo">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#a78bfa"></span>Direzione</span><span class="v" id="bDirezione">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#fb923c"></span>Verso</span><span class="v" id="bVerso">—</span></div>
+        <div class="row"><span class="k"><span class="dot-icon" style="background:#fff"></span>Origine</span><span class="v" id="bOrigine">—</span></div>
+      </div>
+    </div>
+
+    <div class="card quiz-card" id="quizCard" style="display:none">
+      <div class="card-title">Domanda</div>
+      <div class="question-box" id="qbox">Caricamento...</div>
+      <div class="answers">
+        <button class="btn-ans" id="btnSi" onclick="answer(true)">✓ Sì</button>
+        <button class="btn-ans" id="btnNo" onclick="answer(false)">✗ No</button>
+      </div>
+      <div class="feedback idle" id="feedback">Osserva i vettori e rispondi alla domanda.</div>
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()">Prossima domanda →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, CX, CY, SCALE;
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  W = rect.width; H = rect.height;
+  CX = W / 2; CY = H / 2;
+  SCALE = Math.min(W, H) / 13;
+  if (state && state.active) drawAll();
+}
+
+window.addEventListener('resize', () => { setTimeout(resize, 50); });
+
+const state = {
+  active: false,
+  vA: null, vB: null,
+  question: null, correctAnswer: null, explanation: '',
+  answered: false,
+  score: 0, total: 0, streak: 0,
+  animStart: 0
+};
+
+// ── helpers ──────────────────────────────────────────────────
+const toRad = d => d * Math.PI / 180;
+const normAngle = a => ((a % 360) + 360) % 360;
+const directionOf = a => normAngle(a) % 180;
+const randModCm = () => Math.round(2 + Math.random() * 3); // 2–5 cm integer
+const NICE = [0,30,45,60,90,120,135,150,180,210,225,240,270,300,315,330];
+const randAngle = () => NICE[Math.floor(Math.random() * NICE.length)];
+const mkV = (angle, mod) => ({ angle, mod, ox: 0, oy: 0 });
+
+// ── Scenarios ────────────────────────────────────────────────
+const SCENARIOS = [
+  () => {  // same direction, opp verse → ask direzione TRUE
+    const m = randModCm(), a = randAngle(), b = normAngle(a+180);
+    return { vA: mkV(a,m), vB: mkV(b,m), property:'direzione', correct:true,
+      explanation:'✓ Stessa direzione! Entrambi giacciono sulla stessa retta (vedi la linea viola tratteggiata). La direzione è la retta, non il verso: anche se le frecce puntano in sensi opposti, la direzione è identica.' };
+  },
+  () => {  // same direction, opp verse → ask verso FALSE
+    const m = randModCm(), a = randAngle(), b = normAngle(a+180);
+    return { vA: mkV(a,m), vB: mkV(b,m), property:'verso', correct:false,
+      explanation:'✗ Verso diverso! Le frecce puntano in sensi opposti. Stessa retta (stessa direzione) non vuol dire stesso verso: il verso è solo dove punta la punta!' };
+  },
+  () => {  // same verse, diff mod → ask verso TRUE
+    const a = randAngle(); let m1=randModCm(), m2=randModCm();
+    while(m2===m1) m2=randModCm();
+    return { vA: mkV(a,m1), vB: mkV(a,m2), property:'verso', correct:true,
+      explanation:'✓ Stesso verso! Entrambe le frecce puntano nella stessa direzione e nello stesso senso. Il modulo è diverso ('+m1+' cm vs '+m2+' cm), ma il verso dipende solo dal senso della freccia, non dalla sua lunghezza.' };
+  },
+  () => {  // same verse, diff mod → ask modulo FALSE
+    const a = randAngle(); let m1=randModCm(), m2=randModCm();
+    while(m2===m1) m2=randModCm();
+    return { vA: mkV(a,m1), vB: mkV(a,m2), property:'modulo', correct:false,
+      explanation:'✗ Modulo diverso! Stesso verso e stessa direzione, ma le lunghezze sono diverse: '+m1+' cm vs '+m2+' cm. Il modulo si misura sulla freccia, non si legge dal senso.' };
+  },
+  () => {  // same mod, diff direction → ask modulo TRUE
+    let a1=randAngle(), a2=a1;
+    while(directionOf(a2)===directionOf(a1)) a2=randAngle();
+    const m=randModCm();
+    return { vA: mkV(a1,m), vB: mkV(a2,m), property:'modulo', correct:true,
+      explanation:'✓ Stesso modulo! Entrambi i vettori misurano '+m+' cm anche se puntano in direzioni diverse. Il modulo è solo la lunghezza, non dipende dall\'orientamento.' };
+  },
+  () => {  // same mod, diff direction → ask direzione FALSE
+    let a1=randAngle(), a2=a1;
+    while(Math.abs(directionOf(a2)-directionOf(a1))<30) a2=randAngle();
+    const m=randModCm();
+    return { vA: mkV(a1,m), vB: mkV(a2,m), property:'direzione', correct:false,
+      explanation:'✗ Direzione diversa! Le rette su cui giacciono i vettori (linee viola tratteggiate) hanno inclinazioni diverse. Stesso modulo non significa stessa direzione.' };
+  },
+  () => {  // perpendicular → ask verso FALSE
+    const a1=randAngle(), a2=normAngle(a1+90);
+    return { vA: mkV(a1,randModCm()), vB: mkV(a2,randModCm()), property:'verso', correct:false,
+      explanation:'✗ Verso diverso! I vettori sono perpendicolari: le loro rette si incrociano a 90°. Non possono avere stesso verso, perché per avere stesso verso devono avere anche la stessa direzione.' };
+  },
+  () => {  // perpendicular → ask direzione FALSE
+    const a1=randAngle(), a2=normAngle(a1+90);
+    return { vA: mkV(a1,randModCm()), vB: mkV(a2,randModCm()), property:'direzione', correct:false,
+      explanation:'✗ Direzione diversa! Le rette tratteggiate viola mostrano chiaramente inclinazioni ortogonali (90°). Rette perpendicolari hanno direzioni diverse.' };
+  },
+  () => {  // same dir+verse, diff mod → ask direzione TRUE
+    const a=randAngle(); let m1=randModCm(), m2=randModCm();
+    while(m2===m1) m2=randModCm();
+    return { vA: mkV(a,m1), vB: mkV(a,m2), property:'direzione', correct:true,
+      explanation:'✓ Stessa direzione! Anche stessa verso e stessa retta. Il modulo è diverso ('+m1+' vs '+m2+' cm), ma direzione e verso sono indipendenti dalla lunghezza.' };
+  },
+  () => {  // completely different → ask modulo TRUE (same mod)
+    let a1=randAngle(), a2=a1;
+    while(a2===a1 || directionOf(a2)===directionOf(a1)) a2=randAngle();
+    const m=randModCm();
+    return { vA: mkV(a1,m), vB: mkV(a2,m), property:'modulo', correct:true,
+      explanation:'✓ Stesso modulo! Entrambi misurano '+m+' cm, anche se la direzione e il verso sono completamente diversi. Il modulo è solo la lunghezza della freccia.' };
+  },
+];
+
+let lastIdx = -1;
+function pickScenario() {
+  let idx; do { idx = Math.floor(Math.random()*SCENARIOS.length); } while(idx===lastIdx);
+  lastIdx = idx; return SCENARIOS[idx]();
+}
+
+// ── Drawing ───────────────────────────────────────────────────
+function toC(gx, gy) { return { x: CX + gx*SCALE, y: CY - gy*SCALE }; }
+
+function drawGrid() {
+  ctx.clearRect(0, 0, W, H);
+  // Minor grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.055)';
+  ctx.lineWidth = 0.8;
+  for (let i=-14; i<=14; i++) {
+    const px=CX+i*SCALE, py=CY+i*SCALE;
+    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0,CY); ctx.lineTo(W,CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX,0); ctx.lineTo(CX,H); ctx.stroke();
+  // Tick labels
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '9px Space Mono, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let i=-6; i<=6; i++) {
+    if(i===0) continue;
+    ctx.fillText(i+'', CX+i*SCALE, CY+4);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let i=-5; i<=5; i++) {
+    if(i===0) continue;
+    ctx.fillText(i+'', CX-5, CY-i*SCALE);
+  }
+  // Axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = 'bold 11px Space Mono, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('x', W-14, CY-8);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('y', CX+10, 14);
+}
+
+// Draw direction line through origin
+function drawDirLine(angleDeg, alpha) {
+  const rad = toRad(angleDeg);
+  const L = Math.max(W, H);
+  const dx = Math.cos(rad), dy = -Math.sin(rad);
+  ctx.save();
+  ctx.strokeStyle = '#a78bfa';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([7, 5]);
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.beginPath();
+  ctx.moveTo(CX - dx*L, CY - dy*L);
+  ctx.lineTo(CX + dx*L, CY + dy*L);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawArrow(v, color, label, t) {
+  const rad = toRad(v.angle);
+  const modPx = v.mod * SCALE * t;
+  const dx = Math.cos(rad), dy = -Math.sin(rad);
+  const o = toC(0, 0);
+  const ex = o.x + dx*modPx, ey = o.y + dy*modPx;
+  const ang2 = Math.atan2(ey-o.y, ex-o.x);
+  const HL = 14;
+
+  ctx.save();
+  ctx.shadowBlur = 22; ctx.shadowColor = color;
+
+  // shaft
+  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(o.x, o.y);
+  ctx.lineTo(ex - HL*0.55*Math.cos(ang2), ey - HL*0.55*Math.sin(ang2));
+  ctx.stroke();
+
+  // head
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - HL*Math.cos(ang2-0.44), ey - HL*Math.sin(ang2-0.44));
+  ctx.lineTo(ex - HL*Math.cos(ang2+0.44), ey - HL*Math.sin(ang2+0.44));
+  ctx.closePath(); ctx.fill();
+
+  ctx.restore();
+
+  if (t < 0.15) return;
+
+  // Vec label with arrow-hat: two-pass render
+  const perpX = Math.sin(ang2), perpY = -Math.cos(ang2);
+  const dist = 20;
+  const lx = ex + perpX*dist + dx*6;
+  const ly = ey + perpY*dist + dy*6;
+
+  ctx.save();
+  ctx.shadowBlur = 10; ctx.shadowColor = color;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  // letter
+  ctx.font = 'bold 16px Syne, sans-serif';
+  ctx.fillText(label, lx, ly+2);
+  // hat arrow above
+  ctx.font = 'bold 10px Syne, sans-serif';
+  ctx.fillText('→', lx+1, ly-10);
+  ctx.restore();
+
+  // modulo label along shaft middle
+  if (t > 0.4) {
+    const mx = o.x + dx*modPx*0.5 + perpX*18;
+    const my = o.y + dy*modPx*0.5 + perpY*18;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,224,102,0.95)';
+    ctx.font = 'bold 11px Space Mono, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(v.mod+' cm', mx, my);
+    ctx.restore();
+  }
+}
+
+function drawOrigin() {
+  const o = toC(0,0);
+  ctx.save();
+  ctx.shadowBlur = 16; ctx.shadowColor = '#fff';
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(o.x, o.y, 5, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font = 'bold 10px Space Mono, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('O', o.x+8, o.y+3);
+  ctx.restore();
+}
+
+function drawAll() {
+  drawGrid();
+  if (!state.vA || !state.vB) return;
+
+  const t = Math.min(1, (Date.now()-state.animStart)/700);
+  const ease = 1 - Math.pow(1-t, 3);
+
+  // Direction lines (both same violet — shows retta concept)
+  drawDirLine(state.vA.angle, ease);
+  drawDirLine(state.vB.angle, ease);
+
+  drawArrow(state.vA, '#00ffe0', 'A', ease);
+  drawArrow(state.vB, '#ff4d6d', 'B', ease);
+  drawOrigin();
+
+  if (t < 1) requestAnimationFrame(drawAll);
+}
+
+// ── UI ────────────────────────────────────────────────────────
+function versoFull(a) {
+  const n = normAngle(a);
+  const d = ['Est →','Nord-Est ↗','Nord ↑','Nord-Ovest ↖','Ovest ←','Sud-Ovest ↙','Sud ↓','Sud-Est ↘'];
+  return d[Math.round(n/45)%8];
+}
+function formatDir(a) { return directionOf(a)+'° (retta)'; }
+
+function updateSidebar(vA, vB) {
+  document.getElementById('aModulo').textContent    = vA.mod+' cm';
+  document.getElementById('aDirezione').textContent = formatDir(vA.angle);
+  document.getElementById('aVerso').textContent     = versoFull(vA.angle);
+  document.getElementById('aOrigine').textContent   = 'O(0, 0)';
+  document.getElementById('bModulo').textContent    = vB.mod+' cm';
+  document.getElementById('bDirezione').textContent = formatDir(vB.angle);
+  document.getElementById('bVerso').textContent     = versoFull(vB.angle);
+  document.getElementById('bOrigine').textContent   = 'O(0, 0)';
+}
+
+function updateScore() {
+  document.getElementById('scoreVal').textContent  = state.score+' / '+state.total;
+  document.getElementById('streakVal').textContent = '🔥 '+state.streak;
+}
+
+function setQuestion(prop) {
+  const map = {
+    direzione: 'stessa <span class="highlight">direzione</span>',
+    verso:     'stesso <span class="highlight">verso</span>',
+    modulo:    'stesso <span class="highlight">modulo</span>',
+  };
+  document.getElementById('qbox').innerHTML =
+    'A&#x20D7; e B&#x20D7; hanno '+map[prop]+'?';
+}
+
+function startQuiz() {
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('vecCard').style.display  = 'block';
+  document.getElementById('quizCard').style.display = 'flex';
+  state.active = true;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  const sc = pickScenario();
+  Object.assign(state, { vA:sc.vA, vB:sc.vB, question:sc.property,
+    correctAnswer:sc.correct, explanation:sc.explanation,
+    answered:false, animStart:Date.now() });
+
+  updateSidebar(state.vA, state.vB);
+  setQuestion(state.question);
+
+  const fb = document.getElementById('feedback');
+  fb.textContent = 'Osserva la linea tratteggiata (direzione) e le punte delle frecce (verso).';
+  fb.className = 'feedback idle';
+
+  ['btnSi','btnNo'].forEach(id => {
+    const b = document.getElementById(id);
+    b.className = 'btn-ans'; b.disabled = false;
+  });
+  document.getElementById('btnNext').style.display = 'none';
+
+  requestAnimationFrame(drawAll);
+}
+
+function answer(userSays) {
+  if (state.answered) return;
+  state.answered = true; state.total++;
+  const ok = userSays === state.correctAnswer;
+  if (ok) { state.score++; state.streak++; } else { state.streak = 0; }
+  updateScore();
+
+  const si = document.getElementById('btnSi');
+  const no = document.getElementById('btnNo');
+  si.disabled = true; no.disabled = true;
+
+  (userSays ? si : no).className = 'btn-ans '+(ok?'correct':'wrong');
+  if (!ok) (state.correctAnswer ? si : no).className = 'btn-ans correct';
+
+  const fb = document.getElementById('feedback');
+  fb.textContent = state.explanation;
+  fb.className = 'feedback '+(ok?'correct':'wrong');
+  document.getElementById('btnNext').style.display = 'block';
+}
+
+// Init
+setTimeout(resize, 80);
+</script>
+</body>
+</html>
