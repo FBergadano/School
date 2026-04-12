@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legge di Hooke — Forza Elastica</title>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['$','$']] },
+    svg: { fontCache: 'global' },
+    startup: { ready() { MathJax.startup.defaultReady(); } }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root {
+    --bg:#0d0a08; --paper:#1a1208;
+    --copper:#b87333; --copper-bright:#e8983a;
+    --text-primary:#e8d5b0; --text-secondary:#9a8060;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text-primary);font-family:'Crimson Text',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;user-select:none;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(184,115,51,.05) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  header{text-align:center;padding:2.5rem 2rem 1.2rem;position:relative;z-index:1;}
+  .year-badge{font-size:.82rem;letter-spacing:.42em;color:var(--copper);text-transform:uppercase;margin-bottom:.7rem;display:block;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(1.9rem,4.5vw,3.2rem);font-weight:700;line-height:1.1;margin-bottom:.4rem;}
+  h1 em{color:var(--copper-bright);font-style:italic;}
+  .formula-display{font-size:1.5rem;color:var(--copper-bright);margin:1rem 0 .5rem;}
+  /* MathJax colour overrides */
+  .formula-display mjx-container svg{fill:var(--copper-bright);}
+  .ornament{display:flex;align-items:center;gap:1rem;justify-content:center;margin:1.2rem 0;}
+  .ornament::before,.ornament::after{content:'';width:70px;height:1px;background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:7px;height:7px;background:var(--copper);transform:rotate(45deg);}
+  .stage{width:100%;max-width:1000px;padding:0 1.5rem 2.5rem;display:flex;flex-direction:column;align-items:center;gap:1.8rem;position:relative;z-index:1;}
+  .canvas-wrap{width:100%;max-width:900px;border:1px solid rgba(184,115,51,.22);border-radius:5px;background:var(--paper);overflow:hidden;box-shadow:0 0 70px rgba(184,115,51,.07),inset 0 0 35px rgba(0,0,0,.6);position:relative;}
+  canvas{display:block;width:100%;height:auto;cursor:grab;}
+  canvas:active{cursor:grabbing;}
+  .controls{width:100%;max-width:900px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;}
+  .control-section{background:rgba(17,22,32,.8);border:1px solid rgba(184,115,51,.15);border-radius:4px;padding:1.2rem 1.4rem;}
+  .section-title{font-family:'Playfair Display',serif;font-size:.95rem;color:var(--copper-bright);letter-spacing:.08em;margin-bottom:1rem;text-transform:uppercase;font-weight:600;}
+  .control-group{margin-bottom:1rem;}
+  .control-label{font-size:.88rem;color:var(--text-secondary);margin-bottom:.4rem;display:block;}
+  select,input[type=range]{width:100%;padding:.5rem;background:rgba(26,18,8,.6);border:1px solid rgba(184,115,51,.25);border-radius:3px;color:var(--text-primary);font-family:'Crimson Text',serif;font-size:.9rem;}
+  select{cursor:pointer;}
+  select option{background:#1a1208;color:var(--text-primary);}
+  input[type=range]{-webkit-appearance:none;height:6px;background:rgba(184,115,51,.2);outline:none;padding:0;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--copper);cursor:pointer;border-radius:50%;}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;background:var(--copper);cursor:pointer;border-radius:50%;border:none;}
+  .value-display{color:var(--copper-bright);font-weight:600;margin-left:.5rem;}
+  .info-box{background:rgba(184,115,51,.08);border:1px solid rgba(184,115,51,.25);border-radius:4px;padding:.8rem 1rem;margin-top:.8rem;font-size:.88rem;line-height:1.8;}
+  .hi{color:var(--text-primary);font-weight:600;}
+  .instruction{background:linear-gradient(135deg,rgba(184,115,51,.15) 0%,rgba(232,152,58,.1) 100%);border:1px solid rgba(184,115,51,.3);border-radius:5px;padding:1rem 1.2rem;font-size:.95rem;line-height:1.6;text-align:center;}
+  /* MathJax in info boxes: match surrounding text colour */
+  .info-box mjx-container svg{fill:var(--text-primary);}
+  .info-box .mj-force mjx-container svg{fill:#ff8866;}
+  .info-box .mj-disp  mjx-container svg{fill:#66bbff;}
+  /* Broken overlay */
+  #brokenOverlay{display:none;position:absolute;inset:0;background:rgba(13,10,8,.82);flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;z-index:10;border-radius:5px;}
+  #brokenOverlay.show{display:flex;}
+  .broken-msg{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3vw,2.2rem);color:#e05030;text-align:center;text-shadow:0 0 30px rgba(220,80,40,.6);animation:flicker 1.4s infinite alternate;}
+  @keyframes flicker{0%{opacity:1}60%{opacity:.85}80%{opacity:.6}100%{opacity:1}}
+  .reset-btn{font-family:'Playfair Display',serif;font-size:1rem;background:none;border:1px solid var(--copper);color:var(--copper-bright);padding:.6rem 1.8rem;border-radius:3px;cursor:pointer;letter-spacing:.1em;transition:background .2s,color .2s;}
+  .reset-btn:hover{background:var(--copper);color:#0d0a08;}
+  @media(max-width:750px){.controls{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="year-badge">Inghilterra · 1660</span>
+  <h1>La <em>Legge di Hooke</em></h1>
+  <div class="formula-display">$\vec{F} = -k\,\Delta\vec{s}$</div>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+  <p style="font-size:1rem;color:#9a8060;font-style:italic;max-width:600px;margin:0 auto;line-height:1.6;">
+    La forza elastica è proporzionale allo spostamento dalla posizione di equilibrio
+    e diretta in senso opposto: più comprimi o allunghi la molla, più forte essa reagisce
+  </p>
+</header>
+
+<div class="stage">
+  <div class="canvas-wrap" style="position:relative;">
+    <canvas id="c" width="900" height="600"></canvas>
+    <div id="brokenOverlay">
+      <div class="broken-msg">💥 Hai rotto la molla!</div>
+      <button class="reset-btn" onclick="resetSpring()">↺ Ripristina</button>
+    </div>
+  </div>
+
+  <div class="instruction">
+    <strong>Interazione:</strong> Clicca e trascina la massa per comprimere o allungare la molla —
+    poi rilascia e osserva l'oscillazione smorzata. Attenzione a non tirare troppo!
+  </div>
+
+  <div class="controls">
+    <div class="control-section">
+      <h3 class="section-title">⚙ Proprietà della Molla</h3>
+      <div class="control-group">
+        <label class="control-label">Materiale</label>
+        <select id="materialSelect" onchange="updateMaterial()">
+          <option value="soft">Gomma morbida (k bassa)</option>
+          <option value="medium" selected>Acciaio standard (k media)</option>
+          <option value="hard">Acciaio temperato (k alta)</option>
+          <option value="veryhard">Titanio (k molto alta)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Spessore del filo: <span class="value-display" id="thicknessVal">2.0 mm</span></label>
+        <input type="range" id="thicknessRange" min="1" max="4" step="0.5" value="2" oninput="updateThickness()">
+      </div>
+      <div class="control-group">
+        <label class="control-label">Numero di spire: <span class="value-display" id="coilsVal">10</span></label>
+        <input type="range" id="coilsRange" min="5" max="20" step="1" value="10" oninput="updateCoils()">
+      </div>
+      <div class="info-box">Costante elastica: <span class="hi" id="kVal">k = 50 N/m</span></div>
+    </div>
+
+    <div class="control-section">
+      <h3 class="section-title">↔ Spostamento</h3>
+      <div class="info-box" style="margin-top:0;">
+        Posizione naturale: <span class="hi">$x_0 = 300\,\text{px}$</span><br>
+        Posizione attuale: <span class="hi" id="currentPosVal">$x = 300\,\text{px}$</span><br>
+        <strong>Spostamento:</strong> <span class="hi" id="displacementVal">$\Delta s = 0\,\text{px}$</span>
+      </div>
+      <div class="info-box">
+        <strong>Forza elastica:</strong><br>
+        $\vec{F} = -k\,\Delta\vec{s}$<br>
+        <span class="hi" id="forceVal">$F = 0\,\text{N}$</span>
+      </div>
+      <div class="info-box">
+        <strong>Direzione:</strong><br>
+        <span class="hi" id="directionVal">Sistema in equilibrio</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Canvas ────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 900, H = 600;
+
+const springFixedX  = 150;
+const springY       = H / 2;
+const naturalLength = 300;
+const BREAK_LIMIT   = 320;
+const forceScale    = 2;
+const MASS          = 1.0;
+const DAMPING       = 0.018;
+
+let material  = 'medium', thickness = 2.0, numCoils = 10, k = 50;
+let springEndX = springFixedX + naturalLength;
+let velocity  = 0, broken = false, isDragging = false, dragOffsetX = 0, lastTime = null;
+
+const materials = {
+  soft:     {k:20,  name:'Gomma morbida',    color:'#c89060'},
+  medium:   {k:50,  name:'Acciaio standard',  color:'#8a9aa8'},
+  hard:     {k:100, name:'Acciaio temperato', color:'#7a8a98'},
+  veryhard: {k:200, name:'Titanio',           color:'#6a7a88'}
+};
+
+// ── MathJax helpers ───────────────────────────────────────────────────────
+function setMath(id, tex) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '$' + tex + '$';
+  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+function updateMaterial()  { material  = document.getElementById('materialSelect').value; calculateK(); }
+function updateThickness() { thickness = parseFloat(document.getElementById('thicknessRange').value); document.getElementById('thicknessVal').textContent = thickness.toFixed(1)+' mm'; calculateK(); }
+function updateCoils()     { numCoils  = parseInt(document.getElementById('coilsRange').value); document.getElementById('coilsVal').textContent = numCoils; calculateK(); }
+
+function calculateK() {
+  k = materials[material].k * Math.pow(thickness/2,2) / (numCoils/10);
+  document.getElementById('kVal').textContent = 'k = '+k.toFixed(1)+' N/m';
+  updatePhysics();
+}
+
+function updatePhysics() {
+  const disp  = springEndX - springFixedX - naturalLength;
+  const force = broken ? 0 : -k*(disp/100);
+  const sign  = v => v>=0 ? '+' : '-';
+
+  setMath('currentPosVal',  `x = ${springEndX.toFixed(0)}\\,\\text{px}`);
+  setMath('displacementVal',`\\Delta s = ${disp>=0?'+':''}${disp.toFixed(0)}\\,\\text{px}`);
+  setMath('forceVal',       `F = ${force>=0?'+':''}${force.toFixed(1)}\\,\\text{N}`);
+
+  const dirEl = document.getElementById('directionVal');
+  if (broken)           dirEl.textContent = '— molla rotta —';
+  else if(Math.abs(disp)<5) dirEl.textContent = 'Sistema in equilibrio';
+  else if(disp>0)       dirEl.textContent = '← Forza verso sinistra (richiamo)';
+  else                  dirEl.textContent = 'Forza verso destra (richiamo) →';
+}
+
+function resetSpring() {
+  broken=false; velocity=0; springEndX=springFixedX+naturalLength;
+  document.getElementById('brokenOverlay').classList.remove('show');
+  updatePhysics();
+}
+
+// ── Physics ───────────────────────────────────────────────────────────────
+function physicsStep(dt) {
+  if (broken||isDragging) return;
+  const disp = springEndX-springFixedX-naturalLength;
+  velocity += (-k*(disp/100))/MASS*100*dt;
+  velocity *= (1-DAMPING);
+  springEndX += velocity*dt;
+  springEndX = Math.max(springFixedX+60, Math.min(W-60, springEndX));
+  updatePhysics();
+}
+
+function checkBreak() {
+  if (!broken && Math.abs(springEndX-springFixedX-naturalLength)>BREAK_LIMIT) {
+    broken=true; velocity=0;
+    document.getElementById('brokenOverlay').classList.add('show');
+    updatePhysics();
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+function toC(e,t){const r=canvas.getBoundingClientRect(),s=t||e;return{x:(s.clientX-r.left)*(W/r.width),y:(s.clientY-r.top)*(H/r.height)};}
+function startDrag(mx,my){if(broken)return;if(Math.abs(mx-springEndX)<35&&Math.abs(my-springY)<45){isDragging=true;dragOffsetX=mx-springEndX;velocity=0;}}
+function moveDrag(mx){if(!isDragging)return;springEndX=Math.max(springFixedX+60,Math.min(W-60,mx-dragOffsetX));checkBreak();updatePhysics();}
+function endDrag(){isDragging=false;}
+
+canvas.addEventListener('mousedown',  e=>{const p=toC(e);startDrag(p.x,p.y);});
+canvas.addEventListener('mousemove',  e=>{if(isDragging){const p=toC(e);moveDrag(p.x);}});
+canvas.addEventListener('mouseup',    endDrag);
+canvas.addEventListener('mouseleave', endDrag);
+canvas.addEventListener('touchstart', e=>{e.preventDefault();const p=toC(e,e.touches[0]);startDrag(p.x,p.y);},{passive:false});
+canvas.addEventListener('touchmove',  e=>{e.preventDefault();if(isDragging){const p=toC(e,e.touches[0]);moveDrag(p.x);}},{passive:false});
+canvas.addEventListener('touchend',   endDrag);
+
+// ── Draw: canvas vectors drawn natively (no MathJax on canvas) ───────────
+// We use a clean approach: italicised letter + a proper overline arrow drawn with canvas paths
+
+function arrowAbove(c, letter, x, y, col, fs) {
+  // letter in italic serif, small arrow path drawn above
+  c.save();
+  c.fillStyle = col;
+  c.font = `italic bold ${fs}px 'Playfair Display', serif`;
+  c.textAlign = 'center';
+  const lw = c.measureText(letter).width;
+  c.fillText(letter, x, y);
+  // draw arrow above centre of letter
+  const ax = x, ay = y - fs*0.82, aw = lw*0.72, ah = fs*0.13;
+  c.strokeStyle = col; c.lineWidth = fs*0.07; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(ax-aw/2, ay); c.lineTo(ax+aw/2, ay); c.stroke();
+  // arrowhead
+  c.beginPath();
+  c.moveTo(ax+aw/2, ay);
+  c.lineTo(ax+aw/2-ah*1.1, ay-ah);
+  c.lineTo(ax+aw/2-ah*1.1, ay+ah);
+  c.closePath(); c.fill();
+  c.restore();
+}
+
+function drawBackground() {
+  const bg=ctx.createRadialGradient(W/2,H*.3,0,W/2,H/2,W*.7);
+  bg.addColorStop(0,'#1a1612'); bg.addColorStop(1,'#0d0a08');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(184,115,51,.2)'; ctx.lineWidth=1; ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(springFixedX+naturalLength,springY-80); ctx.lineTo(springFixedX+naturalLength,springY+80); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(184,115,51,.4)'; ctx.font='italic 12px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.fillText('Posizione naturale',springFixedX+naturalLength,springY-90);
+}
+
+function drawSpring() {
+  ctx.save();
+  const len=springEndX-springFixedX;
+  let col=materials[material].color;
+  const disp=Math.abs(springEndX-springFixedX-naturalLength);
+  if(!broken&&disp>BREAK_LIMIT*0.65){
+    const t=Math.min(1,(disp-BREAK_LIMIT*.65)/(BREAK_LIMIT*.35));
+    col=`rgb(${Math.round(138+117*t)},${Math.round(154*(1-t))},${Math.round(168*(1-t))})`;
+  }
+  if(broken){
+    ctx.strokeStyle='#664444'; ctx.lineWidth=thickness*1.2; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(springFixedX,springY);
+    let bx=springFixedX+20;
+    for(let i=0;i<6;i++){ctx.lineTo(bx,springY+(i%2===0?18:-10));bx+=18;}
+    ctx.stroke(); ctx.restore(); return;
+  }
+  const spacing=(len-40)/numCoils;
+  ctx.strokeStyle=col; ctx.lineWidth=thickness*1.5; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(springFixedX,springY);
+  let x=springFixedX+20;
+  for(let i=0;i<numCoils;i++){ctx.lineTo(x,springY-20);ctx.lineTo(x+spacing/2,springY);ctx.lineTo(x+spacing,springY+20);x+=spacing;}
+  ctx.lineTo(springEndX-20,springY); ctx.lineTo(springEndX,springY); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=thickness*.5; ctx.stroke();
+  ctx.restore();
+}
+
+function drawAnchors() {
+  ctx.save();
+  ctx.fillStyle='#5a4838'; ctx.fillRect(springFixedX-25,springY-40,25,80);
+  ctx.fillStyle='#7a6858'; ctx.fillRect(springFixedX-25,springY-40,25,5);
+  for(let y of[springY-25,springY,springY+25]){ctx.fillStyle='#4a3828';ctx.beginPath();ctx.arc(springFixedX-12,y,4,0,Math.PI*2);ctx.fill();}
+  if(!broken){
+    const mW=50,mH=60;
+    const g=ctx.createLinearGradient(0,springY-mH/2,0,springY+mH/2);
+    g.addColorStop(0,'#b87333');g.addColorStop(.5,'#c88343');g.addColorStop(1,'#a86323');
+    ctx.fillStyle=g;ctx.fillRect(springEndX,springY-mH/2,mW,mH);
+    ctx.fillStyle='rgba(255,230,200,.3)';ctx.fillRect(springEndX,springY-mH/2,mW,8);
+    ctx.strokeStyle='#8a5323';ctx.lineWidth=2;ctx.strokeRect(springEndX,springY-mH/2,mW,mH);
+    ctx.fillStyle='rgba(26,18,8,.7)';ctx.font='bold 14px Playfair Display,serif';ctx.textAlign='center';
+    ctx.fillText('m',springEndX+mW/2,springY+5);
+  }
+  ctx.restore();
+}
+
+function drawDisplacementVector() {
+  if(broken)return;
+  const disp=springEndX-(springFixedX+naturalLength);
+  if(Math.abs(disp)<5)return;
+  ctx.save();
+  const startX=springFixedX+naturalLength, endX=springEndX, y=springY+105;
+  ctx.strokeStyle='#44aaff'; ctx.fillStyle='#44aaff'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(startX,y); ctx.lineTo(endX,y); ctx.stroke();
+  const as=12, dir=disp>0?1:-1;
+  ctx.beginPath(); ctx.moveTo(endX,y); ctx.lineTo(endX-dir*as,y-as/2); ctx.lineTo(endX-dir*as,y+as/2); ctx.closePath(); ctx.fill();
+  const mx=startX+disp/2;
+  arrowAbove(ctx,'Δs',mx,y-14,'#44aaff',17);
+  ctx.font='13px Crimson Text,serif'; ctx.fillStyle='#44aaff'; ctx.textAlign='center';
+  ctx.fillText(disp.toFixed(0)+' px',mx,y+28);
+  ctx.restore();
+}
+
+function drawForceVector() {
+  if(broken)return;
+  const disp=springEndX-(springFixedX+naturalLength);
+  const force=-k*(disp/100);
+  if(Math.abs(force)<0.5)return;
+  ctx.save();
+  const startX=springEndX+55, startY=springY, endX=startX+force*forceScale, dir=force>0?1:-1;
+  ctx.strokeStyle='#ff4444'; ctx.fillStyle='#ff4444'; ctx.lineWidth=4;
+  ctx.shadowColor='#ff4444'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(endX,startY); ctx.stroke();
+  const as=14; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(endX,startY); ctx.lineTo(endX-dir*as,startY-as/2); ctx.lineTo(endX-dir*as,startY+as/2); ctx.closePath(); ctx.fill();
+  arrowAbove(ctx,'F',endX+dir*28,startY-8,'#ff6644',20);
+  ctx.font='14px Crimson Text,serif'; ctx.fillStyle='#ff4444'; ctx.textAlign='center';
+  ctx.fillText(force.toFixed(1)+' N',endX+dir*28,startY+30);
+  ctx.restore();
+}
+
+function drawLabels() {
+  ctx.save();
+  ctx.fillStyle='rgba(184,115,51,.7)'; ctx.font='italic 14px Crimson Text,serif'; ctx.textAlign='left';
+  ctx.fillText('k = '+k.toFixed(1)+' N/m',30,40);
+  ctx.fillText(materials[material].name,30,60);
+  // top-right formula: draw "F⃗ = −k Δs⃗" natively with arrowAbove
+  const rx=W-120, ry=38;
+  ctx.fillStyle='rgba(232,152,58,.65)'; ctx.font='italic 16px Playfair Display,serif'; ctx.textAlign='left';
+  arrowAbove(ctx,'F',rx,ry,'rgba(255,120,80,.75)',16);
+  ctx.fillStyle='rgba(232,152,58,.65)'; ctx.font='italic 16px Playfair Display,serif';
+  ctx.fillText(' = \u2212k',rx+14,ry);
+  arrowAbove(ctx,'Δs',rx+82,ry,'rgba(100,180,255,.75)',16);
+  ctx.restore();
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────
+function loop(ts) {
+  const dt=lastTime?Math.min((ts-lastTime)/1000,.05):.016; lastTime=ts;
+  physicsStep(dt);
+  ctx.clearRect(0,0,W,H);
+  drawBackground(); drawDisplacementVector(); drawSpring(); drawAnchors(); drawForceVector(); drawLabels();
+  requestAnimationFrame(loop);
+}
+
+calculateK(); updatePhysics(); requestAnimationFrame(loop);
+
+// Typeset MathJax once loaded
+document.addEventListener('DOMContentLoaded', () => {
+  if(window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
