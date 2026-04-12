@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corrente Elettrica — i = Δq/Δt</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg:       #060810;
+  --card:     #0b0e18;
+  --border:   rgba(60,140,255,0.18);
+  --blue:     #3c8cff;
+  --blue2:    #7eb8ff;
+  --amber:    #ffb340;
+  --amber2:   #ffe09a;
+  --copper:   #c87830;
+  --copper2:  #e8a860;
+  --green:    #30e08a;
+  --red:      #ff4060;
+  --text:     #dce8ff;
+  --muted:    #4a6080;
+  --gold:     #f0c060;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Text', serif;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  overflow-x: hidden;
+}
+
+/* Blueprint grid */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(60,140,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,140,255,0.04) 1px, transparent 1px),
+    linear-gradient(rgba(60,140,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,140,255,0.015) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+}
+
+/* Ambient glow */
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(60,140,255,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 70%, rgba(200,120,48,0.07) 0%, transparent 50%);
+}
+
+/* ─── HEADER ─── */
+header {
+  position: relative; z-index: 1;
+  text-align: center; padding: 2rem 2rem 0.6rem;
+}
+.eyebrow {
+  font-size: 0.72rem; letter-spacing: 0.5em; text-transform: uppercase;
+  color: var(--blue2); display: block; margin-bottom: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  font-weight: 700; line-height: 1.05; margin-bottom: 0.3rem;
+}
+h1 .formula-inline {
+  color: var(--amber);
+  font-style: italic;
+  text-shadow: 0 0 30px rgba(255,179,64,0.5);
+}
+.subtitle {
+  font-size: 1rem; color: var(--muted); font-style: italic;
+  max-width: 520px; margin: 0 auto; line-height: 1.6;
+}
+.divider {
+  display: flex; align-items: center; gap: 0.8rem;
+  justify-content: center; margin: 0.8rem auto; max-width: 260px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px;
+}
+.divider::before { background: linear-gradient(90deg, transparent, var(--blue)); }
+.divider::after  { background: linear-gradient(90deg, var(--copper), transparent); }
+.div-dot { width: 6px; height: 6px; background: var(--amber); border-radius: 50%;
+  box-shadow: 0 0 8px var(--amber); }
+
+/* ─── MAIN LAYOUT ─── */
+.main {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 1000px;
+  padding: 0 1rem 2.5rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+}
+
+/* ─── BIG FORMULA CARD ─── */
+.formula-card {
+  width: 100%; max-width: 820px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.4rem 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1.2rem;
+}
+.formula-big {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  color: var(--text);
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+}
+.f-i   { color: var(--amber);  font-style: italic; text-shadow: 0 0 20px rgba(255,179,64,0.5); }
+.f-dq  { color: var(--blue2);  font-style: italic; }
+.f-dt  { color: var(--green);  font-style: italic; }
+.f-eq  { color: var(--muted);  font-size: 0.85em; }
+.frac  { display: inline-flex; flex-direction: column; align-items: center;
+         gap: 0; vertical-align: middle; margin: 0 0.2rem; }
+.frac-num { border-bottom: 2px solid var(--muted); padding: 0 0.3rem 0.1rem; line-height: 1.1; }
+.frac-den { padding: 0.1rem 0.3rem 0; line-height: 1.1; }
+
+.formula-legend {
+  display: flex; flex-direction: column; gap: 0.4rem;
+  font-size: 0.9rem;
+}
+.leg-row { display: flex; align-items: baseline; gap: 0.5rem; }
+.leg-sym { font-family: 'Playfair Display', serif; font-style: italic;
+           font-size: 1rem; min-width: 2rem; text-align: right; }
+.leg-desc { color: var(--muted); }
+
+/* ─── CONDUCTOR CANVAS ─── */
+.canvas-section {
+  width: 100%; max-width: 820px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  position: relative;
+}
+canvas#conductor {
+  display: block; width: 100%; height: auto;
+}
+
+/* ─── CONTROLS ─── */
+.controls {
+  width: 100%; max-width: 820px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.ctrl-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.1rem 1.3rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+}
+.ctrl-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.ctrl-label .dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot-blue   { background: var(--blue);   box-shadow: 0 0 6px var(--blue); }
+.dot-amber  { background: var(--amber);  box-shadow: 0 0 6px var(--amber); }
+.dot-green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+.dot-copper { background: var(--copper2); box-shadow: 0 0 6px var(--copper); }
+
+.slider-row { display: flex; align-items: center; gap: 0.8rem; }
+input[type=range] {
+  -webkit-appearance: none; flex: 1; height: 3px;
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+.sl-blue  { background: linear-gradient(90deg, var(--blue)   var(--pct,50%), rgba(60,140,255,0.15)  var(--pct,50%)); }
+.sl-amber { background: linear-gradient(90deg, var(--amber)  var(--pct,50%), rgba(255,179,64,0.15)  var(--pct,50%)); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2); cursor: pointer;
+  transition: transform .15s;
+}
+.sl-blue::-webkit-slider-thumb  { background: radial-gradient(circle at 35% 35%, #a0d0ff, var(--blue)); box-shadow: 0 0 12px rgba(60,140,255,0.7); }
+.sl-amber::-webkit-slider-thumb { background: radial-gradient(circle at 35% 35%, #ffe0a0, var(--amber)); box-shadow: 0 0 12px rgba(255,179,64,0.7); }
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+.sl-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem; min-width: 4rem; text-align: right;
+  color: var(--gold);
+}
+
+/* ─── LIVE READOUT ─── */
+.readout {
+  width: 100%; max-width: 820px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.readout-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem 1.2rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  position: relative; overflow: hidden;
+}
+.readout-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.rc-dq::before  { background: linear-gradient(90deg, var(--blue), transparent); }
+.rc-dt::before  { background: linear-gradient(90deg, var(--green), transparent); }
+.rc-i::before   { background: linear-gradient(90deg, var(--amber), transparent); }
+.readout-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted);
+}
+.readout-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem; font-style: italic;
+}
+.rv-dq  { color: var(--blue2); }
+.rv-dt  { color: var(--green); }
+.rv-i   { color: var(--amber); text-shadow: 0 0 20px rgba(255,179,64,0.4); }
+.readout-unit {
+  font-size: 0.75rem; color: var(--muted); font-style: italic;
+}
+
+/* Play/Pause */
+.btn-play {
+  background: transparent; border: 1.5px solid var(--blue);
+  border-radius: 4px; padding: 0.5rem 1.2rem;
+  color: var(--blue2); font-family: 'Playfair Display', serif;
+  font-size: 0.9rem; letter-spacing: 0.08em; cursor: pointer;
+  transition: all .25s; white-space: nowrap;
+}
+.btn-play:hover { background: rgba(60,140,255,0.12); color: var(--text); }
+.btn-play.paused { border-color: var(--amber); color: var(--amber2); }
+
+.ctrl-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+/* ─── EXPLAINER STRIP ─── */
+.explainer {
+  width: 100%; max-width: 820px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem 1.4rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+  gap: 0.8rem;
+}
+.exp-block h3 {
+  font-family: 'Playfair Display', serif; font-size: 0.82rem;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem;
+}
+.exp-block p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+.exp-block p .hi { color: var(--text); font-style: italic; }
+
+@media (max-width: 580px) {
+  .controls, .readout { grid-template-columns: 1fr; }
+  .formula-card { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="eyebrow">Elettrodinamica · definizione operativa</span>
+  <h1>Corrente Elettrica &nbsp;<span class="formula-inline">i = Δq/Δt</span></h1>
+  <div class="divider"><div class="div-dot"></div></div>
+  <p class="subtitle">La corrente è la quantità di carica che attraversa una sezione del conduttore nell'unità di tempo.</p>
+</header>
+
+<div class="main">
+
+  <!-- Formula card -->
+  <div class="formula-card">
+    <div class="formula-big">
+      <span class="f-i">i</span>
+      <span style="color:var(--muted)"> = </span>
+      <span class="frac">
+        <span class="frac-num f-dq">Δq</span>
+        <span class="frac-den f-dt">Δt</span>
+      </span>
+    </div>
+    <div class="formula-legend">
+      <div class="leg-row"><span class="leg-sym f-i">i</span><span class="leg-desc">corrente elettrica &nbsp;[A = C/s]</span></div>
+      <div class="leg-row"><span class="leg-sym f-dq">Δq</span><span class="leg-desc">carica transitata &nbsp;[C = coulomb]</span></div>
+      <div class="leg-row"><span class="leg-sym f-dt">Δt</span><span class="leg-desc">intervallo di tempo &nbsp;[s]</span></div>
+    </div>
+  </div>
+
+  <!-- Conductor canvas -->
+  <div class="canvas-section">
+    <canvas id="conductor" width="820" height="300"></canvas>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-card">
+      <div class="ctrl-label"><span class="dot dot-amber"></span> Densità di carica</div>
+      <div class="slider-row">
+        <input type="range" id="slDensity" class="sl-amber" min="5" max="30" step="1" value="14" style="--pct:40%">
+        <span class="sl-val" id="valDensity">14</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);font-style:italic;">
+        Numero di elettroni per unità di lunghezza nel conduttore
+      </div>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-label"><span class="dot dot-blue"></span> Velocità di deriva</div>
+      <div class="slider-row">
+        <input type="range" id="slSpeed" class="sl-blue" min="0.3" max="4" step="0.1" value="1.5" style="--pct:40%">
+        <span class="sl-val" id="valSpeed">1.5×</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);font-style:italic;">
+        Velocità media di spostamento degli elettroni liberi (v<sub>d</sub>)
+      </div>
+    </div>
+  </div>
+
+  <!-- Live readout -->
+  <div class="readout">
+    <div class="readout-card rc-dq">
+      <div class="readout-lbl">Δq — carica transitata</div>
+      <div class="readout-val rv-dq" id="valDq">0.00</div>
+      <div class="readout-unit">coulomb [C]</div>
+    </div>
+    <div class="readout-card rc-dt">
+      <div class="readout-lbl">Δt — intervallo di tempo</div>
+      <div class="readout-val rv-dt" id="valDt">0.0</div>
+      <div class="readout-unit">secondi [s]</div>
+    </div>
+    <div class="readout-card rc-i">
+      <div class="readout-lbl">i = Δq/Δt — corrente</div>
+      <div class="readout-val rv-i" id="valI">—</div>
+      <div class="readout-unit">ampere [A]</div>
+    </div>
+  </div>
+
+  <!-- Play/Reset + window control -->
+  <div class="ctrl-card" style="width:100%;max-width:820px;">
+    <div class="ctrl-row">
+      <button class="btn-play" id="btnPlay" onclick="togglePlay()">⏸ Pausa</button>
+      <button class="btn-play" onclick="resetSim()" style="border-color:var(--muted);color:var(--muted);">↺ Reset</button>
+      <div style="flex:1"></div>
+      <div class="ctrl-label"><span class="dot dot-green"></span> Finestra Δt</div>
+      <div class="slider-row" style="flex:1;min-width:140px;">
+        <input type="range" id="slWindow" class="sl-blue" min="1" max="10" step="0.5" value="4" style="--pct:37%;background:linear-gradient(90deg,var(--green) var(--pct),rgba(48,224,138,0.15) var(--pct))">
+        <span class="sl-val" id="valWindow" style="color:var(--green);">4.0 s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explainer -->
+  <div class="explainer">
+    <div class="exp-block">
+      <h3 style="color:var(--amber2);">Gli elettroni liberi</h3>
+      <p>In un conduttore metallico esistono <span class="hi">elettroni di conduzione</span> che si muovono casualmente. Quando c'è un campo elettrico, acquistano una componente di velocità ordinata: la <span class="hi">velocità di deriva v<sub>d</sub></span>.</p>
+    </div>
+    <div class="exp-block">
+      <h3 style="color:var(--blue2);">La sezione di controllo</h3>
+      <p>La <span class="hi">linea verticale luminosa</span> rappresenta una sezione trasversale immaginaria del filo. Ogni volta che un elettrone la attraversa, una carica <span class="hi">q = 1.6×10⁻¹⁹ C</span> viene registrata come Δq.</p>
+    </div>
+    <div class="exp-block">
+      <h3 style="color:var(--green);">Il tempo Δt</h3>
+      <p>La <span class="hi">finestra verde</span> mostra l'intervallo di tempo Δt scelto. Contando le cariche che attraversano la sezione in quel Δt, il rapporto <span class="hi">Δq/Δt</span> fornisce la corrente istantanea i.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('conductor');
+const ctx = canvas.getContext('2d');
+const W = 820, H = 300;
+
+// Physical constants (scaled for visualization)
+const E_CHARGE = 1;          // 1 unit = 1.6e-19 C for display
+const CHARGE_DISPLAY = 1.6;  // multiply by 1e-19 for display
+
+// Conductor geometry
+const WIRE_Y1 = 80, WIRE_Y2 = 220;  // top/bottom of conductor
+const WIRE_X1 = 60, WIRE_X2 = 760;  // left/right
+const WIRE_MID = (WIRE_Y1 + WIRE_Y2) / 2;
+const WIRE_H = WIRE_Y2 - WIRE_Y1;
+
+// Section plane x position
+const SECTION_X = W / 2;
+
+// State
+let playing = true;
+let simTime = 0;        // simulation time (s, scaled)
+let windowDt = 4.0;     // Δt window size
+let windowStart = 0;    // when current Δt window started
+let chargeCrossed = 0;  // total charge in current window
+let chargeLog = [];     // [{t, q}] crossings in window
+let electrons = [];
+let density = 14;
+let speed = 1.5;
+let totalCharge = 0;    // running total
+let lastRaf = null;
+let prevTs = null;
+
+// Charge crossing flash
+let flashAlpha = 0;
+let recentCrossings = []; // {y, t, life} for visual sparks
+
+// ─── Init electrons ───────────────────────────────
+function initElectrons() {
+  electrons = [];
+  const count = Math.round(density * (WIRE_X2 - WIRE_X1) / 100);
+  for (let i = 0; i < count; i++) {
+    electrons.push(makeElectron());
+  }
+  // Spread them across the full width initially
+  electrons.forEach((e, idx) => {
+    e.x = WIRE_X1 + (idx / electrons.length) * (WIRE_X2 - WIRE_X1);
+  });
+}
+
+function makeElectron(x) {
+  return {
+    x: x !== undefined ? x : WIRE_X1 - Math.random() * 40,
+    y: WIRE_Y1 + 12 + Math.random() * (WIRE_H - 24),
+    vy: (Math.random() - 0.5) * 0.4,    // slight vertical drift
+    vx_rand: (Math.random() - 0.5) * 0.3, // thermal noise
+    phase: Math.random() * Math.PI * 2,
+    r: 5 + Math.random() * 2,
+    brightness: 0.7 + Math.random() * 0.3,
+    crossed: false,
+  };
+}
+
+// ─── Simulation step ──────────────────────────────
+function step(dt) {
+  const vd = speed * 60; // pixels per second
+
+  electrons.forEach(e => {
+    // Drift velocity (rightward)
+    e.x += vd * dt;
+    // Thermal noise
+    e.y += e.vy + Math.sin(e.phase + simTime * 3) * 0.4;
+    e.phase += dt * (1 + Math.random() * 0.5);
+
+    // Bounce off wire walls
+    if (e.y < WIRE_Y1 + 8)  { e.y = WIRE_Y1 + 8;  e.vy = Math.abs(e.vy); }
+    if (e.y > WIRE_Y2 - 8)  { e.y = WIRE_Y2 - 8;  e.vy = -Math.abs(e.vy); }
+
+    // Cross the section plane?
+    if (!e.crossed && e.x > SECTION_X) {
+      e.crossed = true;
+      // Register crossing
+      chargeCrossed += E_CHARGE;
+      chargeLog.push({ t: simTime, q: E_CHARGE });
+      totalCharge += E_CHARGE;
+      flashAlpha = 1.0;
+      recentCrossings.push({ y: e.y, t: simTime, life: 1.0 });
+    }
+
+    // Recycle off right edge
+    if (e.x > WIRE_X2 + 10) {
+      Object.assign(e, makeElectron(WIRE_X1 - Math.random() * 20));
+      e.crossed = false;
+    }
+  });
+
+  // Prune chargeLog outside window
+  const windowEnd = simTime;
+  windowStart = windowEnd - windowDt;
+  chargeLog = chargeLog.filter(c => c.t >= windowStart);
+  chargeCrossed = chargeLog.reduce((s, c) => s + c.q, 0);
+
+  // Fade crossings
+  recentCrossings.forEach(c => c.life -= dt * 1.8);
+  recentCrossings = recentCrossings.filter(c => c.life > 0);
+
+  flashAlpha = Math.max(0, flashAlpha - dt * 2.5);
+}
+
+// ─── DRAW ─────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#080c14');
+  bg.addColorStop(1, '#06080f');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  drawWire();
+  drawTimeWindow();
+  drawSectionPlane();
+  drawElectrons();
+  drawCrossingFlash();
+  drawArrows();
+  drawLabels();
+}
+
+function drawWire() {
+  // Outer casing (darker)
+  ctx.save();
+  const casing = ctx.createLinearGradient(0, WIRE_Y1 - 8, 0, WIRE_Y2 + 8);
+  casing.addColorStop(0, '#1a1008');
+  casing.addColorStop(0.3, '#2a1c10');
+  casing.addColorStop(0.7, '#1e1408');
+  casing.addColorStop(1, '#0e0a04');
+  ctx.fillStyle = casing;
+  ctx.beginPath(); ctx.roundRect(WIRE_X1 - 8, WIRE_Y1 - 8, WIRE_X2 - WIRE_X1 + 16, WIRE_H + 16, 6); ctx.fill();
+
+  // Copper conductor body
+  const cg = ctx.createLinearGradient(0, WIRE_Y1, 0, WIRE_Y2);
+  cg.addColorStop(0,    '#d4a050');
+  cg.addColorStop(0.08, '#e8c070');
+  cg.addColorStop(0.25, '#c87830');
+  cg.addColorStop(0.5,  '#a06020');
+  cg.addColorStop(0.75, '#c07828');
+  cg.addColorStop(0.92, '#e0b850');
+  cg.addColorStop(1,    '#b87030');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.rect(WIRE_X1, WIRE_Y1, WIRE_X2 - WIRE_X1, WIRE_H); ctx.fill();
+
+  // Inner cavity (where electrons live)
+  const ig = ctx.createLinearGradient(0, WIRE_Y1 + 14, 0, WIRE_Y2 - 14);
+  ig.addColorStop(0, '#0a0d18');
+  ig.addColorStop(0.3, '#0d1220');
+  ig.addColorStop(1, '#08090f');
+  ctx.fillStyle = ig;
+  ctx.fillRect(WIRE_X1 + 3, WIRE_Y1 + 14, WIRE_X2 - WIRE_X1 - 6, WIRE_H - 28);
+
+  // Top highlight streak
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = 'rgba(255,230,180,1)';
+  ctx.fillRect(WIRE_X1 + 3, WIRE_Y1 + 1, WIRE_X2 - WIRE_X1 - 6, 5);
+  ctx.globalAlpha = 1;
+
+  // Wire label
+  ctx.fillStyle = 'rgba(200,120,48,0.5)';
+  ctx.font = 'italic 11px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('conduttore in rame', W / 2, WIRE_Y2 + 24);
+  ctx.restore();
+
+  // Left terminal (–)
+  drawTerminal(WIRE_X1 - 8, WIRE_MID, '−', '#ff4060');
+  // Right terminal (+)
+  drawTerminal(WIRE_X2 + 8, WIRE_MID, '+', '#3c8cff');
+
+  // Arrow direction label
+  ctx.save();
+  ctx.fillStyle = 'rgba(60,140,255,0.45)';
+  ctx.font = 'italic 11px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('→  verso corrente convenzionale  →', W / 2, WIRE_Y1 - 16);
+  ctx.restore();
+}
+
+function drawTerminal(x, y, sign, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+  ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(sign, x, y + 0.5);
+  ctx.restore();
+}
+
+function drawTimeWindow() {
+  // Draw Δt window as shaded region on the wire
+  // The window moves with time — show it as an x-range proportional to vd*windowDt
+  const vd = speed * 60;
+  const windowPx = Math.min(vd * windowDt, WIRE_X2 - WIRE_X1 - 20);
+  const winX1 = SECTION_X - windowPx;
+  const winX2 = SECTION_X;
+
+  ctx.save();
+  // Shaded region
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#30e08a';
+  ctx.fillRect(Math.max(winX1, WIRE_X1 + 3), WIRE_Y1 + 14, Math.min(windowPx, winX2 - WIRE_X1 - 3), WIRE_H - 28);
+  ctx.globalAlpha = 1;
+
+  // Left border of window
+  ctx.strokeStyle = 'rgba(48,224,138,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 5]);
+  ctx.beginPath();
+  ctx.moveTo(Math.max(winX1, WIRE_X1 + 3), WIRE_Y1);
+  ctx.lineTo(Math.max(winX1, WIRE_X1 + 3), WIRE_Y2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Δt brace
+  const braceY = WIRE_Y2 + 14;
+  if (winX1 > WIRE_X1 + 3) {
+    ctx.strokeStyle = 'rgba(48,224,138,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(winX1, braceY); ctx.lineTo(winX1, braceY - 5);
+    ctx.moveTo(winX1, braceY); ctx.lineTo(SECTION_X, braceY);
+    ctx.moveTo(SECTION_X, braceY); ctx.lineTo(SECTION_X, braceY - 5);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(48,224,138,0.7)';
+    ctx.font = 'italic 13px Playfair Display, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Δt = ' + windowDt.toFixed(1) + ' s', (winX1 + SECTION_X) / 2, braceY + 14);
+  }
+  ctx.restore();
+}
+
+function drawSectionPlane() {
+  ctx.save();
+
+  // Glow behind
+  const glow = ctx.createLinearGradient(SECTION_X - 20, 0, SECTION_X + 20, 0);
+  glow.addColorStop(0, 'transparent');
+  glow.addColorStop(0.5, `rgba(255,179,64,${0.12 + flashAlpha * 0.25})`);
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(SECTION_X - 20, WIRE_Y1, 40, WIRE_H);
+
+  // Section line
+  ctx.strokeStyle = `rgba(255,179,64,${0.7 + flashAlpha * 0.3})`;
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = `rgba(255,179,64,${0.5 + flashAlpha * 0.4})`;
+  ctx.shadowBlur = 14 + flashAlpha * 20;
+  ctx.beginPath();
+  ctx.moveTo(SECTION_X, WIRE_Y1 - 12);
+  ctx.lineTo(SECTION_X, WIRE_Y2 + 12);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Top diamond marker
+  ctx.fillStyle = `rgba(255,179,64,${0.8 + flashAlpha * 0.2})`;
+  ctx.beginPath();
+  ctx.moveTo(SECTION_X, WIRE_Y1 - 22);
+  ctx.lineTo(SECTION_X + 7, WIRE_Y1 - 14);
+  ctx.lineTo(SECTION_X, WIRE_Y1 - 6);
+  ctx.lineTo(SECTION_X - 7, WIRE_Y1 - 14);
+  ctx.closePath(); ctx.fill();
+
+  // Label
+  ctx.fillStyle = 'rgba(255,179,64,0.7)';
+  ctx.font = 'italic 12px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('sezione A', SECTION_X, WIRE_Y2 + 38);
+
+  // Counter above
+  ctx.fillStyle = `rgba(255,200,80,${0.7 + flashAlpha * 0.3})`;
+  ctx.font = 'italic bold 13px Playfair Display, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Δq = ' + (chargeCrossed * CHARGE_DISPLAY).toFixed(1) + ' ×10⁻¹⁹ C', SECTION_X, WIRE_Y1 - 38);
+
+  ctx.restore();
+}
+
+function drawElectrons() {
+  electrons.forEach(e => {
+    const inWire = e.x > WIRE_X1 + 3 && e.x < WIRE_X2 - 3 &&
+                   e.y > WIRE_Y1 + 14 && e.y < WIRE_Y2 - 14;
+    if (!inWire) return;
+
+    ctx.save();
+    // Outer glow
+    const glow = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 3);
+    glow.addColorStop(0, `rgba(126,184,255,${0.2 * e.brightness})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 3, 0, Math.PI * 2); ctx.fill();
+
+    // Core
+    const cg = ctx.createRadialGradient(e.x - e.r * 0.3, e.y - e.r * 0.3, 0, e.x, e.y, e.r);
+    cg.addColorStop(0, `rgba(200,230,255,${e.brightness})`);
+    cg.addColorStop(0.5, `rgba(100,160,255,${e.brightness})`);
+    cg.addColorStop(1, `rgba(40,80,200,${e.brightness * 0.7})`);
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fill();
+
+    // Minus sign
+    ctx.fillStyle = `rgba(255,255,255,${0.7 * e.brightness})`;
+    ctx.font = `bold ${Math.round(e.r * 1.4)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('−', e.x, e.y + 0.5);
+
+    // Velocity arrow (tiny)
+    ctx.strokeStyle = `rgba(100,180,255,0.4)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(e.x + e.r + 1, e.y);
+    ctx.lineTo(e.x + e.r + 6, e.y);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawCrossingFlash() {
+  recentCrossings.forEach(c => {
+    ctx.save();
+    ctx.globalAlpha = c.life * 0.9;
+    // Ring expanding
+    const r = (1 - c.life) * 30 + 8;
+    ctx.strokeStyle = '#ffe09a';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ffb340';
+    ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(SECTION_X, c.y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawArrows() {
+  // E-field arrow (left pointing, inside wire, subtle)
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = '#ff8060';
+  ctx.fillStyle = '#ff8060';
+  ctx.lineWidth = 1.5;
+  const ey = WIRE_MID - 20;
+  ctx.beginPath(); ctx.moveTo(WIRE_X2 - 30, ey); ctx.lineTo(WIRE_X1 + 30, ey); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(WIRE_X1 + 30, ey);
+  ctx.lineTo(WIRE_X1 + 42, ey - 4);
+  ctx.lineTo(WIRE_X1 + 42, ey + 4);
+  ctx.closePath(); ctx.fill();
+  ctx.font = 'italic 11px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('E⃗ campo elettrico', W / 2, ey - 8);
+  ctx.restore();
+
+  // Electron drift arrow (rightward, actual motion)
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = '#7eb8ff';
+  ctx.fillStyle = '#7eb8ff';
+  ctx.lineWidth = 1.5;
+  const vy2 = WIRE_MID + 20;
+  ctx.beginPath(); ctx.moveTo(WIRE_X1 + 30, vy2); ctx.lineTo(WIRE_X2 - 30, vy2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(WIRE_X2 - 30, vy2);
+  ctx.lineTo(WIRE_X2 - 42, vy2 - 4);
+  ctx.lineTo(WIRE_X2 - 42, vy2 + 4);
+  ctx.closePath(); ctx.fill();
+  ctx.font = 'italic 11px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('v⃗d  velocità di deriva', W / 2, vy2 + 15);
+  ctx.restore();
+}
+
+function drawLabels() {
+  // Live current readout on canvas
+  const i_val = windowDt > 0 ? (chargeCrossed * CHARGE_DISPLAY / windowDt) : 0;
+  ctx.save();
+  ctx.fillStyle = `rgba(255,179,64,${0.6 + flashAlpha * 0.3})`;
+  ctx.font = 'italic bold 15px Playfair Display, serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('i = ' + i_val.toFixed(2) + ' ×10⁻¹⁹ A', WIRE_X2 - 4, WIRE_Y1 - 16);
+  ctx.restore();
+}
+
+// ─── UPDATE READOUT UI ─────────────────────────────
+function updateUI() {
+  const dq = chargeCrossed * CHARGE_DISPLAY;
+  const dt = windowDt;
+  const i_val = dt > 0 ? dq / dt : 0;
+
+  document.getElementById('valDq').textContent = dq.toFixed(1) + ' ×10⁻¹⁹';
+  document.getElementById('valDt').textContent = dt.toFixed(1);
+  document.getElementById('valI').textContent = i_val.toFixed(2) + ' ×10⁻¹⁹';
+}
+
+// ─── ANIMATION LOOP ────────────────────────────────
+function loop(ts) {
+  lastRaf = requestAnimationFrame(loop);
+  if (!playing) { prevTs = null; return; }
+  if (prevTs === null) { prevTs = ts; return; }
+  const dtReal = Math.min((ts - prevTs) / 1000, 0.05);
+  prevTs = ts;
+  simTime += dtReal;
+  step(dtReal);
+  draw();
+  updateUI();
+}
+
+// ─── CONTROLS ─────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btnPlay');
+  btn.textContent = playing ? '⏸ Pausa' : '▶ Riprendi';
+  btn.classList.toggle('paused', !playing);
+}
+
+function resetSim() {
+  simTime = 0; chargeCrossed = 0; chargeLog = [];
+  totalCharge = 0; flashAlpha = 0; recentCrossings = [];
+  initElectrons();
+}
+
+function setupSliders() {
+  const slD = document.getElementById('slDensity');
+  const slS = document.getElementById('slSpeed');
+  const slW = document.getElementById('slWindow');
+
+  function setPct(el, min, max, val) {
+    el.style.setProperty('--pct', ((val - min) / (max - min) * 100) + '%');
+  }
+
+  slD.addEventListener('input', function() {
+    density = +this.value;
+    document.getElementById('valDensity').textContent = density;
+    setPct(this, 5, 30, density);
+    initElectrons();
+  });
+  slS.addEventListener('input', function() {
+    speed = +this.value;
+    document.getElementById('valSpeed').textContent = speed.toFixed(1) + '×';
+    setPct(this, 0.3, 4, speed);
+  });
+  slW.addEventListener('input', function() {
+    windowDt = +this.value;
+    document.getElementById('valWindow').textContent = windowDt.toFixed(1) + ' s';
+    setPct(this, 1, 10, windowDt);
+  });
+}
+
+// ─── INIT ──────────────────────────────────────────
+initElectrons();
+setupSliders();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
