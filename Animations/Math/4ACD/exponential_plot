@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>f(x) = aˣ — Esploratore</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --ink: #1a1a18;
+    --ink2: #4a4a44;
+    --ink3: #9a9a90;
+    --border: #e2e2da;
+    --accent: #2d6a9f;
+    --accent-light: #e8f1f8;
+    --red: #c0392b;
+    --green: #1e7a4a;
+    --amber: #b45309;
+    --curve: #2d6a9f;
+    --grid: #ebebE5;
+    --axis: #c0c0b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Newsreader', Georgia, serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .page-header {
+    padding: 2.5rem 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .title-block h1 {
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+
+  .title-block h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .title-block p {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    color: var(--ink3);
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  .eq-hero {
+    font-family: 'Fira Code', monospace;
+    font-size: 2.4rem;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    transition: color 0.3s;
+  }
+
+  .eq-hero .a-val { color: var(--accent); transition: color 0.3s; }
+
+  /* ── BODY LAYOUT ── */
+  .body-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    min-height: calc(100vh - 130px);
+  }
+
+  /* ── CANVAS AREA ── */
+  .canvas-area {
+    padding: 2.5rem 2rem 2rem 3rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 400px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    padding: 2rem 1.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .panel-section { display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .panel-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    font-family: 'Fira Code', monospace;
+  }
+
+  /* ── SLIDER ── */
+  .slider-container { position: relative; }
+
+  .slider-track-wrap {
+    position: relative;
+    height: 28px;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--accent);
+    cursor: grab;
+    transition: transform 0.1s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--accent);
+    cursor: grab;
+  }
+
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.3rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.7rem;
+    color: var(--ink3);
+  }
+
+  /* ── A VALUE DISPLAY ── */
+  .a-display {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .a-number {
+    font-family: 'Fira Code', monospace;
+    font-size: 2.8rem;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1;
+    transition: color 0.3s;
+    min-width: 120px;
+  }
+
+  .a-unit { font-size: 0.9rem; color: var(--ink3); font-style: italic; }
+
+  /* ── BEHAVIOR BADGE ── */
+  .behavior-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    font-style: italic;
+    transition: all 0.35s ease;
+    border: 1px solid;
+  }
+
+  .badge-growing {
+    background: #edf5fb;
+    color: #1a4f7a;
+    border-color: #b8d4ea;
+  }
+
+  .badge-constant {
+    background: #fdf3e7;
+    color: #7c4a0a;
+    border-color: #f0d0a0;
+  }
+
+  .badge-decreasing {
+    background: #f5f5f5;
+    color: #3a3a3a;
+    border-color: #d0d0c8;
+  }
+
+  .badge-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── PROPERTIES TABLE ── */
+  .props-table { width: 100%; border-collapse: collapse; }
+
+  .props-table tr { border-bottom: 0.5px solid var(--border); }
+  .props-table tr:last-child { border-bottom: none; }
+
+  .props-table td {
+    padding: 0.55rem 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .props-table td:first-child {
+    color: var(--ink3);
+    font-style: italic;
+    width: 55%;
+    padding-right: 0.5rem;
+  }
+
+  .props-table td:last-child {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.82rem;
+    color: var(--ink);
+    text-align: right;
+  }
+
+  /* ── NOTABLE VALUES ── */
+  .notable-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .notable-cell {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    text-align: center;
+  }
+
+  .notable-x {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.7rem;
+    color: var(--ink3);
+    margin-bottom: 0.2rem;
+  }
+
+  .notable-y {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ── ANIMATION ── */
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-section { animation: fadeSlideIn 0.4s ease both; }
+
+  /* ── FOOTER NOTE ── */
+  .foot-note {
+    padding: 1rem 3rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--ink3);
+    font-style: italic;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .foot-note span { display: flex; align-items: center; gap: 0.4rem; }
+  .swatch { display: inline-block; width: 18px; height: 2px; border-radius: 1px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="title-block">
+    <h1>La funzione <em>esponenziale</em></h1>
+    <p>Muovi il cursore per esplorare come cambia il grafico al variare della base</p>
+  </div>
+  <div class="eq-hero">f(x) = <span class="a-val" id="eq-a">2.00</span><sup style="font-size:1.4rem;vertical-align:super">x</sup></div>
+</header>
+
+<div class="body-layout">
+
+  <div class="canvas-area">
+    <div class="canvas-wrap">
+      <canvas id="graph"></canvas>
+    </div>
+    <div class="foot-note">
+      <span><span class="swatch" style="background:#2d6a9f"></span> f(x) = aˣ con il valore di a corrente</span>
+      <span><span class="swatch" style="background:#ddd;height:1px"></span> Il punto (0, 1) è sempre sulla curva</span>
+      <span>Asintoto orizzontale: y = 0 (per x → −∞ se a > 1, o per x → +∞ se 0 &lt; a &lt; 1)</span>
+    </div>
+  </div>
+
+  <aside class="panel">
+
+    <div class="panel-section">
+      <div class="panel-label">Base  a</div>
+      <div class="a-display">
+        <div class="a-number" id="a-big">2.00</div>
+      </div>
+      <div id="behavior-wrap">
+        <div class="behavior-badge badge-growing" id="behavior">
+          <span class="badge-dot" style="background:#2d6a9f"></span>
+          funzione crescente
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Cursore</div>
+      <div class="slider-track-wrap">
+        <input type="range" id="slider" min="0" max="1000" value="500" step="1">
+      </div>
+      <div class="slider-labels">
+        <span>0.01</span>
+        <span>a = 1</span>
+        <span>10</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Valori notevoli</div>
+      <div class="notable-grid" id="notable-grid"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Proprietà</div>
+      <table class="props-table" id="props-table">
+        <tr><td>Dominio</td><td>ℝ</td></tr>
+        <tr><td>Codominio</td><td>(0, +∞)</td></tr>
+        <tr><td>f(0)</td><td>1</td></tr>
+        <tr><td>Asintoto</td><td>y = 0</td></tr>
+        <tr><td>Monotonia</td><td id="mono-cell">crescente</td></tr>
+        <tr><td>f(1)</td><td id="f1-cell">—</td></tr>
+        <tr><td>f(−1)</td><td id="fm1-cell">—</td></tr>
+      </table>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+
+function sliderToA(v) {
+  if (v <= 500) return 0.01 + (v / 500) * 0.99;
+  return 1 + ((v - 500) / 500) * 9;
+}
+
+function fmt(n, d) {
+  if (Math.abs(n) >= 1000) return n.toFixed(0);
+  if (Math.abs(n) >= 10)   return n.toFixed(1);
+  return n.toFixed(d !== undefined ? d : 3);
+}
+
+function fmtA(a) {
+  if (a < 0.1)  return a.toFixed(3);
+  if (a < 1)    return a.toFixed(2);
+  if (a < 10)   return a.toFixed(2);
+  return a.toFixed(1);
+}
+
+function safeExp(a, x) {
+  const v = Math.pow(a, x);
+  if (!isFinite(v)) return null;
+  return v;
+}
+
+function drawGraph(a) {
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const XMIN = -5, XMAX = 5;
+  const YMIN = -0.3, YMAX = 8;
+
+  const px = x => (x - XMIN) / (XMAX - XMIN) * W;
+  const py = y => H - (y - YMIN) / (YMAX - YMIN) * H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // background
+  ctx.fillStyle = '#fafaf7';
+  ctx.fillRect(0, 0, W, H);
+
+  // grid lines
+  ctx.strokeStyle = '#e8e8e0';
+  ctx.lineWidth = 0.5;
+  for (let x = XMIN; x <= XMAX; x++) {
+    ctx.beginPath(); ctx.moveTo(px(x), 0); ctx.lineTo(px(x), H); ctx.stroke();
+  }
+  for (let y = 0; y <= YMAX; y++) {
+    ctx.beginPath(); ctx.moveTo(0, py(y)); ctx.lineTo(W, py(y)); ctx.stroke();
+  }
+
+  // axes
+  ctx.strokeStyle = '#b0b0a4';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, py(0)); ctx.lineTo(W, py(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px(0), 0); ctx.lineTo(px(0), H); ctx.stroke();
+
+  // axis labels
+  ctx.fillStyle = '#9a9a90';
+  ctx.font = '11px "Fira Code", monospace';
+  ctx.textAlign = 'center';
+  for (let x = XMIN + 1; x <= XMAX - 1; x++) {
+    if (x === 0) continue;
+    ctx.fillText(x, px(x), py(0) + 14);
+  }
+  ctx.textAlign = 'right';
+  for (let y = 1; y <= YMAX - 1; y++) {
+    ctx.fillText(y, px(0) - 5, py(y) + 4);
+  }
+
+  // axis arrows & letters
+  ctx.fillStyle = '#6a6a60';
+  ctx.font = '13px "Newsreader", serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('x', W - 14, py(0) - 6);
+  ctx.fillText('y', px(0) + 6, 14);
+
+  // arrows
+  ctx.fillStyle = '#b0b0a4';
+  ctx.beginPath(); ctx.moveTo(W-2, py(0)); ctx.lineTo(W-10, py(0)-4); ctx.lineTo(W-10, py(0)+4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(px(0), 2); ctx.lineTo(px(0)-4, 10); ctx.lineTo(px(0)+4, 10); ctx.closePath(); ctx.fill();
+
+  // asymptote y=0 hint
+  ctx.strokeStyle = 'rgba(180,83,9,0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(0, py(0)); ctx.lineTo(W, py(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // fixed point (0,1)
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.arc(px(0), py(1), 4.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#c0392b';
+  ctx.font = '11px "Fira Code", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('(0, 1)', px(0)+7, py(1)-4);
+
+  // curve
+  const curveColor = a < 1 ? '#5a7a5a' : a === 1 ? '#b45309' : '#2d6a9f';
+  ctx.strokeStyle = curveColor;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  let started = false;
+  const N = 400;
+  for (let i = 0; i <= N; i++) {
+    const x = XMIN + (i / N) * (XMAX - XMIN);
+    const y = safeExp(a, x);
+    if (y === null || y > YMAX + 1 || y < YMIN - 1) { started = false; continue; }
+    const cx = px(x), cy = py(y);
+    if (!started) { ctx.moveTo(cx, cy); started = true; }
+    else ctx.lineTo(cx, cy);
+  }
+  ctx.stroke();
+
+  // dot at x=1
+  const y1 = safeExp(a, 1);
+  if (y1 !== null && y1 > YMIN && y1 < YMAX) {
+    ctx.fillStyle = curveColor;
+    ctx.beginPath(); ctx.arc(px(1), py(y1), 4, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function updateUI(a) {
+  const aStr = fmtA(a);
+  document.getElementById('eq-a').textContent = aStr;
+  document.getElementById('a-big').textContent = aStr;
+  document.getElementById('a-big').style.color = a < 1 ? '#3a7a3a' : a <= 1.01 ? '#b45309' : '#2d6a9f';
+  document.querySelector('.eq-hero .a-val').textContent = aStr;
+  document.querySelector('.eq-hero .a-val').style.color = a < 1 ? '#3a7a3a' : a <= 1.01 ? '#b45309' : '#2d6a9f';
+
+  const beh = document.getElementById('behavior');
+  if (Math.abs(a - 1) < 0.015) {
+    beh.className = 'behavior-badge badge-constant';
+    beh.innerHTML = '<span class="badge-dot" style="background:#b45309"></span>funzione costante (a ≈ 1)';
+  } else if (a < 1) {
+    beh.className = 'behavior-badge badge-decreasing';
+    beh.innerHTML = '<span class="badge-dot" style="background:#4a7a4a"></span>funzione decrescente';
+  } else {
+    beh.className = 'behavior-badge badge-growing';
+    beh.innerHTML = '<span class="badge-dot" style="background:#2d6a9f"></span>funzione crescente';
+  }
+
+  document.getElementById('mono-cell').textContent = a < 1 ? 'decrescente' : a <= 1.01 ? 'costante' : 'crescente';
+  document.getElementById('f1-cell').textContent = fmtA(a);
+  document.getElementById('fm1-cell').textContent = fmt(1/a, 3);
+
+  const notable = document.getElementById('notable-grid');
+  const xs = [-2, -1, 0, 1, 2, 3];
+  notable.innerHTML = xs.map(x => {
+    const y = safeExp(a, x);
+    const yStr = y === null ? '∞' : y > 999 ? '>999' : fmt(y, 2);
+    return `<div class="notable-cell"><div class="notable-x">x = ${x}</div><div class="notable-y">${yStr}</div></div>`;
+  }).join('');
+}
+
+function render() {
+  const a = sliderToA(parseInt(document.getElementById('slider').value));
+  drawGraph(a);
+  updateUI(a);
+}
+
+document.getElementById('slider').addEventListener('input', render);
+window.addEventListener('resize', render);
+render();
+</script>
+</body>
+</html>
