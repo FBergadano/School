@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dal bacillo di peste al numero e</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0a18;
+  --panel: rgba(20,16,42,0.85);
+  --border: rgba(160,130,255,0.15);
+  --accent: #f5a623;
+  --red: #ff5c7a;
+  --green: #3dffa0;
+  --purple: #b39dff;
+  --blue: #5ce8ff;
+  --text: #ede8ff;
+  --muted: #8b80b0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+header {
+  text-align: center;
+  padding: 1.1rem 1rem 0.55rem;
+}
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.15rem, 4.5vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1.25;
+  background: linear-gradient(120deg, var(--accent), var(--red), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+header p { color: var(--muted); font-size: clamp(.72rem, 2.5vw, .88rem); margin-top: .2rem; }
+
+/* Controls — 2-row grid, buttons column on right */
+.controls-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: .38rem .55rem;
+  padding: .55rem .85rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.025);
+  border-bottom: 1px solid var(--border);
+}
+.ctrl-freq-label  { grid-column:1; grid-row:1; }
+.ctrl-freq-slider { grid-column:2; grid-row:1; display:flex; align-items:center; gap:.4rem; }
+.ctrl-days-label  { grid-column:1; grid-row:2; }
+.ctrl-days-slider { grid-column:2; grid-row:2; display:flex; align-items:center; gap:.4rem; }
+.ctrl-buttons     { grid-column:3; grid-row:1/3; display:flex; flex-direction:column; gap:.3rem; }
+
+.label-sm { font-size: clamp(.7rem, 2.2vw, .8rem); color: var(--muted); font-weight: 700; white-space: nowrap; }
+
+.btn {
+  padding: .42rem .85rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(.78rem, 2.4vw, .88rem);
+  font-weight: 800;
+  transition: transform .12s, opacity .12s;
+  white-space: nowrap;
+  min-height: 40px;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn-go { background: linear-gradient(135deg, var(--accent), var(--red)); color: #111; }
+.btn-reset { background: transparent; color: var(--purple); border: 1px solid var(--purple); }
+
+input[type=range] {
+  -webkit-appearance: none; height: 5px; border-radius: 4px;
+  background: rgba(160,130,255,.22); outline: none; cursor: pointer;
+  flex: 1; min-width: 0;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 8px rgba(245,166,35,.5);
+}
+.val-badge {
+  font-family: 'DM Mono', monospace; font-size: clamp(.66rem, 2vw, .76rem);
+  color: var(--accent); background: rgba(245,166,35,.1);
+  padding: .1rem .38rem; border-radius: 5px; white-space:nowrap; text-align:center;
+  flex-shrink: 0;
+}
+
+/* Main layout: side-by-side tablet+, stacked mobile */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .6rem;
+  padding: .6rem .85rem .85rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media (max-width: 600px) {
+  .main-layout { grid-template-columns: 1fr; gap: .5rem; padding: .5rem .6rem .75rem; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .7rem .8rem .8rem;
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.panel::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2.5px;
+  background: linear-gradient(90deg, var(--accent), var(--red), var(--purple));
+}
+.panel-title {
+  font-size: clamp(.62rem,2vw,.76rem); font-weight: 800; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--accent);
+  margin-bottom: .45rem; display:flex; align-items:center; gap:.3rem;
+}
+
+#tree-canvas  { width:100%; display:block; border-radius:6px; }
+#chart-canvas { width:100%; display:block; border-radius:6px; }
+
+#timeline {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 36px; margin-top: .4rem; padding: 0 1px;
+}
+.tl-step {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:1px;
+  opacity:0; transform:translateY(4px); transition:opacity .25s,transform .25s;
+}
+.tl-step.show { opacity:1; transform:translateY(0); }
+.tl-bar { width:100%; border-radius:2px 2px 0 0; background:linear-gradient(180deg,var(--accent),var(--red)); min-height:3px; }
+.tl-label { font-family:'DM Mono',monospace; font-size:7px; color:var(--muted); text-align:center; line-height:1.1; white-space:nowrap; }
+
+.legend {
+  display:flex; flex-wrap:wrap; gap:.25rem .55rem;
+  margin-top:.4rem; font-size:clamp(.6rem,1.9vw,.73rem); color:var(--muted);
+}
+.legend-item { display:flex; align-items:center; gap:.25rem; }
+.leg-solid    { width:16px; height:2.5px; border-radius:2px; flex-shrink:0; }
+.leg-dashed-2 { width:16px; height:0; border-top:2px dashed var(--accent); flex-shrink:0; }
+.leg-dashed-e { width:16px; height:0; border-top:2px dashed var(--green);  flex-shrink:0; }
+
+.bottom-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .6rem;
+}
+@media (max-width: 600px) { .bottom-row { grid-template-columns: 1fr; } }
+
+.info-box {
+  padding: .55rem .75rem;
+  background: rgba(61,255,160,.055);
+  border: 1px solid rgba(61,255,160,.18);
+  border-radius: 8px;
+  font-size: clamp(.68rem,2vw,.79rem); line-height:1.62; color:#c2ffdd;
+}
+.info-box strong { color: var(--green); }
+
+.e-reveal {
+  text-align:center; padding:.5rem .45rem .38rem;
+  background: rgba(179,157,255,.06);
+  border: 1px solid rgba(179,157,255,.2);
+  border-radius: 8px; opacity:0; transition: opacity .9s;
+}
+.e-reveal.show { opacity:1; }
+.e-big {
+  font-family:'Playfair Display',serif;
+  font-size: clamp(1.35rem,5vw,2.4rem); font-weight:900;
+  background: linear-gradient(135deg, var(--green), var(--purple));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.e-digits {
+  font-family:'DM Mono',monospace; font-size:clamp(.58rem,1.8vw,.7rem);
+  color:var(--muted); margin-top:.18rem; word-break:break-all;
+}
+.e-digits span { color:var(--accent); }
+.e-sub { font-size:clamp(.6rem,1.8vw,.72rem); color:var(--muted); margin-top:.28rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="font-size:2rem;margin-bottom:.25rem">🦠</div>
+  <h1>Dal bacillo di peste al numero <em>e</em></h1>
+  <p>Rendi il contagio sempre più continuo nel tempo · la curva converge a e<sup>x</sup></p>
+</header>
+
+<div class="controls-bar">
+  <span class="label-sm ctrl-freq-label">Aggiornamenti/g:</span>
+  <div class="ctrl-freq-slider">
+    <input type="range" id="freq-slider" min="0" max="7" value="0" step="1">
+    <span class="val-badge" id="freq-label" id="freq-badge">1 / giorno</span>
+  </div>
+
+  <span class="label-sm ctrl-days-label">Giorni:</span>
+  <div class="ctrl-days-slider">
+    <input type="range" id="days-slider" min="2" max="7" value="5" step="1">
+    <span class="val-badge" id="days-label" id="days-badge">5</span>
+  </div>
+
+  <div class="ctrl-buttons">
+    <button class="btn btn-go" id="btn-go">▶ Anima</button>
+    <button class="btn btn-reset" id="btn-reset">↺ Reset</button>
+  </div>
+</div>
+
+<div class="main-layout">
+
+  <!-- LEFT: tree + timeline -->
+  <div class="panel">
+    <div class="panel-title">🌳 Albero dei contagi</div>
+    <canvas id="tree-canvas"></canvas>
+    <div id="timeline"></div>
+  </div>
+
+  <!-- RIGHT: chart -->
+  <div class="panel">
+    <div class="panel-title">📈 Crescita nel tempo</div>
+    <canvas id="chart-canvas"></canvas>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="leg-solid" style="background:linear-gradient(90deg,var(--accent),var(--red))"></div>
+        <span id="legend-discrete">(1+1/n)^(n·t) — discreto</span>
+      </div>
+      <div class="legend-item">
+        <div class="leg-dashed-2"></div>
+        <span>2<sup>t</sup> — riferimento discreto</span>
+      </div>
+      <div class="legend-item">
+        <div class="leg-dashed-e"></div>
+        <span>e<sup>t·ln2</sup> — limite continuo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: info + e reveal -->
+  <div class="bottom-row">
+    <div class="info-box">
+      Con <strong>n aggiornamenti al giorno</strong>, dopo <em>t</em> giorni il numero di infetti è
+      <strong>(1 + 1/n)<sup>n·t</sup></strong>.<br>
+      Il tratteggio <strong style="color:var(--accent)">arancio</strong> mostra 2<sup>t</sup> (un aggiornamento/giorno);
+      il tratteggio <strong style="color:var(--green)">verde</strong> è e<sup>t·ln 2</sup>, il vero limite continuo.
+      Aumenta gli aggiornamenti: la curva solida si avvicina sempre di più al verde!
+    </div>
+    <div class="e-reveal" id="e-reveal">
+      <div class="e-big">e ≈ 2,71828…</div>
+      <div class="e-digits"><span>e</span> = 2,<span>71828</span> 18284 59045 23536 02874 71352 66249…</div>
+      <div class="e-sub">Numero di Nepero · base della crescita continua · lim<sub>n→∞</sub>(1+1/n)<sup>n</sup></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const FREQ_STEPS = [
+  { label: '1 / giorno',     n: 1        },
+  { label: '2 / giorno',     n: 2        },
+  { label: '4 / giorno',     n: 4        },
+  { label: '8 / giorno',     n: 8        },
+  { label: '24 / giorno',    n: 24       },
+  { label: '1 / ora',        n: 24       },  // same n, cosmetic
+  { label: '1 / minuto',     n: 1440     },
+  { label: '∞  →  e',        n: 1e6      },
+];
+// override n for step 5 to be distinct
+FREQ_STEPS[5].n = 60;
+
+const freqSlider = document.getElementById('freq-slider');
+const daysSlider = document.getElementById('days-slider');
+const freqLabel  = document.getElementById('freq-label');
+const daysLabel  = document.getElementById('days-label');
+const btnGo      = document.getElementById('btn-go');
+const btnReset   = document.getElementById('btn-reset');
+
+freqSlider.max = FREQ_STEPS.length - 1;
+
+freqSlider.addEventListener('input', () => {
+  freqLabel.textContent = FREQ_STEPS[+freqSlider.value].label;
+  staticDraw();
+});
+daysSlider.addEventListener('input', () => {
+  daysLabel.textContent = daysSlider.value;
+  staticDraw();
+});
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function getFreq(){ return FREQ_STEPS[+freqSlider.value]; }
+function getDays(){ return +daysSlider.value; }
+
+// ── TREE ────────────────────────────────────────────
+const treeCanvas = document.getElementById('tree-canvas');
+const tctx = treeCanvas.getContext('2d');
+
+function resizeTree(){
+  const w = treeCanvas.parentElement.clientWidth - 16;
+  treeCanvas.width  = w;
+  // taller ratio on narrow screens so the tree isn't squished
+  const ratio = window.innerWidth < 600 ? 1.0 : 0.72;
+  treeCanvas.height = Math.round(w * ratio);
+}
+
+// Colors per tree level
+const NODE_COLORS = ['#f5a623','#ff5c7a','#b39dff','#5ce8ff','#3dffa0','#ffed5c','#ff8c5a','#f572e0'];
+
+function drawTree(stepsVisible, totalDays, n){
+  resizeTree();
+  const W = treeCanvas.width, H = treeCanvas.height;
+  tctx.clearRect(0, 0, W, H);
+
+  // How many full day-levels to show (each level = one "daily" generation)
+  // stepsVisible goes from 0 to totalDays*n
+  const daysRevealed = stepsVisible / n;          // e.g. 2.5 days
+  const fullLevels   = Math.floor(daysRevealed);  // fully visible levels
+  const frac         = daysRevealed - fullLevels;  // 0..1 partial fade for next level
+
+  const maxLevels = totalDays;
+  // vertical layout: level 0 at top, level maxLevels at bottom
+  const padT = 14, padB = 8;
+  const levelH = (H - padT - padB) / maxLevels;
+
+  for(let lv = 0; lv <= Math.min(fullLevels, maxLevels); lv++){
+    const nodeCount = Math.pow(2, lv);
+    const y = padT + lv * levelH;
+    const col = NODE_COLORS[lv % NODE_COLORS.length];
+    // alpha: full for completed levels, frac for the leading edge
+    const alpha = (lv < fullLevels) ? 1 : frac;
+
+    for(let i = 0; i < nodeCount; i++){
+      // x position: evenly spaced
+      const x = (W / nodeCount) * (i + 0.5);
+
+      // Line to parent
+      if(lv > 0){
+        const parentCount = nodeCount / 2;
+        const px = (W / parentCount) * (Math.floor(i/2) + 0.5);
+        const py = padT + (lv - 1) * levelH;
+        tctx.globalAlpha = alpha * 0.5;
+        tctx.strokeStyle = col;
+        tctx.lineWidth = Math.max(0.8, 2.5 - lv * 0.3);
+        tctx.beginPath();
+        tctx.moveTo(px, py);
+        tctx.bezierCurveTo(px, py + levelH * 0.55, x, py + levelH * 0.55, x, y);
+        tctx.stroke();
+      }
+
+      // Node
+      tctx.globalAlpha = alpha;
+      const r = Math.max(3, 9 - lv * 0.9);
+
+      // glow halo
+      const grd = tctx.createRadialGradient(x,y,0,x,y,r*3);
+      grd.addColorStop(0, col + 'aa'); grd.addColorStop(1, col + '00');
+      tctx.fillStyle = grd;
+      tctx.beginPath(); tctx.arc(x,y,r*3,0,Math.PI*2); tctx.fill();
+
+      // solid dot
+      tctx.fillStyle = col;
+      tctx.beginPath(); tctx.arc(x,y,r,0,Math.PI*2); tctx.fill();
+
+      // emoji for shallow levels where nodes are few
+      if(nodeCount <= 8){
+        tctx.font = `${Math.max(8, 13 - lv * 1.5)}px serif`;
+        tctx.textAlign = 'center'; tctx.textBaseline = 'middle';
+        tctx.fillText('🦠', x, y);
+      }
+    }
+
+    tctx.globalAlpha = 1;
+
+    // Day label on left margin
+    if(lv <= fullLevels){
+      tctx.fillStyle = col + (lv < fullLevels ? 'cc' : Math.round(frac*200).toString(16).padStart(2,'0'));
+      tctx.font = 'bold 9px DM Mono, monospace';
+      tctx.textAlign = 'left'; tctx.textBaseline = 'middle';
+      const cnt = Math.pow(2, lv);
+      tctx.fillText(`g${lv}: ${cnt}`, 3, y);
+    }
+  }
+
+  tctx.globalAlpha = 1;
+}
+
+// ── TIMELINE ────────────────────────────────────────
+function buildTimeline(totalDays, n){
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  const totalSteps = totalDays * n;
+  const maxCount   = Math.pow(2, totalDays);
+
+  // Cap number of bars for readability
+  const barCount = Math.min(totalSteps + 1, 80);
+  const step = (totalSteps) / (barCount - 1);
+
+  for(let bi = 0; bi < barCount; bi++){
+    const s   = Math.round(bi * step);
+    const day = s / n;
+    const cnt = Math.pow(1 + 1/n, s);
+    const pct = Math.max(4, (cnt / maxCount) * 96);
+    const el  = document.createElement('div');
+    el.className = 'tl-step';
+    el.id = 'tl-' + bi;
+    const showLabel = (Number.isInteger(day) && day <= totalDays) ? `g${day}` : '';
+    el.innerHTML = `<div class="tl-bar" style="height:${pct}%"></div>
+                    <div class="tl-label">${showLabel}</div>`;
+    tl.appendChild(el);
+  }
+  return { barCount, step };
+}
+
+function showTimelineUpTo(barIdx){
+  for(let bi = 0; bi <= barIdx; bi++){
+    const el = document.getElementById('tl-' + bi);
+    if(el) el.classList.add('show');
+  }
+}
+
+// ── CHART ────────────────────────────────────────────
+const chartCanvas = document.getElementById('chart-canvas');
+const cctx = chartCanvas.getContext('2d');
+
+function resizeChart(){
+  const w = chartCanvas.parentElement.clientWidth - 16;
+  chartCanvas.width  = w;
+  const ratio = window.innerWidth < 600 ? 0.85 : 0.68;
+  chartCanvas.height = Math.round(w * ratio);
+}
+
+function drawChart(days, n, revealedSteps){
+  resizeChart();
+  const W = chartCanvas.width, H = chartCanvas.height;
+  cctx.clearRect(0,0,W,H);
+
+  const pL=46, pR=14, pT=14, pB=28;
+  const pw = W-pL-pR, ph = H-pT-pB;
+
+  // y axis: max = 2^days * 1.15
+  const yMax = Math.pow(2, days) * 1.15;
+  const totalSteps = days * n;
+
+  function tx(t){ return pL + (t/days)*pw; }
+  function ty(v){ return pT + ph - Math.min(1, v/yMax)*ph; }
+
+  // grid
+  cctx.strokeStyle = 'rgba(160,130,255,0.09)';
+  cctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const v=(yMax/4)*i, y=ty(v);
+    cctx.beginPath(); cctx.moveTo(pL,y); cctx.lineTo(pL+pw,y); cctx.stroke();
+    cctx.fillStyle='#8b80b0'; cctx.font='8.5px DM Mono,monospace';
+    cctx.textAlign='right'; cctx.textBaseline='middle';
+    cctx.fillText(Math.round(v), pL-4, y);
+  }
+  for(let d=0;d<=days;d++){
+    cctx.fillStyle='#8b80b0'; cctx.font='8.5px DM Mono,monospace';
+    cctx.textAlign='center'; cctx.textBaseline='top';
+    cctx.fillText('g'+d, tx(d), pT+ph+3);
+  }
+
+  // axes
+  cctx.strokeStyle='rgba(160,130,255,0.25)'; cctx.lineWidth=1.5;
+  cctx.beginPath(); cctx.moveTo(pL,pT); cctx.lineTo(pL,pT+ph); cctx.lineTo(pL+pw,pT+ph); cctx.stroke();
+
+  // ── 2^t dashed orange ──
+  cctx.setLineDash([5,5]);
+  cctx.strokeStyle = 'rgba(245,166,35,0.55)';
+  cctx.lineWidth = 1.8;
+  cctx.beginPath();
+  for(let px=0;px<=pw;px++){
+    const t=(px/pw)*days, v=Math.pow(2,t);
+    if(px===0) cctx.moveTo(pL+px,ty(v)); else cctx.lineTo(pL+px,ty(v));
+  }
+  cctx.stroke();
+
+  // ── e^(t·ln2) dashed green ──
+  cctx.setLineDash([4,4]);
+  cctx.strokeStyle = '#3dffa0';
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  for(let px=0;px<=pw;px++){
+    const t=(px/pw)*days, v=Math.exp(t*Math.LN2);
+    if(px===0) cctx.moveTo(pL+px,ty(v)); else cctx.lineTo(pL+px,ty(v));
+  }
+  cctx.stroke();
+  cctx.setLineDash([]);
+
+  // ── (1+1/n)^(n·t) solid animated ──
+  const stepsToShow = Math.min(revealedSteps, totalSteps);
+  if(stepsToShow >= 0){
+    const grd = cctx.createLinearGradient(pL,0,pL+pw,0);
+    grd.addColorStop(0,'#f5a623'); grd.addColorStop(1,'#ff5c7a');
+    cctx.strokeStyle = grd;
+    cctx.lineWidth = 2.8;
+    cctx.beginPath();
+    for(let s=0;s<=stepsToShow;s++){
+      const t=s/n, v=Math.pow(1+1/n,s);
+      const x=tx(t), y=ty(v);
+      if(s===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+    }
+    cctx.stroke();
+
+    // dots at integer days only
+    for(let s=0;s<=stepsToShow;s+=n){
+      const t=s/n, v=Math.pow(1+1/n,s);
+      const x=tx(t), y=ty(v);
+      cctx.fillStyle='#f5a623';
+      cctx.beginPath(); cctx.arc(x,y,3.5,0,Math.PI*2); cctx.fill();
+      if(days <= 6){
+        cctx.fillStyle='rgba(245,166,35,0.9)'; cctx.font='8px DM Mono,monospace';
+        cctx.textAlign='center'; cctx.textBaseline='bottom';
+        cctx.fillText(Math.round(v), x, y-5);
+      }
+    }
+  }
+
+  // legend label
+  const fi = +freqSlider.value;
+  document.getElementById('legend-discrete').textContent =
+    fi === 0 ? '2ᵗ — discreto (1×/giorno)' :
+    fi >= FREQ_STEPS.length-1 ? '(1+1/n)ⁿᵗ → eᵗ·ˡⁿ²' :
+    `(1+1/${n})^(${n}t) — ${FREQ_STEPS[fi].label}`;
+}
+
+// ── ANIMATION ────────────────────────────────────────
+let animRunning = false;
+let animCancel  = false;
+
+async function runAnimation(){
+  if(animRunning){ animCancel=true; await sleep(60); }
+  animCancel=false; animRunning=true;
+  btnGo.disabled=true;
+
+  const days = getDays();
+  const { n } = getFreq();
+  const totalSteps = days * n;
+
+  document.getElementById('e-reveal').classList.remove('show');
+
+  // build timeline bars (capped for display)
+  const { barCount, step } = buildTimeline(days, n);
+
+  resizeTree(); resizeChart();
+  tctx.clearRect(0,0,treeCanvas.width,treeCanvas.height);
+  cctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
+
+  // Number of animation frames
+  const FRAMES = Math.min(totalSteps, 200);
+  const delay  = Math.max(20, Math.min(600, 1400 / FRAMES));
+
+  for(let frame=0; frame<=FRAMES; frame++){
+    if(animCancel) break;
+
+    const s = Math.round((frame / FRAMES) * totalSteps);
+    drawTree(s, days, n);
+    showTimelineUpTo(Math.round((frame / FRAMES) * (barCount-1)));
+    drawChart(days, n, s);
+
+    await sleep(delay);
+  }
+
+  if(!animCancel){
+    // Final frame complete
+    drawTree(totalSteps, days, n);
+    showTimelineUpTo(barCount-1);
+    drawChart(days, n, totalSteps);
+
+    // Show e reveal if high frequency
+    if(n >= 60){
+      await sleep(300);
+      document.getElementById('e-reveal').classList.add('show');
+    }
+  }
+
+  animRunning=false;
+  btnGo.disabled=false;
+}
+
+btnGo.addEventListener('click', runAnimation);
+
+btnReset.addEventListener('click', ()=>{
+  animCancel=true; animRunning=false; btnGo.disabled=false;
+  document.getElementById('timeline').innerHTML='';
+  document.getElementById('e-reveal').classList.remove('show');
+  resizeTree(); tctx.clearRect(0,0,treeCanvas.width,treeCanvas.height);
+  resizeChart(); cctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
+});
+
+function staticDraw(){
+  const days = getDays();
+  const { n, label } = getFreq();
+  freqLabel.textContent = label;
+  daysLabel.textContent = days;
+  resizeChart();
+  drawChart(days, n, days*n);
+  resizeTree();
+  drawTree(days*n, days, n);
+}
+
+window.addEventListener('resize', staticDraw);
+setTimeout(staticDraw, 100);
+</script>
+</body>
+</html>
