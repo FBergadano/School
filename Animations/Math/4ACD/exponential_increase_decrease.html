@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esponenziale in base 2 — ×2ⁿ e ÷2ⁿ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  --bg: #08090e;
+  --card-e: #10111e;
+  --card-d: #0a100d;
+  --border-e: rgba(100,120,255,0.2);
+  --border-d: rgba(60,200,120,0.2);
+  --acc-e: #6477ff;
+  --acc2-e: #a78bfa;
+  --acc-d: #3dc878;
+  --acc2-d: #86efac;
+  --gold: #f0c060;
+  --text: #e8eaf5;
+  --muted-e: #6870a0;
+  --muted-d: #5a8070;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Text', serif;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  overflow-x: hidden;
+}
+
+/* ambient glows */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse at 15% 40%, rgba(40,50,120,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 60%, rgba(20,80,40,0.14) 0%, transparent 55%);
+}
+.grid-bg {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(200,220,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,220,255,0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── HEADER ─── */
+header {
+  position:relative; z-index:1;
+  text-align:center; padding: 2.2rem 2rem 0.8rem;
+}
+.eyebrow {
+  font-size:0.76rem; letter-spacing:0.42em; text-transform:uppercase;
+  margin-bottom:0.6rem; display:block;
+  background: linear-gradient(90deg, var(--acc2-e), var(--acc2-d));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+h1 {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.8rem,4.5vw,3.4rem);
+  font-weight:700; line-height:1.05; margin-bottom:0.4rem;
+}
+h1 .exp-up   { color:var(--acc-e); font-style:italic; text-shadow:0 0 28px rgba(100,119,255,0.55); }
+h1 .exp-down { color:var(--acc-d); font-style:italic; text-shadow:0 0 28px rgba(61,200,120,0.55); }
+.subtitle {
+  font-size:1rem; font-style:italic; line-height:1.6;
+  max-width:560px; margin:0 auto;
+  color: rgba(200,210,220,0.5);
+}
+.divider {
+  display:flex; align-items:center; gap:1rem; justify-content:center;
+  margin:0.9rem auto; max-width:320px;
+}
+.divider::before { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,var(--acc-e)); }
+.divider::after  { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--acc-d),transparent); }
+.div-diamond { width:7px; height:7px; transform:rotate(45deg);
+  background: linear-gradient(135deg, var(--acc-e), var(--acc-d)); }
+
+/* ─── TABS ─── */
+.tabs {
+  position:relative; z-index:1;
+  display:flex; gap:0; margin:0 auto 1.6rem;
+  border-radius:6px; overflow:hidden;
+  border:1px solid rgba(150,150,200,0.2);
+  max-width:500px; width:calc(100% - 2rem);
+}
+.tab {
+  flex:1; padding:0.75rem 1.2rem; border:none; cursor:pointer;
+  font-family:'Playfair Display',serif; font-size:0.9rem;
+  letter-spacing:0.06em; transition:all .3s; background:transparent;
+  display:flex; align-items:center; justify-content:center; gap:0.5rem;
+}
+.tab.tab-e { color:var(--muted-e); }
+.tab.tab-d { color:var(--muted-d); border-left:1px solid rgba(150,150,200,0.2); }
+.tab.tab-e.active { background:rgba(100,119,255,0.18); color:var(--acc2-e); }
+.tab.tab-d.active { background:rgba(61,200,120,0.15); color:var(--acc2-d); }
+.tab:not(.active):hover { filter:brightness(1.3); }
+.tab-icon { font-size:1.1rem; }
+
+/* ─── SCENARIO WRAPPER ─── */
+.scenario { display:none; flex-direction:column; align-items:center; gap:0;
+  width:100%; max-width:1060px; padding:0 1rem 2.5rem; position:relative; z-index:1; }
+.scenario.active { display:flex; }
+
+/* ─── SLIDER SECTION ─── */
+.slider-section {
+  width:100%; max-width:820px;
+  border-radius:8px; padding:1.7rem 2rem 1.2rem; margin-bottom:1.5rem;
+}
+.sc-e .slider-section { background:var(--card-e); border:1px solid var(--border-e); }
+.sc-d .slider-section { background:var(--card-d); border:1px solid var(--border-d); }
+
+.slider-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1.1rem; }
+.step-lbl { font-family:'Playfair Display',serif; font-size:1rem; letter-spacing:0.08em; }
+.sc-e .step-lbl { color:var(--muted-e); }
+.sc-d .step-lbl { color:var(--muted-d); }
+.step-count { font-family:'Playfair Display',serif; font-size:1.5rem; font-style:italic; }
+.sc-e .step-count { color:var(--acc2-e); }
+.sc-d .step-count { color:var(--acc2-d); }
+
+input[type=range] {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:4px; border-radius:2px; outline:none; cursor:pointer;
+}
+.sc-e input[type=range] { background:linear-gradient(90deg,var(--acc-e) var(--pct,0%),rgba(100,119,255,0.15) var(--pct,0%)); }
+.sc-d input[type=range] { background:linear-gradient(90deg,var(--acc-d) var(--pct,0%),rgba(61,200,120,0.15) var(--pct,0%)); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25); cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+}
+.sc-e input[type=range]::-webkit-slider-thumb {
+  background:radial-gradient(circle at 35% 35%,#a0b0ff,var(--acc-e));
+  box-shadow:0 0 18px rgba(100,119,255,0.7);
+}
+.sc-d input[type=range]::-webkit-slider-thumb {
+  background:radial-gradient(circle at 35% 35%,#a0ffcc,var(--acc-d));
+  box-shadow:0 0 18px rgba(61,200,120,0.7);
+}
+input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+
+.tick-row { display:flex; justify-content:space-between; margin-top:0.55rem; padding:0 12px; }
+.tick { font-size:0.65rem; cursor:pointer; transition:color .2s; text-align:center; }
+.sc-e .tick { color:var(--muted-e); }
+.sc-d .tick { color:var(--muted-d); }
+.sc-e .tick.active { color:var(--acc-e); font-weight:600; }
+.sc-d .tick.active { color:var(--acc-d); font-weight:600; }
+
+/* ─── CONTENT ROW ─── */
+.content-row {
+  width:100%; max-width:820px;
+  display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;
+}
+.panel {
+  border-radius:8px; padding:1.4rem;
+  display:flex; flex-direction:column; gap:0.9rem;
+}
+.sc-e .panel { background:var(--card-e); border:1px solid var(--border-e); }
+.sc-d .panel { background:var(--card-d); border:1px solid var(--border-d); }
+.panel-title {
+  font-family:'Playfair Display',serif; font-size:0.8rem;
+  letter-spacing:0.14em; text-transform:uppercase;
+}
+.sc-e .panel-title { color:var(--muted-e); }
+.sc-d .panel-title { color:var(--muted-d); }
+
+.viz-wrap {
+  width:100%; aspect-ratio:1/1.05; border-radius:4px; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.sc-e .viz-wrap {
+  background:repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(100,119,255,0.04) 19px,rgba(100,119,255,0.04) 20px),
+  repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(100,119,255,0.04) 19px,rgba(100,119,255,0.04) 20px);
+}
+.sc-d .viz-wrap {
+  background:repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(61,200,120,0.04) 19px,rgba(61,200,120,0.04) 20px),
+  repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(61,200,120,0.04) 19px,rgba(61,200,120,0.04) 20px);
+}
+canvas { display:block; max-width:100%; max-height:100%; }
+
+.stat-block { display:flex; flex-direction:column; gap:0.3rem; }
+.stat-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.26rem 0; }
+.sc-e .stat-row { border-bottom:1px solid rgba(100,119,255,0.08); }
+.sc-d .stat-row { border-bottom:1px solid rgba(61,200,120,0.08); }
+.stat-lbl { font-size:0.85rem; font-style:italic; }
+.sc-e .stat-lbl { color:var(--muted-e); }
+.sc-d .stat-lbl { color:var(--muted-d); }
+.stat-val { font-family:'Playfair Display',serif; font-size:0.92rem; color:var(--gold); text-align:right; }
+
+/* ─── OBJECT IMAGE ─── */
+.obj-img-wrap {
+  width:100%; aspect-ratio:1/1;
+  background:rgba(4,4,8,0.9); border-radius:6px; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.sc-e .obj-img-wrap { border:1px solid rgba(100,119,255,0.1); }
+.sc-d .obj-img-wrap { border:1px solid rgba(61,200,120,0.1); }
+.obj-img-wrap img {
+  max-width:88%; max-height:88%; object-fit:contain;
+  transition:opacity .4s,transform .4s;
+}
+.img-loading { opacity:0; transform:scale(0.9); }
+.img-loaded  { opacity:1; transform:scale(1); }
+.img-fallback {
+  position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; font-size:4rem;
+}
+.obj-name { font-family:'Playfair Display',serif; font-size:1.05rem; font-style:italic; text-align:center; }
+.obj-size { font-size:0.88rem; text-align:center; }
+.sc-e .obj-size { color:var(--muted-e); }
+.sc-d .obj-size { color:var(--muted-d); }
+.obj-desc { font-size:0.8rem; font-style:italic; text-align:center; line-height:1.5; padding:0 0.4rem; margin-top:0.1rem; }
+.sc-e .obj-desc { color:rgba(104,112,160,0.85); }
+.sc-d .obj-desc { color:rgba(90,128,112,0.85); }
+
+/* ─── FORMULA BANNER ─── */
+.formula-banner {
+  width:100%; max-width:820px; border-radius:8px;
+  padding:1rem 1.5rem; margin-top:1.4rem;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.8rem;
+}
+.sc-e .formula-banner { background:linear-gradient(135deg,rgba(100,119,255,0.07),rgba(167,139,250,0.04)); border:1px solid rgba(100,119,255,0.18); }
+.sc-d .formula-banner { background:linear-gradient(135deg,rgba(61,200,120,0.06),rgba(86,239,172,0.03)); border:1px solid rgba(61,200,120,0.17); }
+.formula-main { font-family:'Playfair Display',serif; font-size:clamp(0.95rem,2.2vw,1.38rem); }
+.sc-e .formula-main { color:var(--acc2-e); text-shadow:0 0 18px rgba(167,139,250,0.3); }
+.sc-d .formula-main { color:var(--acc2-d); text-shadow:0 0 18px rgba(86,239,172,0.25); }
+.chip-row { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.chip {
+  padding:0.2rem 0.55rem; border-radius:20px; font-size:0.7rem;
+  transition:all .35s; cursor:default;
+}
+.sc-e .chip { background:rgba(100,119,255,0.07); border:1px solid rgba(100,119,255,0.15); color:var(--muted-e); }
+.sc-d .chip { background:rgba(61,200,120,0.07); border:1px solid rgba(61,200,120,0.15); color:var(--muted-d); }
+.sc-e .chip.active { background:rgba(100,119,255,0.22); border-color:var(--acc-e); color:var(--acc2-e); }
+.sc-d .chip.active { background:rgba(61,200,120,0.18); border-color:var(--acc-d); color:var(--acc2-d); }
+
+/* ─── SCALE BAR ─── */
+.scale-section {
+  width:100%; max-width:820px; border-radius:8px;
+  padding:1.1rem 1.5rem; margin-top:1.4rem;
+}
+.sc-e .scale-section { background:var(--card-e); border:1px solid var(--border-e); }
+.sc-d .scale-section { background:var(--card-d); border:1px solid var(--border-d); }
+.scale-title { font-size:0.72rem; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:0.75rem; }
+.sc-e .scale-title { color:var(--muted-e); }
+.sc-d .scale-title { color:var(--muted-d); }
+.scale-bar-wrap { position:relative; height:28px; }
+.scale-bar-bg { width:100%; height:8px; border-radius:4px; margin-top:10px; }
+.sc-e .scale-bar-bg { background:linear-gradient(90deg,#3a5 8%,#6699cc 28%,#7766bb 50%,#9955aa 70%,#cc4488 88%,#ee3366 100%); }
+.sc-d .scale-bar-bg { background:linear-gradient(90deg,#3dc878 0%,#5adc98 15%,#5ab888 28%,#4a9060 40%,#4080a0 55%,#6060c0 68%,#9040a0 80%,#c03060 92%,#e01040 100%); }
+.scale-needle {
+  position:absolute; top:-10px; width:2px; height:28px;
+  background:white; border-radius:1px;
+  box-shadow:0 0 8px rgba(255,255,255,0.8);
+  transform:translateX(-50%);
+  transition:left 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}
+.scale-needle::before { content:'▼'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:9px; color:white; }
+.scale-labels { display:flex; justify-content:space-between; margin-top:0.5rem; }
+.scale-lbl { font-size:0.6rem; }
+.sc-e .scale-lbl { color:var(--muted-e); }
+.sc-d .scale-lbl { color:var(--muted-d); }
+
+@media (max-width:600px) {
+  .content-row { grid-template-columns:1fr; }
+  .formula-banner { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header>
+  <span class="eyebrow">Esponenziale in base 2 · crescita e decrescita</span>
+  <h1><span class="exp-up">×&thinsp;2ⁿ</span> &emsp; e &emsp; <span class="exp-down">÷&thinsp;2ⁿ</span></h1>
+  <div class="divider"><div class="div-diamond"></div></div>
+  <p class="subtitle">Un foglio che si raddoppia fino alle stelle, o un bastone che si dimezza fino agli atomi.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab tab-e active" id="btnE" onclick="switchTab('e')">
+    <span class="tab-icon">📄</span> Raddoppia &thinsp;·&thinsp; 2ⁿ
+  </button>
+  <button class="tab tab-d" id="btnD" onclick="switchTab('d')">
+    <span class="tab-icon">🪵</span> Dimezza &thinsp;·&thinsp; (½)ⁿ
+  </button>
+</div>
+
+<!-- ═══════════════ SCENARIO E — EXPONENTIAL GROWTH ═══════════════ -->
+<div class="scenario sc-e active" id="sc-e">
+
+  <div class="slider-section">
+    <div class="slider-header">
+      <span class="step-lbl">Numero di piegature</span>
+      <span class="step-count" id="eFoldLabel">n = 0</span>
+    </div>
+    <input type="range" id="foldSlider" min="0" max="30" step="1" value="0" style="--pct:0%">
+    <div class="tick-row" id="eTickRow"></div>
+  </div>
+
+  <div class="content-row">
+    <div class="panel">
+      <span class="panel-title">Foglio piegato</span>
+      <div class="viz-wrap">
+        <canvas id="paperCanvas" width="300" height="315"></canvas>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row"><span class="stat-lbl">Spessore</span><span class="stat-val" id="eStatThick">1 mm</span></div>
+        <div class="stat-row"><span class="stat-lbl">Formula</span><span class="stat-val" id="eStatFormula">2⁰ mm</span></div>
+        <div class="stat-row"><span class="stat-lbl">Strati</span><span class="stat-val" id="eStatLayers">1</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="panel-title">Oggetto di riferimento</span>
+      <div class="obj-img-wrap" id="eObjWrap">
+        <img id="eObjImg" src="" alt="" class="img-loading">
+        <div class="img-fallback" id="eImgFallback"></div>
+      </div>
+      <div class="obj-name" id="eObjName">Acaro della polvere</div>
+      <div class="obj-size" id="eObjSize">≈ 1 mm</div>
+      <div class="obj-desc" id="eObjDesc"></div>
+    </div>
+  </div>
+
+  <div class="formula-banner">
+    <div class="formula-main" id="eFormulaDisplay">
+      Spessore = 2⁰ × 1 mm = <span style="color:var(--gold)">1 mm</span>
+    </div>
+    <div class="chip-row" id="eContextChain"></div>
+  </div>
+
+  <div class="scale-section">
+    <div class="scale-title">Scala logaritmica — da 1 mm alla Luna</div>
+    <div class="scale-bar-wrap">
+      <div class="scale-bar-bg">
+        <div class="scale-needle" id="eScaleNeedle" style="left:0%"></div>
+      </div>
+    </div>
+    <div class="scale-labels">
+      <span class="scale-lbl">1 mm</span>
+      <span class="scale-lbl">1 cm</span>
+      <span class="scale-lbl">1 m</span>
+      <span class="scale-lbl">100 m</span>
+      <span class="scale-lbl">1 km</span>
+      <span class="scale-lbl">100 km</span>
+      <span class="scale-lbl">∞ Luna</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCENARIO D — EXPONENTIAL DECAY ═══════════════ -->
+<div class="scenario sc-d" id="sc-d">
+
+  <div class="slider-section">
+    <div class="slider-header">
+      <span class="step-lbl">Numero di tagli</span>
+      <span class="step-count" id="dCutLabel">n = 0</span>
+    </div>
+    <input type="range" id="cutSlider" min="0" max="30" step="1" value="0" style="--pct:0%">
+    <div class="tick-row" id="dTickRow"></div>
+  </div>
+
+  <div class="content-row">
+    <div class="panel">
+      <span class="panel-title">Frammento attuale</span>
+      <div class="viz-wrap">
+        <canvas id="stickCanvas" width="300" height="315"></canvas>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row"><span class="stat-lbl">Lunghezza</span><span class="stat-val" id="dStatLen">1.000 mm</span></div>
+        <div class="stat-row"><span class="stat-lbl">Formula</span><span class="stat-val" id="dStatForm">1000 / 2⁰</span></div>
+        <div class="stat-row"><span class="stat-lbl">Scala</span><span class="stat-val" id="dStatScale">macroscopica</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="panel-title">Oggetto di riferimento</span>
+      <div class="obj-img-wrap" id="dObjWrap">
+        <img id="dObjImg" src="" alt="" class="img-loading">
+        <div class="img-fallback" id="dImgFb"></div>
+      </div>
+      <div class="obj-name" id="dObjName">Bastone di legno</div>
+      <div class="obj-size" id="dObjSize">= 1 m</div>
+      <div class="obj-desc" id="dObjDesc"></div>
+    </div>
+  </div>
+
+  <div class="formula-banner">
+    <div class="formula-main" id="dFormulaDisp">
+      Lunghezza = 1000 / 2⁰ = <span style="color:var(--gold)">1.000 mm</span>
+    </div>
+    <div class="chip-row" id="dRealmRow"></div>
+  </div>
+
+  <div class="scale-section">
+    <div class="scale-title">Scala logaritmica — da 1 metro all'atomo</div>
+    <div class="scale-bar-wrap">
+      <div class="scale-bar-bg">
+        <div class="scale-needle" id="dNeedle" style="left:0%"></div>
+      </div>
+    </div>
+    <div class="scale-labels">
+      <span class="scale-lbl">1 m</span>
+      <span class="scale-lbl">1 cm</span>
+      <span class="scale-lbl">1 mm</span>
+      <span class="scale-lbl">100 µm</span>
+      <span class="scale-lbl">10 µm</span>
+      <span class="scale-lbl">1 µm</span>
+      <span class="scale-lbl">100 nm</span>
+      <span class="scale-lbl">~1 nm</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════
+function switchTab(t) {
+  document.querySelectorAll('.scenario').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('sc-'+t).classList.add('active');
+  document.getElementById('btn'+t.toUpperCase()).classList.add('active');
+}
+
+
+// ════════════════════════════════════
+//  SCENARIO E — GROWTH  (×2ⁿ)
+// ════════════════════════════════════
+// ── Canvas setup (Scenario E)
+const eCanvas = document.getElementById('paperCanvas');
+const ctx = eCanvas.getContext('2d');
+const CW = 300, CH = 315;
+
+const E_OBJECTS = [
+  { n:0,  mm:1,          name:"Acaro della polvere",       emoji:"🦠",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/House_Dust_Mite.jpg/320px-House_Dust_Mite.jpg" },
+  { n:1,  mm:2,          name:"Formica faraone operaia",   emoji:"🐜",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Monomorium_pharaonis_casent0103752_profile_1.jpg/320px-Monomorium_pharaonis_casent0103752_profile_1.jpg" },
+  { n:2,  mm:4,          name:"Seme di papavero",          emoji:"🌱",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Papaver_somniferum_seeds.jpg/320px-Papaver_somniferum_seeds.jpg" },
+  { n:3,  mm:8,          name:"Chicco di riso Arborio",    emoji:"🌾",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Rice_p1160004.jpg/320px-Rice_p1160004.jpg" },
+  { n:4,  mm:16,         name:"Nocciola sgusciata",        emoji:"🌰",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Hazel_-_Corylus_avellana.jpg/320px-Hazel_-_Corylus_avellana.jpg" },
+  { n:5,  mm:32,         name:"Biglia di vetro piccola",   emoji:"🔮",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Marbles_game_on_Valaam.jpg/320px-Marbles_game_on_Valaam.jpg" },
+  { n:6,  mm:64,         name:"Pallina da ping-pong",      emoji:"🏓",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/PingPongBall.svg/320px-PingPongBall.svg.png" },
+  { n:7,  mm:128,        name:"Lattina Coca-Cola 330 ml",  emoji:"🥤",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Coca-Cola_bottle_cap_and_can.jpg/240px-Coca-Cola_bottle_cap_and_can.jpg" },
+  { n:8,  mm:256,        name:"Bottiglia acqua 1 litro",   emoji:"🍶",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Bottled_water_in_China.jpg/240px-Bottled_water_in_China.jpg" },
+  { n:9,  mm:512,        name:"Chitarra ukulele soprano",  emoji:"🎸",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Ukulele_Baritone_soprano_concert_tenor.jpg/320px-Ukulele_Baritone_soprano_concert_tenor.jpg" },
+  { n:10, mm:1024,       name:"Sedia IKEA ADDE",           emoji:"🪑",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/IKEA_IVAR_chairs_and_shelf.jpg/320px-IKEA_IVAR_chairs_and_shelf.jpg" },
+  { n:11, mm:2048,       name:"Porta interna standard",    emoji:"🚪",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Interior_Door.jpg/240px-Interior_Door.jpg" },
+  { n:12, mm:4096,       name:"Fiat 500",                  emoji:"🚗",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/2007-2015_Fiat_500_1.2_Pop_(Australia),_front_8.20.17.jpg/320px-2007-2015_Fiat_500_1.2_Pop_(Australia),_front_8.20.17.jpg" },
+  { n:13, mm:8192,       name:"Mercedes-Benz Sprinter",    emoji:"🚐",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Mercedes-Benz_Sprinter_W906.jpg/320px-Mercedes-Benz_Sprinter_W906.jpg" },
+  { n:14, mm:16384,      name:"Giraffa adulta",            emoji:"🦒",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Giraffe_Mikumi_National_Park.jpg/240px-Giraffe_Mikumi_National_Park.jpg" },
+  { n:15, mm:32768,      name:"Statua della Libertà",      emoji:"🗽",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/24701-nature-natural-beauty.jpg/320px-24701-nature-natural-beauty.jpg",
+    imgAlt:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Lady_Liberty_under_a_blue_sky_%28cropped%29.jpg/240px-Lady_Liberty_under_a_blue_sky_%28cropped%29.jpg" },
+  { n:16, mm:65536,      name:"Big Ben (Elizabeth Tower)", emoji:"🕰️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Clock_Tower_-_Palace_of_Westminster%2C_London_-_May_2007_icon.png/240px-Clock_Tower_-_Palace_of_Westminster%2C_London_-_May_2007_icon.png" },
+  { n:17, mm:131072,     name:"London Eye",                emoji:"🎡",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/The_London_Eye_at_Twilight.jpg/320px-The_London_Eye_at_Twilight.jpg" },
+  { n:18, mm:262144,     name:"30 St Mary Axe (Gherkin)",  emoji:"🏙️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/30stmaryaxe.jpg/240px-30stmaryaxe.jpg" },
+  { n:19, mm:524288,     name:"CN Tower, Toronto",         emoji:"📡",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Toronto_-_ON_-_Toronto_Skyline2.jpg/320px-Toronto_-_ON_-_Toronto_Skyline2.jpg" },
+  { n:20, mm:1048576,    name:"Burj Khalifa",              emoji:"🏗️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Burj_Khalifa.jpg/240px-Burj_Khalifa.jpg" },
+  { n:21, mm:2097152,    name:"Monte Olimpo, Grecia",      emoji:"⛰️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Mount_Olympus_%28Mitikas_peak%29_from_Skala_-_Mytikas.jpg/320px-Mount_Olympus_%28Mitikas_peak%29_from_Skala_-_Mytikas.jpg" },
+  { n:22, mm:4194304,    name:"Monte Bianco (4.808 m)",    emoji:"🏔️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Mont_blanc_2011.jpg/320px-Mont_blanc_2011.jpg",
+    desc:"Il tetto d'Europa si staglia a 4.808 m. Il foglio lo supera appena." },
+  { n:23, mm:8388608,    name:"Monte Everest (8.849 m)",   emoji:"🏔️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg/320px-Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg",
+    desc:"Il punto più alto della Terra. 8,4 km: sei già sopra la vetta." },
+  { n:24, mm:16777216,   name:"Mauna Kea — vetta sopra il fondo oceanico",  emoji:"🌋",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mauna_Kea_observatory.jpg/320px-Mauna_Kea_observatory.jpg",
+    desc:"Dal fondo marino alla cima: ~10.200 m. Il foglio è a ~17 km, già nella stratosfera." },
+  { n:25, mm:33554432,   name:"Stratosfera — volo del Concorde (~18 km)",   emoji:"🛩️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Concorde_at_Filton.jpg/320px-Concorde_at_Filton.jpg",
+    desc:"Il Concorde crocierava a 18.000 m. A 33 km sei nel cuore della stratosfera." },
+  { n:26, mm:67108864,   name:"Salto di Felix Baumgartner (39 km)",         emoji:"🪂",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Felix_Baumgartner_2013.jpg/320px-Felix_Baumgartner_2013.jpg",
+    desc:"Nel 2012 Baumgartner saltò da 39 km. Il foglio lo ha già superato: sei a 67 km." },
+  { n:27, mm:134217728,  name:"Mesosfera — meteore che bruciano (~80 km)",  emoji:"🌠",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Leonid_Meteor.jpg/320px-Leonid_Meteor.jpg",
+    desc:"Le meteore si incendiano a ~80 km d'altezza. Il foglio è a 134 km, oltre la Linea di Kármán." },
+  { n:28, mm:268435456,  name:"Distanza Terra–Luna al perigeo",             emoji:"🌕",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/320px-FullMoon2010.jpg",
+    desc:"La Luna al punto più vicino dista ~356.500 km. Con 28 piegature ci sei quasi." },
+  { n:29, mm:536870912,  name:"Distanza media Terra–Luna (384.400 km)",     emoji:"🌙",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Full_Moon_Luc_Viatour.jpg/320px-Full_Moon_Luc_Viatour.jpg",
+    desc:"537.000 km: il foglio supera abbondantemente la distanza Terra–Luna media." },
+  { n:30, mm:1073741824, name:"~¾ del diametro del Sole (1.392.000 km)",   emoji:"☀️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/320px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg",
+    desc:"1.074.000 km: quasi il diametro del Sole. 30 piegature di un foglio da 1 mm." },
+];
+
+
+function E_formatMM(mm) {
+  if (mm < 10)    return mm.toFixed(1) + ' mm';
+  if (mm < 1000)  return Math.round(mm) + ' mm';
+  if (mm < 1e6)   return (mm/1000).toFixed(2).replace(/\.?0+$/,'') + ' m';
+  if (mm < 1e9)   return (mm/1e6).toFixed(2).replace(/\.?0+$/,'') + ' km';
+  return (mm/1e6).toFixed(0) + ' km';
+}
+
+function E_drawPaper(n) {
+  ctx.clearRect(0, 0, CW, CH);
+
+  const mm = Math.pow(2, n);
+  // Visual thickness: log scale, min 2px max ~260px
+  // n=0 → 2px, n=30 → 260px (log mapping)
+  const minPx = 2, maxPx = 260;
+  const vizH = n === 0 ? minPx : Math.min(maxPx, minPx + (maxPx - minPx) * (n / 30));
+
+  const paperW = 220;
+  const paperX = (CW - paperW) / 2;
+  const paperY = CH - 30 - vizH;
+
+  // Shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(100,119,255,0.3)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 8;
+
+  // Main paper body
+  if (vizH > 4) {
+    // Side face (thickness illusion)
+    const sideW = Math.min(30, vizH * 0.3);
+    // Right face
+    const rg = ctx.createLinearGradient(paperX + paperW, paperY, paperX + paperW + sideW, paperY + vizH * 0.3);
+    rg.addColorStop(0, '#c8c0a8');
+    rg.addColorStop(1, '#8a8070');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(paperX + paperW, paperY);
+    ctx.lineTo(paperX + paperW + sideW, paperY - vizH * 0.15);
+    ctx.lineTo(paperX + paperW + sideW, paperY - vizH * 0.15 + vizH);
+    ctx.lineTo(paperX + paperW, paperY + vizH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Top face
+    const tg = ctx.createLinearGradient(paperX, paperY, paperX + paperW + sideW * 0.7, paperY - vizH * 0.15);
+    tg.addColorStop(0, '#e8e0cc');
+    tg.addColorStop(1, '#ccc4b0');
+    ctx.fillStyle = tg;
+    ctx.beginPath();
+    ctx.moveTo(paperX, paperY);
+    ctx.lineTo(paperX + paperW, paperY);
+    ctx.lineTo(paperX + paperW + sideW, paperY - vizH * 0.15);
+    ctx.lineTo(paperX + sideW, paperY - vizH * 0.15);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Front face
+  const fg = ctx.createLinearGradient(paperX, paperY, paperX, paperY + vizH);
+  fg.addColorStop(0, '#f8f4ec');
+  fg.addColorStop(0.05, '#f0ece0');
+  fg.addColorStop(1, '#e0d8c4');
+  ctx.fillStyle = fg;
+  ctx.fillRect(paperX, paperY, paperW, vizH);
+
+  // Paper lines (folds visualization)
+  if (n > 0 && vizH > 8) {
+    const lineCount = Math.min(n, 16);
+    const spacing = vizH / lineCount;
+    ctx.strokeStyle = 'rgba(180,170,150,0.5)';
+    ctx.lineWidth = 0.8;
+    for (let i = 1; i < lineCount; i++) {
+      const ly = paperY + i * spacing;
+      ctx.beginPath();
+      ctx.moveTo(paperX + 2, ly);
+      ctx.lineTo(paperX + paperW - 2, ly);
+      ctx.stroke();
+      // alternating shade
+      if (i % 2 === 0) {
+        const sg = ctx.createLinearGradient(0, ly, 0, ly + spacing);
+        sg.addColorStop(0, 'rgba(220,210,190,0.3)');
+        sg.addColorStop(1, 'rgba(200,190,170,0.1)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(paperX + 2, ly, paperW - 4, Math.min(spacing, vizH - i * spacing));
+      }
+    }
+  }
+
+  // Border
+  ctx.strokeStyle = 'rgba(160,150,130,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(paperX, paperY, paperW, vizH);
+
+  ctx.restore();
+
+  // Thickness arrow annotation
+  if (vizH > 20) {
+    const ax = paperX - 28;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(100,119,255,0.7)';
+    ctx.fillStyle = 'rgba(100,119,255,0.7)';
+    ctx.lineWidth = 1.5;
+    // vertical line
+    ctx.beginPath(); ctx.moveTo(ax, paperY); ctx.lineTo(ax, paperY + vizH); ctx.stroke();
+    // top arrow
+    ctx.beginPath(); ctx.moveTo(ax, paperY); ctx.lineTo(ax - 4, paperY + 8); ctx.lineTo(ax + 4, paperY + 8); ctx.closePath(); ctx.fill();
+    // bottom arrow
+    ctx.beginPath(); ctx.moveTo(ax, paperY + vizH); ctx.lineTo(ax - 4, paperY + vizH - 8); ctx.lineTo(ax + 4, paperY + vizH - 8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // Number of layers text at bottom of paper
+  if (vizH > 16) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(100,119,255,0.7)';
+    ctx.font = 'italic 11px Crimson Text, serif';
+    ctx.textAlign = 'center';
+    const layerCount = Math.pow(2, n);
+    const txt = layerCount <= 1024 ? layerCount + ' strati' : '2^' + n + ' strati';
+    ctx.fillText(txt, CW / 2, paperY + vizH / 2 + 4);
+    ctx.restore();
+  }
+
+  // Ground line
+  ctx.save();
+  ctx.strokeStyle = 'rgba(100,119,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath(); ctx.moveTo(20, CH - 30); ctx.lineTo(CW - 20, CH - 30); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Height label on the side
+  ctx.save();
+  ctx.fillStyle = 'rgba(240,192,96,0.85)';
+  ctx.font = 'bold 13px Playfair Display, serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(E_formatMM(mm), paperX - 36, paperY + vizH / 2 + 5);
+  ctx.restore();
+}
+
+// ─── Object image & info ───────────────────────────────────────────────────
+let eCurSrc = '';
+
+
+function E_updateObject(n) {
+  const obj = E_OBJECTS[n] || E_OBJECTS[E_OBJECTS.length - 1];
+  const imgEl = document.getElementById('eObjImg');
+  const fallback = document.getElementById('eImgFallback');
+  const nameEl = document.getElementById('eObjName');
+  const sizeEl = document.getElementById('eObjSize');
+
+  nameEl.textContent = obj.name;
+  sizeEl.textContent = '≈ ' + E_formatMM(obj.mm);
+
+  let descEl = document.getElementById('eObjDesc');
+  if (!descEl) {
+    descEl = document.createElement('div');
+    descEl.id = 'objDesc';
+    descEl.style.cssText = 'font-size:0.82rem;color:#6870a0;font-style:italic;text-align:center;line-height:1.5;padding:0.2rem 0.6rem;margin-top:0.1rem;';
+    sizeEl.insertAdjacentElement('afterend', descEl);
+  }
+  descEl.textContent = obj.desc || '';
+
+  fallback.textContent = obj.emoji;
+
+  if (obj.img && obj.img !== eCurSrc) {
+    eCurSrc = obj.img;
+    imgEl.classList.remove('loaded');
+    imgEl.classList.add('loading');
+    const tryLoad = (src) => {
+      imgEl.onload = () => {
+        fallback.style.display = 'none';
+        imgEl.classList.remove('loading');
+        imgEl.classList.add('loaded');
+      };
+      imgEl.onerror = () => {
+        if (obj.imgAlt && src !== obj.imgAlt) {
+          tryLoad(obj.imgAlt);
+        } else {
+          imgEl.style.display = 'none';
+          fallback.style.display = 'flex';
+        }
+      };
+      imgEl.src = src;
+      imgEl.alt = obj.name;
+    };
+    imgEl.style.display = 'block';
+    fallback.style.display = 'flex';
+    tryLoad(obj.img);
+  }
+}
+
+// ─── Scale needle ──────────────────────────────────────────────────────────
+function E_updateScale(n) {
+  // Log scale: n=0 (1mm) → 0%, n=30 (536870912 mm ≈ 537000 km) → 100%
+  const pct = n / 30 * 100;
+  document.getElementById('eScaleNeedle').style.left = pct + '%';
+}
+
+// ─── Context chain chips ───────────────────────────────────────────────────
+const E_SCALE_CHIPS = [
+  { label: 'Microscopico', max: 3 },
+  { label: 'Millimetrico', max: 6 },
+  { label: 'Centimetrico', max: 9 },
+  { label: 'Metrico', max: 12 },
+  { label: 'Terrestre', max: 18 },
+  { label: 'Architettonico', max: 21 },
+  { label: 'Geografico', max: 24 },
+  { label: 'Atmosferico', max: 26 },
+  { label: 'Spaziale', max: 30 },
+];
+
+function E_buildChips() {
+  const c = document.getElementById('eContextChain');
+  E_SCALE_CHIPS.forEach((ch, i) => {
+    const el = document.createElement('span');
+    el.className = 'chip';
+    el.textContent = ch.label;
+    el.id = 'chip' + i;
+    c.appendChild(el);
+  });
+}
+
+function E_updateChips(n) {
+  E_SCALE_CHIPS.forEach((ch, i) => {
+    const el = document.getElementById('chip' + i);
+    const prev = i > 0 ? E_SCALE_CHIPS[i - 1].max : -1;
+    el.classList.toggle('active', n > prev && n <= ch.max);
+  });
+}
+
+// ─── Main update ──────────────────────────────────────────────────────────
+function E_update(n) {
+  n = Math.round(clamp(n, 0, 30));
+  const mm = Math.pow(2, n);
+
+  // Slider styling
+  const slider = document.getElementById('foldSlider');
+  slider.value = n;
+  slider.style.setProperty('--pct', (n / 30 * 100) + '%');
+
+  // Fold label
+  document.getElementById('eFoldLabel').textContent = 'n = ' + n;
+
+  // Ticks
+  document.querySelectorAll('#sc-e .tick').forEach(t => {
+    t.classList.toggle('active', +t.dataset.n === n);
+  });
+
+  // Stats
+  document.getElementById('eStatThick').textContent = E_formatMM(mm);
+  document.getElementById('eStatFormula').textContent = '2^' + n + ' mm';
+  document.getElementById('eStatLayers').textContent = n <= 20 ? Math.pow(2, n).toLocaleString('it-IT') : '2^' + n;
+
+  // Formula
+  document.getElementById('eFormulaDisplay').innerHTML =
+    'Spessore = 2<sup>' + n + '</sup> × 1 mm = <span style="color:var(--gold)">' + E_formatMM(mm) + '</span>';
+
+  // Draw paper
+  E_drawPaper(n);
+
+  // Object
+  E_updateObject(n);
+
+  // Scale
+  E_updateScale(n);
+
+  // Chips
+  E_updateChips(n);
+}
+
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+
+
+// ════════════════════════════════════
+//  SCENARIO D — DECAY  (÷2ⁿ)
+// ════════════════════════════════════
+// ── Canvas setup (Scenario D)
+const dCanvas = document.getElementById('stickCanvas');
+
+const D_OBJECTS = [
+  { n:0,  mm:1000,    name:"Bastone di legno — 1 metro",        emoji:"🪵",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Wooden_stick.jpg/320px-Wooden_stick.jpg",
+    desc:"Il punto di partenza. Un bastone lungo esattamente un metro.", realm:"Macroscopica" },
+  { n:1,  mm:500,     name:"Righello da 50 cm",                 emoji:"📏",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Ruler-Inch-Centimeter.jpg/320px-Ruler-Inch-Centimeter.jpg",
+    desc:"Il primo taglio porta a 50 cm: la lunghezza di un righello scolastico.", realm:"Macroscopica" },
+  { n:2,  mm:250,     name:"Foglio A4 — lato corto (21 cm)",    emoji:"📄",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/A_size_illustration2_with_letter_added.svg/320px-A_size_illustration2_with_letter_added.svg.png",
+    desc:"25 cm è poco più del lato corto di un foglio A4.", realm:"Macroscopica" },
+  { n:3,  mm:125,     name:"Smartphone moderno",                emoji:"📱",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/IPhone_14_vector.svg/240px-IPhone_14_vector.svg.png",
+    desc:"12,5 cm: la lunghezza tipica di uno smartphone medio.", realm:"Macroscopica" },
+  { n:4,  mm:62.5,    name:"Chiave USB",                        emoji:"💾",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/USB_memory_stick.JPG/320px-USB_memory_stick.JPG",
+    desc:"6,25 cm: la dimensione di una chiavetta USB standard.", realm:"Macroscopica" },
+  { n:5,  mm:31.25,   name:"Dado da gioco",                     emoji:"🎲",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/6sided_dice.jpg/320px-6sided_dice.jpg",
+    desc:"3 cm: circa il lato di un dado da gioco da tavolo.", realm:"Macroscopica" },
+  { n:6,  mm:15.6,    name:"Perla di collana (grossa)",         emoji:"🔮",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Pearl_necklace_2.jpg/320px-Pearl_necklace_2.jpg",
+    desc:"15,6 mm: una perla pregiata di grande diametro.", realm:"Macroscopica" },
+  { n:7,  mm:7.8,     name:"Chicco di caffè",                   emoji:"☕",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Roasted_coffee_beans.jpg/320px-Roasted_coffee_beans.jpg",
+    desc:"7,8 mm: quasi esattamente la lunghezza di un chicco di caffè Arabica.", realm:"Macroscopica" },
+  { n:8,  mm:3.9,     name:"Seme di sesamo",                    emoji:"🫙",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Sesame_seeds.jpg/320px-Sesame_seeds.jpg",
+    desc:"3,9 mm: i semi di sesamo sul panino del tuo hamburger.", realm:"Macroscopica" },
+  { n:9,  mm:1.95,    name:"Formica faraone operaia",           emoji:"🐜",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Monomorium_pharaonis_casent0103752_profile_1.jpg/320px-Monomorium_pharaonis_casent0103752_profile_1.jpg",
+    desc:"2 mm: la lunghezza di una formica faraone, tra le più piccole al mondo.", realm:"Macroscopica" },
+  { n:10, mm:0.977,   name:"Acaro della polvere",               emoji:"🦠",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/House_Dust_Mite.jpg/320px-House_Dust_Mite.jpg",
+    desc:"~1 mm: al limite di visibilità ad occhio nudo. Vive nella tua polvere.", realm:"Macroscopica" },
+  { n:11, mm:0.488,   name:"Granello di sabbia grossa",         emoji:"🏖️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Glass_Sand.jpg/320px-Glass_Sand.jpg",
+    desc:"488 µm: un granello di sabbia da spiaggia, ancora visibile con difficoltà.", realm:"Mesoscopica" },
+  { n:12, mm:0.244,   name:"Spessore di un foglio di carta",    emoji:"📃",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Good_Food_Display_-_NCI_Visuals_Online.jpg/320px-Good_Food_Display_-_NCI_Visuals_Online.jpg",
+    imgAlt:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Paper_Fibers.jpg/320px-Paper_Fibers.jpg",
+    desc:"244 µm: circa lo spessore di un foglio di carta da fotocopiatrice (70-100 µm).", realm:"Mesoscopica" },
+  { n:13, mm:0.122,   name:"Capello umano",                     emoji:"💇",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Human_hair_under_the_microscope.jpg/320px-Human_hair_under_the_microscope.jpg",
+    desc:"122 µm: nel range del diametro di un capello umano (60–120 µm).", realm:"Mesoscopica" },
+  { n:14, mm:0.0610,  name:"Granello di polline di pino",       emoji:"🌲",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Pine_pollen_grain_%28Pinus_sylvestris%29.jpg/320px-Pine_pollen_grain_%28Pinus_sylvestris%29.jpg",
+    desc:"61 µm: il polline di pino, che causa la famosa allergia primaverile.", realm:"Mesoscopica" },
+  { n:15, mm:0.0305,  name:"Cellula epiteliale umana",          emoji:"🔬",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/OSC_Microbio_02_03_EukTypCel.jpg/320px-OSC_Microbio_02_03_EukTypCel.jpg",
+    desc:"30 µm: dimensione tipica di una cellula epiteliale del corpo umano.", realm:"Microscopica" },
+  { n:16, mm:0.01525, name:"Globulo rosso (eritrocita)",        emoji:"🩸",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Red_blood_cell.jpg/320px-Red_blood_cell.jpg",
+    desc:"15 µm: il doppio del diametro di un globulo rosso (~8 µm). Trasporta ossigeno.", realm:"Microscopica" },
+  { n:17, mm:0.00763, name:"Mitocondrio",                       emoji:"⚡",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Animal_mitochondria_structure.svg/320px-Animal_mitochondria_structure.svg.png",
+    desc:"7,6 µm: la dimensione di un mitocondrio, la 'centrale energetica' della cellula.", realm:"Microscopica" },
+  { n:18, mm:0.00381, name:"Batterio E. coli",                  emoji:"🧫",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/EscherichiaColi_NIAID.jpg/320px-EscherichiaColi_NIAID.jpg",
+    desc:"3,8 µm: la lunghezza tipica del batterio Escherichia coli.", realm:"Microscopica" },
+  { n:19, mm:0.00191, name:"Cloroplasto",                       emoji:"🌿",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Chloroplast-new.jpg/320px-Chloroplast-new.jpg",
+    desc:"~2 µm: il cloroplasto, organello che compie la fotosintesi nelle piante.", realm:"Microscopica" },
+  { n:20, mm:0.000954,name:"Lunghezza d'onda luce visibile",    emoji:"🌈",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/EM_spectrum.svg/320px-EM_spectrum.svg.png",
+    desc:"954 nm: nel range dell'infrarosso vicino. La luce rossa visibile è ~700 nm.", realm:"Microscopica" },
+  { n:21, mm:0.000477,name:"Virus dell'influenza",              emoji:"🤧",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Influenza_virus_particle_color.jpg/320px-Influenza_virus_particle_color.jpg",
+    desc:"477 nm: i virus dell'influenza misurano 80–120 nm. Siamo già sotto la luce visibile.", realm:"Nanometrica" },
+  { n:22, mm:0.000238,name:"Virus HIV",                         emoji:"🔴",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/HIV-budding-Color.jpg/320px-HIV-budding-Color.jpg",
+    desc:"238 nm: vicino al diametro del virus HIV (~120 nm). Invisibile al microscopio ottico.", realm:"Nanometrica" },
+  { n:23, mm:0.000119,name:"Esosoma (vescicola cellulare)",     emoji:"🫧",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Exosome_diagram.svg/320px-Exosome_diagram.svg.png",
+    desc:"119 nm: gli esosomi sono vescicole di comunicazione tra cellule (30–150 nm).", realm:"Nanometrica" },
+  { n:24, mm:0.0000596,name:"Proteina albumina",                emoji:"🧬",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/1E7I.png/320px-1E7I.png",
+    desc:"~60 nm: molto più grande dell'albumina (~7 nm), ma nella scala delle grandi proteine.", realm:"Nanometrica" },
+  { n:25, mm:0.0000298,name:"Transistor — processo a 3 nm",    emoji:"💻",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Moores_Law_Transistor_Count_1970-2020.png/320px-Moores_Law_Transistor_Count_1970-2020.png",
+    desc:"30 nm: i transistor più avanzati (3 nm process) che alimentano il tuo smartphone.", realm:"Nanometrica" },
+  { n:26, mm:0.0000149,name:"Doppio strato lipidico (membrana)",emoji:"🧫",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Cell_membrane_detailed_diagram_en.svg/320px-Cell_membrane_detailed_diagram_en.svg.png",
+    desc:"~15 nm: lo spessore del doppio strato lipidico che separa ogni cellula dal mondo esterno.", realm:"Nanometrica" },
+  { n:27, mm:0.00000745,name:"Molecola di glucosio",            emoji:"🍬",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Alpha-D-Glucopyranose.svg/320px-Alpha-D-Glucopyranose.svg.png",
+    desc:"7,45 nm: molto più grande di una molecola di glucosio (~0,7 nm), ma stessa scala.", realm:"Atomica" },
+  { n:28, mm:0.00000373,name:"Doppia elica del DNA",            emoji:"🧬",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/DNA_Structure%2BKey%2BLabelled.pn_NoBB.png/240px-DNA_Structure%2BKey%2BLabelled.pn_NoBB.png",
+    desc:"3,7 nm: il diametro della doppia elica del DNA è esattamente ~2 nm.", realm:"Atomica" },
+  { n:29, mm:0.00000186,name:"Nanotube di carbonio (SWCNT)",    emoji:"⚛️",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Types_of_Carbon_Nanotubes.png/320px-Types_of_Carbon_Nanotubes.png",
+    desc:"1,86 nm: i nanotubi a parete singola hanno diametro 0,4–2 nm. La frontiera dei materiali.", realm:"Atomica" },
+  { n:30, mm:0.000000931,name:"Atomo di silicio",               emoji:"✨",
+    img:"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Atom_diagram.png/240px-Atom_diagram.png",
+    desc:"0,93 nm: il raggio atomico del silicio è ~0,11 nm. Siamo entrati nel mondo atomico.", realm:"Atomica" },
+];
+
+
+const D_REALMS = [
+  { label:"Macroscopica", max:10 },
+  { label:"Mesoscopica",  max:13 },
+  { label:"Microscopica", max:20 },
+  { label:"Nanometrica",  max:26 },
+  { label:"Atomica",      max:30 },
+];
+
+
+function D_fmtMM(mm) {
+  if (mm >= 1000)   return (mm/1000).toFixed(3).replace(/0+$/,'').replace(/\.$/,'') + ' m';
+  if (mm >= 1)      return mm.toFixed(1).replace(/\.0$/,'') + ' mm';
+  if (mm >= 0.001)  return (mm*1000).toFixed(1).replace(/\.0$/,'') + ' µm';
+  return (mm*1e6).toFixed(2).replace(/\.?0+$/,'') + ' nm';
+}
+
+function D_drawStick(n) {
+  const dCtx = dCanvas.getContext('2d');
+  const dCW = 300, dCH = 315;
+  dCtx.clearRect(0, 0, dCW, dCH);
+
+  const mm = 1000 / Math.pow(2, n);
+  // Visual width: n=0 → maxW, n=30 → minW  (log mapped)
+  const maxW = 240, minW = 1;
+  const vizW = n === 0 ? maxW : Math.max(minW, maxW * Math.pow(2, -n * 0.88));
+
+  const stickH = Math.min(48 + (1 - n/30)*20, 68); // thicker when longer
+  const stickX = (dCW - vizW) / 2;
+  const stickY = (dCH - stickH) / 2;
+
+  // Background scale guide lines (greyed out original)
+  dCtx.save();
+  dCtx.globalAlpha = 0.07;
+  dCtx.strokeStyle = '#3dc878';
+  dCtx.lineWidth = 1;
+  dCtx.setLineDash([4, 6]);
+  // show where 1m line was
+  dCtx.beginPath();
+  dCtx.moveTo((dCW - maxW) / 2, stickY + stickH / 2);
+  dCtx.lineTo((dCW + maxW) / 2, stickY + stickH / 2);
+  dCtx.stroke();
+  dCtx.setLineDash([]);
+  dCtx.restore();
+
+  if (vizW < 2) {
+    // Sub-pixel: draw as glowing dot
+    dCtx.save();
+    const dot = dCtx.createRadialGradient(dCW/2, dCH/2, 0, dCW/2, dCH/2, 8);
+    dot.addColorStop(0, 'rgba(134,239,172,1)');
+    dot.addColorStop(0.4, 'rgba(61,200,120,0.6)');
+    dot.addColorStop(1, 'transparent');
+    dCtx.fillStyle = dot;
+    dCtx.beginPath(); dCtx.arc(dCW/2, dCH/2, 8, 0, Math.PI*2); dCtx.fill();
+    dCtx.fillStyle = 'white';
+    dCtx.beginPath(); dCtx.arc(dCW/2, dCH/2, 1.5, 0, Math.PI*2); dCtx.fill();
+    dCtx.restore();
+    return;
+  }
+
+  // Shadow
+  dCtx.save();
+  dCtx.shadowColor = 'rgba(61,200,120,0.35)';
+  dCtx.shadowBlur = 18;
+  dCtx.shadowOffsetY = 6;
+
+  // Wood grain texture on stick — main body
+  const woodG = dCtx.createLinearGradient(stickX, stickY, stickX, stickY + stickH);
+  woodG.addColorStop(0,    '#c8b070');
+  woodG.addColorStop(0.12, '#e0c880');
+  woodG.addColorStop(0.35, '#d4b060');
+  woodG.addColorStop(0.6,  '#c09040');
+  woodG.addColorStop(0.85, '#b08030');
+  woodG.addColorStop(1,    '#806020');
+  dCtx.fillStyle = woodG;
+  dCtx.beginPath();
+  dCtx.roundRect(stickX, stickY, vizW, stickH, Math.min(stickH/2, 8));
+  dCtx.fill();
+  dCtx.restore();
+
+  // Wood grain lines
+  if (vizW > 20) {
+    dCtx.save();
+    dCtx.globalAlpha = 0.12;
+    dCtx.strokeStyle = '#604010';
+    dCtx.lineWidth = 0.8;
+    for (let gx = stickX + 8; gx < stickX + vizW - 4; gx += 12 + Math.random() * 6) {
+      const wave = Math.sin((gx - stickX) / (vizW) * Math.PI) * 3;
+      dCtx.beginPath();
+      dCtx.moveTo(gx, stickY + 4 + wave);
+      dCtx.lineTo(gx + 3, stickY + stickH - 4 - wave);
+      dCtx.stroke();
+    }
+    dCtx.restore();
+  }
+
+  // Top highlight
+  dCtx.save();
+  dCtx.globalAlpha = 0.35;
+  const hg = dCtx.createLinearGradient(0, stickY, 0, stickY + stickH * 0.4);
+  hg.addColorStop(0, 'rgba(255,240,180,0.9)');
+  hg.addColorStop(1, 'transparent');
+  dCtx.fillStyle = hg;
+  dCtx.beginPath();
+  dCtx.roundRect(stickX + 1, stickY + 1, vizW - 2, stickH * 0.4, [Math.min(stickH/2, 8), Math.min(stickH/2, 8), 0, 0]);
+  dCtx.fill();
+  dCtx.restore();
+
+  // End grain (left cap)
+  if (vizW > 15) {
+    const capW = Math.min(12, vizW * 0.12);
+    dCtx.save();
+    const eg = dCtx.createLinearGradient(stickX, 0, stickX + capW, 0);
+    eg.addColorStop(0, '#7a5020');
+    eg.addColorStop(1, '#c09040');
+    dCtx.fillStyle = eg;
+    dCtx.beginPath();
+    dCtx.roundRect(stickX, stickY, capW, stickH, [Math.min(stickH/2, 8), 0, 0, Math.min(stickH/2, 8)]);
+    dCtx.fill();
+    // Annual rings on end
+    dCtx.globalAlpha = 0.25;
+    dCtx.strokeStyle = '#3a2010';
+    dCtx.lineWidth = 0.8;
+    const rx = stickX + capW/2, ry = stickY + stickH/2;
+    for (let r = 1.5; r < capW/2; r += 2) {
+      dCtx.beginPath(); dCtx.ellipse(rx, ry, r*0.6, r, 0, 0, Math.PI*2); dCtx.stroke();
+    }
+    dCtx.restore();
+
+    // Right end grain
+    const rStart = stickX + vizW - capW;
+    dCtx.save();
+    const eg2 = dCtx.createLinearGradient(rStart, 0, stickX + vizW, 0);
+    eg2.addColorStop(0, '#b08030');
+    eg2.addColorStop(1, '#5a3010');
+    dCtx.fillStyle = eg2;
+    dCtx.beginPath();
+    dCtx.roundRect(rStart, stickY, capW, stickH, [0, Math.min(stickH/2, 8), Math.min(stickH/2, 8), 0]);
+    dCtx.fill();
+    dCtx.restore();
+  }
+
+  // Outline
+  dCtx.save();
+  dCtx.strokeStyle = 'rgba(100,60,20,0.4)';
+  dCtx.lineWidth = 1.5;
+  dCtx.beginPath();
+  dCtx.roundRect(stickX, stickY, vizW, stickH, Math.min(stickH/2, 8));
+  dCtx.stroke();
+  dCtx.restore();
+
+  // Measurement arrow below stick
+  dCtx.save();
+  dCtx.strokeStyle = 'rgba(61,200,120,0.6)';
+  dCtx.fillStyle = 'rgba(61,200,120,0.6)';
+  dCtx.lineWidth = 1.5;
+  const ay = stickY + stickH + 16;
+  // horizontal line
+  dCtx.beginPath(); dCtx.moveTo(stickX, ay); dCtx.lineTo(stickX + vizW, ay); dCtx.stroke();
+  // left arrow
+  dCtx.beginPath(); dCtx.moveTo(stickX, ay); dCtx.lineTo(stickX+8, ay-4); dCtx.lineTo(stickX+8, ay+4); dCtx.closePath(); dCtx.fill();
+  // right arrow
+  dCtx.beginPath(); dCtx.moveTo(stickX+vizW, ay); dCtx.lineTo(stickX+vizW-8, ay-4); dCtx.lineTo(stickX+vizW-8, ay+4); dCtx.closePath(); dCtx.fill();
+  // label
+  dCtx.fillStyle = 'rgba(240,192,96,0.9)';
+  dCtx.font = 'bold 12px Playfair Display, serif';
+  dCtx.textAlign = 'center';
+  dCtx.fillText(D_fmtMM(mm), dCW/2, ay + 18);
+  dCtx.restore();
+
+  // Ghosted full-length stick for comparison (if n > 0)
+  if (n > 0 && vizW < maxW * 0.7) {
+    dCtx.save();
+    dCtx.globalAlpha = 0.12;
+    dCtx.strokeStyle = '#3dc878';
+    dCtx.lineWidth = 1;
+    dCtx.setLineDash([5, 7]);
+    const gy = stickY + stickH + 38;
+    dCtx.beginPath();
+    dCtx.moveTo((dCW-maxW)/2, gy);
+    dCtx.lineTo((dCW+maxW)/2, gy);
+    dCtx.stroke();
+    dCtx.setLineDash([]);
+    dCtx.fillStyle = '#3dc878';
+    dCtx.font = 'italic 10px Crimson Text, serif';
+    dCtx.textAlign = 'right';
+    dCtx.fillText('← 1 m originale', (dCW+maxW)/2 - 4, gy + 14);
+    dCtx.restore();
+  }
+}
+
+// ─── Object panel ──────────────────────────────────────────────────────────
+let dCurSrc = '';
+
+
+
+function D_updateObj(n) {
+  const obj = D_OBJECTS[Math.min(n, E_OBJECTS.length-1)];
+  const img = document.getElementById('dObjImg');
+  const fb  = document.getElementById('dImgFb');
+  document.getElementById('dObjName').textContent = obj.name;
+  document.getElementById('dObjSize').textContent = '≈ ' + D_fmtMM(obj.mm);
+  document.getElementById('dObjDesc').textContent = obj.desc || '';
+  fb.textContent = obj.emoji;
+
+  if (obj.img !== dCurSrc) {
+    dCurSrc = obj.img;
+    img.className = 'img-loading';
+    img.style.display = 'block'; fb.style.display = 'flex';
+    const load = (src) => {
+      img.onload = () => { img.className = 'img-loaded'; fb.style.display = 'none'; };
+      img.onerror = () => {
+        if (obj.imgAlt && src !== obj.imgAlt) load(obj.imgAlt);
+        else { img.style.display = 'none'; fb.style.display = 'flex'; }
+      };
+      img.src = src; img.alt = obj.name;
+    };
+    load(obj.img);
+  }
+}
+
+// ─── Realm chips ───────────────────────────────────────────────────────────
+function D_buildRealms() {
+  const row = document.getElementById('dRealmRow');
+  D_REALMS.forEach((r, i) => {
+    const el = document.createElement('span');
+    el.className = 'chip'; el.id = 'realm'+i; el.textContent = r.label;
+    row.appendChild(el);
+  });
+}
+function D_updateRealms(n) {
+  D_REALMS.forEach((r, i) => {
+    const prev = i > 0 ? D_REALMS[i-1].max : -1;
+    document.getElementById('realm'+i).classList.toggle('active', n > prev && n <= r.max);
+  });
+  const cur = D_REALMS.find((r, i) => n <= r.max) || D_REALMS[D_REALMS.length-1];
+  document.getElementById('dStatScale').textContent = cur.label.toLowerCase();
+}
+
+// ─── Ticks ─────────────────────────────────────────────────────────────────
+function D_buildTicks() {
+  const row = document.getElementById('dTickRow');
+  for (let i = 0; i <= 30; i += 5) {
+    const t = document.createElement('span');
+    t.className = 'tick' + (i===0?' active':'');
+    t.textContent = i; t.dataset.n = i;
+    t.onclick = () => { document.getElementById('cutSlider').value = i; D_update(i); };
+    row.appendChild(t);
+  }
+}
+
+// ─── Main update ───────────────────────────────────────────────────────────
+
+
+function D_update(n) {
+  n = Math.max(0, Math.min(30, Math.round(n)));
+  const mm = 1000 / Math.pow(2, n);
+
+  const sl = document.getElementById('cutSlider');
+  sl.value = n;
+  sl.style.setProperty('--pct', (n/30*100)+'%');
+
+  document.getElementById('dCutLabel').textContent = 'n = ' + n;
+  document.querySelectorAll('#sc-d .tick').forEach(t => t.classList.toggle('active', +t.dataset.n === n));
+
+  document.getElementById('dStatLen').textContent  = D_fmtMM(mm);
+  document.getElementById('dStatForm').textContent = '1000 / 2^' + n;
+
+  document.getElementById('dFormulaDisp').innerHTML =
+    'Lunghezza = 1000 / 2<sup>'+n+'</sup> = <span style="color:var(--gold)">'+D_fmtMM(mm)+'</span>';
+
+  D_drawStick(n);
+  D_updateObj(n);
+  D_updateRealms(n);
+
+  // Needle: n=0 → 0%, n=30 → 100%
+  document.getElementById('dNeedle').style.left = (n/30*100)+'%';
+}
+
+
+
+// ════════════════════════════════════
+//  INIT BOTH
+// ════════════════════════════════════
+// ── Growth ticks
+(function() {
+  const row = document.getElementById('eTickRow');
+  for (let i = 0; i <= 30; i += 5) {
+    const t = document.createElement('span');
+    t.className = 'tick' + (i===0?' active':'');
+    t.textContent = i; t.dataset.n = i;
+    t.onclick = () => { document.getElementById('foldSlider').value = i; E_update(i); };
+    row.appendChild(t);
+  }
+  E_buildChips();
+  E_update(0);
+  document.getElementById('foldSlider').addEventListener('input', function() { E_update(+this.value); });
+})();
+
+// ── Decay ticks
+(function() {
+  const row = document.getElementById('dTickRow');
+  for (let i = 0; i <= 30; i += 5) {
+    const t = document.createElement('span');
+    t.className = 'tick' + (i===0?' active':'');
+    t.textContent = i; t.dataset.n = i;
+    t.onclick = () => { document.getElementById('cutSlider').value = i; D_update(i); };
+    row.appendChild(t);
+  }
+  D_buildRealms();
+  D_update(0);
+  document.getElementById('cutSlider').addEventListener('input', function() { D_update(+this.value); });
+})();
+</script>
+</body>
+</html>
