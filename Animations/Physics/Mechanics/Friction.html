@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attrito Radente Dinamico</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root {
+    --bg:#0d0a08; --paper:#1a1208;
+    --copper:#b87333; --copper-bright:#e8983a;
+    --text-primary:#e8d5b0; --text-secondary:#9a8060;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text-primary);font-family:'Crimson Text',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;user-select:none;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(184,115,51,.05) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  header{text-align:center;padding:2.5rem 2rem 1.2rem;position:relative;z-index:1;}
+  .year-badge{font-size:.82rem;letter-spacing:.42em;color:var(--copper);text-transform:uppercase;margin-bottom:.7rem;display:block;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(1.9rem,4.5vw,3.2rem);font-weight:700;line-height:1.1;margin-bottom:.4rem;}
+  h1 em{color:var(--copper-bright);font-style:italic;}
+  .formula-display{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--copper-bright);margin:1rem 0 .5rem;font-style:italic;}
+  .ornament{display:flex;align-items:center;gap:1rem;justify-content:center;margin:1.2rem 0;}
+  .ornament::before,.ornament::after{content:'';width:70px;height:1px;background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:7px;height:7px;background:var(--copper);transform:rotate(45deg);}
+  .stage{width:100%;max-width:1100px;padding:0 1.5rem 2.5rem;display:flex;flex-direction:column;align-items:center;gap:1.8rem;position:relative;z-index:1;}
+  .canvas-wrap{width:100%;max-width:1000px;border:1px solid rgba(184,115,51,.22);border-radius:5px;background:var(--paper);overflow:hidden;box-shadow:0 0 70px rgba(184,115,51,.07),inset 0 0 35px rgba(0,0,0,.6);}
+  canvas{display:block;width:100%;height:auto;cursor:crosshair;}
+  .controls{width:100%;max-width:1000px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;}
+  .control-section{background:rgba(17,22,32,.8);border:1px solid rgba(184,115,51,.15);border-radius:4px;padding:1.2rem 1.4rem;}
+  .section-title{font-family:'Playfair Display',serif;font-size:.95rem;color:var(--copper-bright);letter-spacing:.08em;margin-bottom:1rem;text-transform:uppercase;font-weight:600;}
+  .control-group{margin-bottom:1rem;}
+  .control-label{font-size:.88rem;color:var(--text-secondary);margin-bottom:.4rem;display:block;}
+  select,input[type=range]{width:100%;padding:.5rem;background:rgba(26,18,8,.6);border:1px solid rgba(184,115,51,.25);border-radius:3px;color:var(--text-primary);font-family:'Crimson Text',serif;font-size:.9rem;}
+  select{cursor:pointer;}
+  select option{background:#1a1208;color:var(--text-primary);}
+  input[type=range]{-webkit-appearance:none;height:6px;background:rgba(184,115,51,.2);outline:none;padding:0;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--copper);cursor:pointer;border-radius:50%;}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;background:var(--copper);cursor:pointer;border-radius:50%;border:none;}
+  .value-display{color:var(--copper-bright);font-weight:600;margin-left:.5rem;}
+  .info-box{background:rgba(184,115,51,.08);border:1px solid rgba(184,115,51,.25);border-radius:4px;padding:.8rem 1rem;margin-top:.8rem;font-size:.88rem;line-height:1.6;}
+  .hi{color:var(--text-primary);font-weight:600;}
+  .instruction{background:linear-gradient(135deg,rgba(184,115,51,.15) 0%,rgba(232,152,58,.1) 100%);border:1px solid rgba(184,115,51,.3);border-radius:5px;padding:1rem 1.2rem;font-size:.95rem;line-height:1.6;text-align:center;}
+  @media(max-width:850px){.controls{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="year-badge">Francia · 1699</span>
+  <h1>L'<em>Attrito Radente</em> Dinamico</h1>
+  <div class="formula-display">F<sub>attr</sub> = μ F<sub>⊥</sub></div>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+  <p style="font-size:1rem;color:#9a8060;font-style:italic;max-width:650px;margin:0 auto;line-height:1.6;">
+    La forza di attrito radente dinamico è proporzionale alla forza normale (peso) 
+    e al coefficiente di attrito μ, che dipende dalle rugosità delle superfici a contatto. 
+    La forza si oppone al moto, rallentando l'oggetto fino all'arresto.
+  </p>
+</header>
+
+<div class="stage">
+  <div class="canvas-wrap">
+    <canvas id="c" width="1000" height="500"></canvas>
+  </div>
+
+  <div class="instruction">
+    <strong>Interazione:</strong> Clicca sull'oggetto e trascinalo per dargli una velocità iniziale, 
+    poi rilascia. Più veloce trascini, più alta sarà la velocità di lancio. 
+    Osserva come l'attrito rallenta il moto fino all'arresto completo.
+  </div>
+
+  <div class="controls">
+    <div class="control-section">
+      <h3 class="section-title">🏗 Superficie di Scorrimento</h3>
+      <div class="control-group">
+        <label class="control-label">Tipo di superficie</label>
+        <select id="surfaceSelect" onchange="updateSurface()">
+          <option value="ice">Ghiaccio (molto liscia)</option>
+          <option value="wood">Legno levigato</option>
+          <option value="concrete" selected>Cemento ruvido</option>
+          <option value="asphalt">Asfalto</option>
+          <option value="sand">Sabbia (molto ruvida)</option>
+        </select>
+      </div>
+      <div class="info-box">Rugosità superficie: <span class="hi" id="surfaceRoughnessVal">0.50</span></div>
+    </div>
+
+    <div class="control-section">
+      <h3 class="section-title">📦 Materiale dell'Oggetto</h3>
+      <div class="control-group">
+        <label class="control-label">Materiale</label>
+        <select id="materialSelect" onchange="updateMaterial()">
+          <option value="teflon">Teflon (molto liscio)</option>
+          <option value="metal">Metallo levigato</option>
+          <option value="wood" selected>Legno</option>
+          <option value="rubber">Gomma</option>
+          <option value="sandpaper">Carta vetrata (molto ruvida)</option>
+        </select>
+      </div>
+      <div class="info-box">Rugosità materiale: <span class="hi" id="materialRoughnessVal">0.35</span></div>
+    </div>
+
+    <div class="control-section">
+      <h3 class="section-title">⚖ Peso dell'Oggetto</h3>
+      <div class="control-group">
+        <label class="control-label">Massa: <span class="value-display" id="massVal">5.0 kg</span></label>
+        <input type="range" id="massRange" min="1" max="20" step="0.5" value="5" oninput="updateMass()">
+      </div>
+      <div class="info-box">Forza normale (peso):<br><span class="hi" id="normalForceVal">F<sub>⊥</sub> = 49.0 N</span></div>
+    </div>
+
+    <div class="control-section">
+      <h3 class="section-title">📊 Stato del Sistema</h3>
+      <div class="info-box" style="margin-top:0;"><strong>Coefficiente di attrito:</strong><br><span class="hi" id="muVal">μ = 0.175</span></div>
+      <div class="info-box"><strong>Forza di attrito:</strong><br><span class="hi" id="frictionForceVal">F<sub>attr</sub> = 0.0 N</span></div>
+      <div class="info-box"><strong>Velocità attuale:</strong><br><span class="hi" id="velocityVal">v = 0.0 m/s</span></div>
+      <div class="info-box"><strong>Decelerazione:</strong><br><span class="hi" id="decelVal">a = 0.0 m/s²</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 1000, H = 500;
+const g = 9.8;
+
+// ── Surfaces: μ_s values spread much wider than original ─────────────────
+const surfaces = {
+  ice:      { roughness: 0.010, name: 'Ghiaccio',       color: '#cce5ff' },
+  wood:     { roughness: 0.080, name: 'Legno levigato',  color: '#d4a574' },
+  concrete: { roughness: 0.300, name: 'Cemento ruvido',  color: '#a0a8b0' },
+  asphalt:  { roughness: 0.520, name: 'Asfalto',         color: '#585860' },
+  sand:     { roughness: 0.900, name: 'Sabbia',          color: '#e0c090' }
+};
+
+const materials = {
+  teflon:    { roughness: 0.010, name: 'Teflon',          color: '#e8e8e8' },
+  metal:     { roughness: 0.060, name: 'Metallo levigato', color: '#9aa8b8' },
+  wood:      { roughness: 0.200, name: 'Legno',            color: '#b87333' },
+  rubber:    { roughness: 0.600, name: 'Gomma',            color: '#3a3a3a' },
+  sandpaper: { roughness: 0.950, name: 'Carta vetrata',    color: '#d0b090' }
+};
+
+let surfaceType = 'concrete', surfaceRoughness = 0.300;
+let materialType = 'wood',    materialRoughness = 0.200;
+let mass = 5.0, normalForce = mass * g, mu = 0, frictionForce = 0;
+
+const objectSize = 60;
+const groundY    = H - 120;
+let objectX  = 200;
+const objectY = groundY - objectSize / 2;
+let velocityX = 0;
+
+// Launch speed display
+let launchSpeed   = 0;   // m/s at moment of release
+let launchFadeAge = 0;   // frames since launch (for fade-out)
+const LAUNCH_FADE = 180; // frames (~3 s) before fully faded
+
+let isDragging = false, dragOffsetX = 0;
+let mouseHistory = [];
+
+// ── Controls ──────────────────────────────────────────────────────────────
+function updateSurface() {
+  surfaceType = document.getElementById('surfaceSelect').value;
+  surfaceRoughness = surfaces[surfaceType].roughness;
+  document.getElementById('surfaceRoughnessVal').textContent = surfaceRoughness.toFixed(3);
+  calculateFriction();
+}
+function updateMaterial() {
+  materialType = document.getElementById('materialSelect').value;
+  materialRoughness = materials[materialType].roughness;
+  document.getElementById('materialRoughnessVal').textContent = materialRoughness.toFixed(3);
+  calculateFriction();
+}
+function updateMass() {
+  mass = parseFloat(document.getElementById('massRange').value);
+  document.getElementById('massVal').textContent = mass.toFixed(1) + ' kg';
+  normalForce = mass * g;
+  document.getElementById('normalForceVal').innerHTML = `F<sub>⊥</sub> = ${normalForce.toFixed(1)} N`;
+  calculateFriction();
+}
+function calculateFriction() {
+  // μ = sqrt(s_roughness * m_roughness) — keeps the wider spread
+  mu = Math.sqrt(surfaceRoughness * materialRoughness);
+  document.getElementById('muVal').textContent = `μ = ${mu.toFixed(4)}`;
+  frictionForce = Math.abs(velocityX) > 0.01 ? mu * normalForce : 0;
+  updateUI();
+}
+function updateUI() {
+  document.getElementById('frictionForceVal').innerHTML = `F<sub>attr</sub> = ${frictionForce.toFixed(2)} N`;
+  document.getElementById('velocityVal').textContent    = `v = ${Math.abs(velocityX).toFixed(2)} m/s`;
+  document.getElementById('decelVal').textContent       = Math.abs(velocityX) > 0.01
+    ? `a = −${(frictionForce/mass).toFixed(3)} m/s²`
+    : `a = 0.000 m/s²`;
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+function toC(src) {
+  const r = canvas.getBoundingClientRect();
+  return { x:(src.clientX-r.left)*(W/r.width), y:(src.clientY-r.top)*(H/r.height) };
+}
+function tryStartDrag(mx, my) {
+  if (Math.abs(mx-objectX) < objectSize && Math.abs(my-objectY) < objectSize) {
+    isDragging   = true;
+    dragOffsetX  = mx - objectX;
+    velocityX    = 0;
+    mouseHistory = [{x:mx, t:performance.now()}];
+  }
+}
+function doMoveDrag(mx) {
+  if (!isDragging) return;
+  objectX = Math.max(objectSize/2, Math.min(W-objectSize/2, mx - dragOffsetX));
+  mouseHistory.push({x:mx, t:performance.now()});
+  if (mouseHistory.length > 12) mouseHistory.shift();
+}
+function endDrag() {
+  if (!isDragging) return;
+  isDragging = false;
+  if (mouseHistory.length >= 2) {
+    const recent = mouseHistory.slice(-6);
+    const dx = recent[recent.length-1].x - recent[0].x;
+    const dt = (recent[recent.length-1].t - recent[0].t) / 1000;
+    if (dt > 0) {
+      velocityX = Math.max(-30, Math.min(30, (dx/dt) * 0.05));
+    }
+  }
+  mouseHistory = [];
+  // Record launch speed and reset fade counter
+  launchSpeed   = Math.abs(velocityX);
+  launchFadeAge = 0;
+  calculateFriction();
+}
+
+canvas.addEventListener('mousedown',  e => { const p=toC(e); tryStartDrag(p.x,p.y); });
+canvas.addEventListener('mousemove',  e => { if(isDragging) doMoveDrag(toC(e).x); });
+canvas.addEventListener('mouseup',    endDrag);
+canvas.addEventListener('mouseleave', () => { if(isDragging){ isDragging=false; velocityX=0; mouseHistory=[]; } });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const p=toC(e.touches[0]); tryStartDrag(p.x,p.y); }, {passive:false});
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); if(isDragging) doMoveDrag(toC(e.touches[0]).x); }, {passive:false});
+canvas.addEventListener('touchend',   e => { e.preventDefault(); endDrag(); }, {passive:false});
+
+// ── Physics ───────────────────────────────────────────────────────────────
+const DT = 1/60;
+function updatePhysics() {
+  if (isDragging) return;
+  if (Math.abs(velocityX) > 0.01) {
+    frictionForce = mu * normalForce;
+    const decel   = frictionForce / mass;
+    const sign    = velocityX > 0 ? 1 : -1;
+    velocityX    -= sign * decel * DT;
+    if (Math.abs(velocityX) < 0.05) { velocityX = 0; frictionForce = 0; }
+    objectX += velocityX;
+    if (objectX < objectSize/2)        { objectX = objectSize/2;        velocityX = -velocityX * 0.25; }
+    if (objectX > W - objectSize/2)    { objectX = W - objectSize/2;    velocityX = -velocityX * 0.25; }
+  } else {
+    frictionForce = 0;
+  }
+  // Age the launch label
+  if (launchFadeAge < LAUNCH_FADE) launchFadeAge++;
+  updateUI();
+}
+
+// ── Draw helpers ──────────────────────────────────────────────────────────
+function shadeColor(c, p) {
+  const n=parseInt(c.replace('#',''),16), a=Math.round(2.55*p);
+  const R=Math.max(0,Math.min(255,(n>>16)+a));
+  const G=Math.max(0,Math.min(255,(n>>8&0xFF)+a));
+  const B=Math.max(0,Math.min(255,(n&0xFF)+a));
+  return '#'+(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1);
+}
+
+function drawVector(x, y, dx, dy, color, label) {
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 5) return;
+  const ang = Math.atan2(dy, dx), as = 12;
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = 3; ctx.shadowColor = color; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx,y+dy); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.moveTo(x+dx,y+dy);
+  ctx.lineTo(x+dx-as*Math.cos(ang-Math.PI/6), y+dy-as*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x+dx-as*Math.cos(ang+Math.PI/6), y+dy-as*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  ctx.font='italic bold 15px Playfair Display,serif'; ctx.textAlign='center';
+  // offset label to the left for vertical downward vectors
+  const isDown = dx===0 && dy>0;
+  ctx.fillText(label, x+dx/2 + (isDown ? -22 : 0), y+dy/2-14);
+  ctx.restore();
+}
+
+// ── Scene drawing ─────────────────────────────────────────────────────────
+function drawBackground() {
+  const bg=ctx.createRadialGradient(W/2,H*.3,0,W/2,H/2,W*.7);
+  bg.addColorStop(0,'#1a1612'); bg.addColorStop(1,'#0d0a08');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+}
+
+function drawGround() {
+  ctx.save();
+  const sc=surfaces[surfaceType].color;
+  const grad=ctx.createLinearGradient(0,groundY,0,H);
+  grad.addColorStop(0,sc); grad.addColorStop(1,'#1a1208');
+  ctx.fillStyle=grad; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.strokeStyle='rgba(184,115,51,.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(W,groundY); ctx.stroke();
+  ctx.globalAlpha=surfaceRoughness*0.35;
+  for(let i=0;i<60;i++){
+    const x=(i/60)*W, h=3+Math.random()*6*surfaceRoughness;
+    ctx.fillStyle='#000'; ctx.fillRect(x,groundY,W/60,h);
+  }
+  ctx.globalAlpha=1;
+  ctx.fillStyle='rgba(184,115,51,.6)'; ctx.font='italic 14px Crimson Text,serif'; ctx.textAlign='left';
+  ctx.fillText(surfaces[surfaceType].name,30,groundY+35);
+  ctx.restore();
+}
+
+function drawObject() {
+  ctx.save();
+  const mc=materials[materialType].color;
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.beginPath(); ctx.ellipse(objectX,groundY+5,objectSize*.6,objectSize*.15,0,0,Math.PI*2); ctx.fill();
+  const og=ctx.createLinearGradient(objectX-objectSize/2,objectY-objectSize/2,objectX+objectSize/2,objectY+objectSize/2);
+  og.addColorStop(0,mc); og.addColorStop(1,shadeColor(mc,-30));
+  ctx.fillStyle=og; ctx.fillRect(objectX-objectSize/2,objectY-objectSize/2,objectSize,objectSize);
+  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.fillRect(objectX-objectSize/2,objectY-objectSize/2,objectSize,objectSize*.2);
+  ctx.strokeStyle=shadeColor(mc,-50); ctx.lineWidth=2; ctx.strokeRect(objectX-objectSize/2,objectY-objectSize/2,objectSize,objectSize);
+  ctx.fillStyle='rgba(232,213,176,.9)'; ctx.font='bold 14px Playfair Display,serif'; ctx.textAlign='center';
+  ctx.fillText(`${mass.toFixed(1)} kg`,objectX,objectY+5);
+  ctx.restore();
+}
+
+function drawVectors() {
+  ctx.save();
+  // Normal force — downward, starting from bottom edge of block
+  const nLen = Math.min(normalForce * 2, 160);
+  const nStartY = objectY + objectSize / 2; // bottom edge
+  drawVector(objectX, nStartY, 0, nLen, '#66dd66', 'F⊥');
+  // Friction — horizontal, opposing motion
+  if (Math.abs(velocityX) > 0.01) {
+    const fLen = Math.min(frictionForce * 2, 140);
+    const fDir = velocityX > 0 ? -1 : 1;
+    drawVector(objectX, objectY, fLen * fDir, 0, '#ff6644', 'Fₐ');
+    // Velocity arrow above the block — bigger scale + minimum visual length
+    const vRaw = velocityX * 10;
+    const vDir = velocityX > 0 ? 1 : -1;
+    const vLen = vDir * Math.max(Math.abs(vRaw), 50);
+    drawVector(objectX, objectY - objectSize / 2 - 24, vLen, 0, '#44aaff', 'v');
+  }
+  ctx.restore();
+}
+
+function drawLaunchLabel() {
+  if (launchSpeed < 0.05 || launchFadeAge >= LAUNCH_FADE) return;
+  const alpha = 1 - launchFadeAge / LAUNCH_FADE;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Badge background
+  const bw = 240, bh = 40, bx = objectX - bw/2, by = groundY - objectSize - 68;
+  ctx.fillStyle = 'rgba(13,10,8,.75)';
+  ctx.strokeStyle = 'rgba(232,152,58,.6)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e8983a';
+  ctx.font = 'bold 18px Playfair Display,serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`v₀ = ${launchSpeed.toFixed(2)} m/s`, objectX, by + bh*0.72);
+  ctx.restore();
+}
+
+function drawFormula() {
+  ctx.save();
+  ctx.fillStyle='rgba(232,152,58,.7)'; ctx.font='italic 18px Playfair Display,serif'; ctx.textAlign='right';
+  ctx.fillText('Fₐ = μ F⊥', W-40, 45);
+  ctx.fillStyle='rgba(184,115,51,.6)'; ctx.font='italic 14px Crimson Text,serif';
+  ctx.fillText(`μ = ${mu.toFixed(4)}`, W-40, 70);
+  ctx.restore();
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────
+function loop() {
+  updatePhysics();
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  drawGround();
+  drawVectors();
+  drawObject();
+  drawLaunchLabel();
+  drawFormula();
+  requestAnimationFrame(loop);
+}
+
+calculateFriction(); updateUI(); loop();
+</script>
+</body>
+</html>
