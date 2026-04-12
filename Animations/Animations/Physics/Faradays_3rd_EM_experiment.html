@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Terzo Esperimento di Faraday — 1831</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg:#0a0c10; --surface:#10141c; --copper:#b87333; --copper-bright:#e8983a;
+    --glow:rgba(184,115,51,0.4); --tp:#e8d5b0; --ts:#9a8060;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{overflow-x:hidden;}
+  body{
+    background:var(--bg);color:var(--tp);font-family:'Crimson Text',serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse at 50% 0%,rgba(72,152,255,.04) 0%,transparent 60%);
+    pointer-events:none;z-index:0;
+  }
+
+  /* ── Header ── */
+  header{text-align:center;padding:1.6rem 1rem .9rem;position:relative;z-index:1;width:100%;}
+  .year-badge{font-size:.74rem;letter-spacing:.38em;color:var(--copper);
+    text-transform:uppercase;margin-bottom:.5rem;display:block;}
+  h1{font-family:'Playfair Display',serif;
+    font-size:clamp(1.4rem,5vw,2.8rem);font-weight:700;color:var(--tp);line-height:1.1;margin-bottom:.3rem;}
+  h1 em{color:var(--copper-bright);font-style:italic;}
+  .subtitle{font-size:clamp(.82rem,2.2vw,.97rem);color:var(--ts);font-style:italic;
+    max-width:660px;margin:0 auto;line-height:1.55;padding:0 .5rem;}
+  .ornament{display:flex;align-items:center;gap:.8rem;justify-content:center;margin:.9rem 0;}
+  .ornament::before,.ornament::after{content:'';width:50px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:6px;height:6px;background:var(--copper);transform:rotate(45deg);}
+
+  /* ── Layout ── */
+  .stage{
+    width:100%;max-width:1220px;padding:0 .75rem 2rem;
+    display:flex;flex-direction:column;gap:1rem;
+    position:relative;z-index:1;
+  }
+
+  /* Top row: macro + micro side by side on wide screens */
+  .top-row{
+    display:grid;
+    grid-template-columns:1fr;   /* mobile default: stacked */
+    gap:1rem;
+  }
+  @media(min-width:760px){
+    .top-row{grid-template-columns:2fr 1fr;}
+  }
+
+  .canvas-wrap{
+    width:100%;border:1px solid rgba(184,115,51,.22);border-radius:5px;
+    background:var(--surface);overflow:hidden;
+    box-shadow:0 0 60px rgba(184,115,51,.07),inset 0 0 30px rgba(0,0,0,.55);
+  }
+  .canvas-wrap.macro{cursor:grab;user-select:none;}
+  .canvas-wrap.macro:active{cursor:grabbing;}
+  canvas{display:block;width:100%;height:auto;touch-action:none;}
+  .micro-header{
+    background:rgba(16,20,28,.92);padding:.55rem .5rem;text-align:center;
+    border-bottom:1px solid rgba(184,115,51,.2);font-family:'Playfair Display',serif;
+    color:var(--copper);font-size:clamp(.76rem,2vw,.88rem);letter-spacing:.04em;font-style:italic;
+  }
+
+  /* ── Controls ── */
+  .controls{
+    display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:center;
+    background:rgba(16,20,28,.8);padding:1.1rem 1.2rem;
+    border:1px solid rgba(184,115,51,.15);border-radius:5px;
+  }
+  .ctrl-group{display:flex;flex-direction:column;gap:.45rem;flex:1;min-width:160px;max-width:260px;}
+  .ctrl-label{font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ts);}
+  .slider-wrap{display:flex;align-items:center;gap:.7rem;}
+  input[type=range]{
+    -webkit-appearance:none;flex:1;height:3px;
+    background:rgba(184,115,51,.2);border-radius:2px;outline:none;cursor:pointer;
+    min-width:80px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--copper);border:2px solid var(--copper-bright);cursor:pointer;
+    box-shadow:0 0 9px var(--glow);transition:transform .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25);}
+  .slider-val{font-family:'Playfair Display',serif;font-size:.92rem;
+    color:var(--copper-bright);min-width:3.2rem;text-align:right;white-space:nowrap;}
+  .ctrl-btns{display:flex;flex-direction:column;align-items:center;gap:.55rem;}
+  .btn-main{
+    position:relative;padding:.65rem 1.5rem;background:transparent;
+    border:1.5px solid var(--copper);border-radius:2px;color:var(--copper-bright);
+    font-family:'Playfair Display',serif;font-size:.9rem;cursor:pointer;
+    letter-spacing:.08em;transition:all .3s;overflow:hidden;white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-main::before{
+    content:'';position:absolute;inset:0;background:var(--copper);
+    transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:-1;
+  }
+  .btn-main:hover{color:var(--bg);}.btn-main:hover::before{transform:scaleX(1);}
+  .btn-main.active{background:var(--copper);color:var(--bg);animation:pglow 2s infinite;}
+  @keyframes pglow{0%,100%{box-shadow:0 0 18px var(--glow);}50%{box-shadow:0 0 32px rgba(184,115,51,.6);}}
+  .btn-rev{
+    padding:.42rem 1rem;background:transparent;
+    border:1px solid rgba(184,115,51,.4);border-radius:2px;color:var(--ts);
+    font-family:'Crimson Text',serif;font-size:.84rem;cursor:pointer;
+    letter-spacing:.06em;transition:all .3s;-webkit-tap-highlight-color:transparent;
+  }
+  .btn-rev:hover{border-color:var(--copper);color:var(--copper-bright);}
+  .btn-label{font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ts);}
+
+  /* ── Legend ── */
+  .legend{
+    display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;
+    font-size:clamp(.74rem,2vw,.83rem);color:var(--ts);padding-bottom:.5rem;
+  }
+  .legend-item{display:flex;align-items:center;gap:.35rem;}
+  .ldot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="year-badge">London · Royal Institution · 1831</span>
+  <h1>Il Terzo Esperimento di <em>Faraday</em></h1>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+  <p class="subtitle">
+    Gli <strong style="color:#80c8ff">elettroni liberi</strong> subiscono la Forza di Lorentz
+    (F&nbsp;=&nbsp;|qvB&nbsp;sin&nbsp;α|) e si accumulano su un'estremità.
+    La repulsione tra elettroni ne frena l'addensamento.
+    Gli <strong style="color:#5de896">ioni</strong> del reticolo subiscono la stessa forza, ma vengono quasi subito fermati dai legami nucleari.
+  </p>
+</header>
+
+<div class="stage">
+
+  <!-- ── Canvases ── -->
+  <div class="top-row">
+    <div class="canvas-wrap macro" id="canvasWrap">
+      <canvas id="cMacro" width="760" height="460"></canvas>
+    </div>
+    <div class="canvas-wrap micro">
+      <div class="micro-header">Zoom microscopico — sezione barra (vista lungo v)</div>
+      <canvas id="cMicro" width="340" height="414"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Controls ── -->
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Campo magnetico B</span>
+      <div class="slider-wrap">
+        <input type="range" id="bSlider" min="0.5" max="4" value="2" step="0.1">
+        <span class="slider-val" id="bValEl">2.0 T</span>
+      </div>
+    </div>
+    <div class="ctrl-btns">
+      <button class="btn-main" id="playBtn" onclick="togglePlay()">▶ Avvia moto</button>
+      <button class="btn-rev" onclick="reverseDir()">⇄ Inverti verso</button>
+      <span class="btn-label">o trascina la barra</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Velocità automatica</span>
+      <div class="slider-wrap">
+        <input type="range" id="vSlider" min="0.5" max="5" value="2" step="0.1">
+        <span class="slider-val" id="vValEl">2.0 m/s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Legend ── -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="ldot" style="background:#155c28;border:1.5px solid #5de896"></div>Ioni + (quasi fissi)
+    </div>
+    <div class="legend-item">
+      <div class="ldot" style="background:#0d4faa;border:1.5px solid #80c8ff"></div>Elettroni − (liberi)
+    </div>
+    <div class="legend-item"><div class="ldot" style="background:#ff5722"></div>Forza Lorentz F<sub>L</sub></div>
+    <div class="legend-item"><div class="ldot" style="background:#00d4b0"></div>Forza Elettrica F<sub>E</sub></div>
+    <div class="legend-item"><div class="ldot" style="background:#a060ff"></div>Repulsione e⁻–e⁻</div>
+    <div class="legend-item"><div class="ldot" style="background:#ffe080"></div>Velocità v</div>
+    <div class="legend-item"><div class="ldot" style="background:#4898ff"></div>Campo B</div>
+  </div>
+
+</div><!-- /stage -->
+
+<script>
+// ═══════════════ COLOURS ═══════════════
+const C_EDARK='#0d2f80',C_EMID='#2c7ae0',C_EHI='#c0e8ff';
+const C_IDARK='#0c3818',C_IMID='#1e8040',C_IHI='#88e8b0',C_IRIM='#2ecc71';
+const C_FL='#ff5722',C_FE='#00d4b0',C_VEL='#ffe080',C_REP='rgba(160,96,255,';
+
+// ═══════════════ STATE ═══════════════
+let barX=-240,prevBarX=-240,barVelocity=0,smoothVel=0;
+let separation=0,separationDir=-1,prevSep=0,transient=0;
+let autoPlay=false,autoDir=1,autoSpeed=2,fieldB=2;
+let isDragging=false,dragCX=0,dragBX=0;
+let time=0;
+
+const FX0=-130,FX1=130,RZ=102;
+
+// ═══════════════ CANVASES ═══════════════
+const cMacro=document.getElementById('cMacro');
+const ctxM=cMacro.getContext('2d');
+const WM=760,HM=460,CXM=WM*.5,CYM=HM*.52;
+
+const cMicro=document.getElementById('cMicro');
+const ctxU=cMicro.getContext('2d');
+const WU=340,HU=414;
+
+// HiDPI / Retina scaling for the micro canvas
+(function scaleCanvas(){
+  const dpr=window.devicePixelRatio||1;
+  cMicro.width=WU*dpr;cMicro.height=HU*dpr;
+  cMicro.style.width=WU+'px';cMicro.style.height=HU+'px';
+  ctxU.scale(dpr,dpr);
+})();
+
+// ═══════════════ UTILS ═══════════════
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ss=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
+function proj(x,y,z){const p=900,sc=p/(p+z*.25);
+  return{sx:CXM+(x-z*.45)*sc,sy:CYM+(-y+z*.52)*sc,sc};}
+
+function getFS(){
+  const fade=45;
+  const fp=clamp(Math.min(ss(FX0-fade,FX0+fade,barX),1-ss(FX1-fade,FX1+fade,barX)),0,1);
+  const inf=barX>FX0&&barX<FX1;
+  const vN=clamp(Math.abs(barVelocity)/3,0,1);
+  const lDir=(inf&&Math.abs(barVelocity)>.04)?-Math.sign(barVelocity):0;
+  const mDir=(inf&&Math.abs(barVelocity)>.04)?-Math.sign(barVelocity):0;
+  return{fp,inf,vN,lDir,mDir};
+}
+
+// ═══════════════ UI ═══════════════
+document.getElementById('bSlider').addEventListener('input',e=>{
+  fieldB=+e.target.value;document.getElementById('bValEl').textContent=fieldB.toFixed(1)+' T';});
+document.getElementById('vSlider').addEventListener('input',e=>{
+  autoSpeed=+e.target.value;document.getElementById('vValEl').textContent=autoSpeed.toFixed(1)+' m/s';});
+function togglePlay(){
+  autoPlay=!autoPlay;
+  const b=document.getElementById('playBtn');
+  b.classList.toggle('active',autoPlay);
+  b.textContent=autoPlay?'⏹ Ferma moto':'▶ Avvia moto';
+}
+function reverseDir(){autoDir*=-1;}
+
+// Drag (macro only)
+function startDrag(cx){
+  isDragging=true;autoPlay=false;
+  document.getElementById('playBtn').classList.remove('active');
+  document.getElementById('playBtn').textContent='▶ Avvia moto';
+  dragCX=cx;dragBX=barX;
+}
+function moveDrag(cx){
+  if(!isDragging)return;
+  const r=cMacro.getBoundingClientRect();
+  barX=clamp(dragBX+(cx-dragCX)*(WM/r.width),-265,265);
+}
+cMacro.addEventListener('mousedown',e=>startDrag(e.clientX));
+window.addEventListener('mousemove',e=>moveDrag(e.clientX));
+window.addEventListener('mouseup',()=>{isDragging=false;});
+cMacro.addEventListener('touchstart',e=>{e.preventDefault();startDrag(e.touches[0].clientX);},{passive:false});
+window.addEventListener('touchmove',e=>{if(isDragging){e.preventDefault();moveDrag(e.touches[0].clientX);}},{passive:false});
+window.addEventListener('touchend',()=>{isDragging=false;});
+
+// ═══════════════ PHYSICS ═══════════════
+function updatePhysics(){
+  if(autoPlay){barX+=autoSpeed*autoDir;if(barX>=265){barX=265;autoDir=-1;}if(barX<=-265){barX=-265;autoDir=1;}}
+  const rv=barX-prevBarX;
+  smoothVel=smoothVel*.82+rv*.18;prevBarX=barX;barVelocity=smoothVel;
+  const{fp,lDir}=getFS();
+  if(lDir!==0)separationDir=lDir;
+  const tgt=(fp>.05&&Math.abs(barVelocity)>.04)?Math.min(1,Math.abs(barVelocity)/3.5)*fp:0;
+  separation+=(tgt-separation)*.055;separation=clamp(separation,0,1);
+  const ds=separation-prevSep;
+  transient=transient*.88+ds*separationDir*25;prevSep=separation;
+}
+
+// ═══════════════ ARROW HELPER ═══════════════
+function drawArrow(ctx,sx,sy,ex,ey,col,lw,lbl,dash){
+  const dx=ex-sx,dy=ey-sy,len=Math.hypot(dx,dy);
+  if(len<2)return;
+  const nx=dx/len,ny=dy/len,h=10;
+  ctx.save();ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineCap='round';
+  if(dash)ctx.setLineDash([5,5]);
+  ctx.shadowColor=col;ctx.shadowBlur=dash?0:6;
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.setLineDash([]);ctx.shadowBlur=0;
+  ctx.fillStyle=col;
+  ctx.beginPath();ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-nx*h-ny*h*.4,ey-ny*h+nx*h*.4);
+  ctx.lineTo(ex-nx*h+ny*h*.4,ey-ny*h-nx*h*.4);
+  ctx.closePath();ctx.fill();
+  if(lbl){
+    ctx.font='italic bold 12px Crimson Text,serif';ctx.fillStyle=col;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=4;
+    ctx.fillText(lbl,ex+nx*17,ey+ny*17);ctx.shadowBlur=0;
+  }
+  ctx.restore();
+}
+function a3d(x0,y0,z0,x1,y1,z1,col,lw,lbl,dash){
+  const p0=proj(x0,y0,z0),p1=proj(x1,y1,z1);
+  drawArrow(ctxM,p0.sx,p0.sy,p1.sx,p1.sy,col,lw,lbl,dash);
+}
+
+// ═══════════════════════════════════════════
+// MACRO RENDERING
+// ═══════════════════════════════════════════
+const N_BAR=14;
+const bzArr=Array.from({length:N_BAR},(_,i)=>-RZ*.88+i*(RZ*1.76/(N_BAR-1)));
+
+function drawMacro(){
+  const ctx=ctxM;
+  ctx.clearRect(0,0,WM,HM);
+  const bg=ctx.createRadialGradient(WM/2,HM*.42,0,WM/2,HM/2,WM*.78);
+  bg.addColorStop(0,'#161210');bg.addColorStop(1,'#0a0c10');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,WM,HM);
+
+  const{fp,inf,lDir,vN}=getFS();
+  const vMag=Math.abs(barVelocity);
+
+  // Field box
+  ctx.save();ctx.setLineDash([4,7]);ctx.strokeStyle='rgba(72,152,255,.2)';ctx.lineWidth=1;
+  const fz0=-(RZ+14),fz1=RZ+14;
+  [[FX0,0,fz0],[FX1,0,fz0],[FX0,0,fz1],[FX1,0,fz1],
+   [FX0,0,fz0],[FX0,0,fz1],[FX1,0,fz0],[FX1,0,fz1],
+   [FX0,0,fz0],[FX0,130,fz0],[FX1,0,fz0],[FX1,130,fz0],
+   [FX0,0,fz1],[FX0,130,fz1],[FX1,0,fz1],[FX1,130,fz1],
+   [FX0,130,fz0],[FX1,130,fz0],[FX0,130,fz1],[FX1,130,fz1],
+   [FX0,130,fz0],[FX0,130,fz1],[FX1,130,fz0],[FX1,130,fz1]
+  ].reduce((acc,p,i)=>{if(i%2===0)acc.push([p]);else{acc[acc.length-1].push(p);}return acc;},[])
+  .forEach(([a,b])=>{
+    const pa=proj(...a),pb=proj(...b);
+    ctx.beginPath();ctx.moveTo(pa.sx,pa.sy);ctx.lineTo(pb.sx,pb.sy);ctx.stroke();
+  });
+  ctx.setLineDash([]);ctx.restore();
+
+  // B arrows
+  const bAl=clamp(.22+fieldB/7,.22,.78);
+  const bH=22+fieldB*16;
+  [FX0+44,0,FX1-44].forEach(ax=>[-68,0,68].forEach(az=>{
+    a3d(ax,6,az,ax,bH,az,`rgba(72,152,255,${bAl.toFixed(2)})`,1.5,ax===0&&az===0?'B':null);
+  }));
+
+  // Rails
+  [RZ,-RZ].forEach(rz=>{
+    const ps=proj(-285,4,rz),pe=proj(285,4,rz);
+    [[13,'#2a1204'],[9,'#b06020'],[5,'#d89030'],[2.5,'rgba(255,210,130,.22)']].forEach(([w,c])=>{
+      ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(ps.sx,ps.sy);ctx.lineTo(pe.sx,pe.sy);ctx.stroke();
+    });
+    [FX0,FX1].forEach(fx=>{
+      const pm=proj(fx,5,rz);
+      ctx.beginPath();ctx.arc(pm.sx,pm.sy,4,0,Math.PI*2);
+      ctx.fillStyle='rgba(72,152,255,.45)';ctx.fill();
+    });
+  });
+
+  // Bar
+  const p0=proj(barX,5,-RZ),p1=proj(barX,5,RZ);
+  if(inf&&separation>.05){
+    ctx.save();ctx.globalAlpha=.07*separation;
+    ctx.strokeStyle='#4898ff';ctx.lineWidth=30;ctx.lineCap='round';
+    ctx.shadowColor='#4898ff';ctx.shadowBlur=22;
+    ctx.beginPath();ctx.moveTo(p0.sx,p0.sy);ctx.lineTo(p1.sx,p1.sy);ctx.stroke();
+    ctx.restore();
+  }
+  [[14,'#5a2006'],[10,'#a85a18'],[6,'#d08828'],[3,'#e8a040']].forEach(([w,c])=>{
+    ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(p0.sx,p0.sy);ctx.lineTo(p1.sx,p1.sy);ctx.stroke();
+  });
+
+  // Charges on bar
+  const eTgtZ=separationDir*(RZ*.86);
+  for(let i=0;i<N_BAR;i++){
+    const bz=bzArr[i];
+    // Ion
+    const iz=bz+Math.sin(time*.09+i*1.3)*1.6;
+    const pi=proj(barX,18,iz);const ri=Math.max(3.5,5.5*pi.sc);
+    ctx.save();ctx.globalAlpha=.6;
+    const ig=ctx.createRadialGradient(pi.sx-1,pi.sy-1,0,pi.sx,pi.sy,ri);
+    ig.addColorStop(0,C_IHI);ig.addColorStop(1,C_IDARK);
+    ctx.beginPath();ctx.arc(pi.sx,pi.sy,ri,0,Math.PI*2);ctx.fillStyle=ig;ctx.fill();
+    ctx.strokeStyle=C_IRIM;ctx.lineWidth=.8;ctx.stroke();
+    ctx.fillStyle='#ccffdd';ctx.font=`bold ${Math.max(7,Math.round(ri*1.4))}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('+',pi.sx,pi.sy);
+    ctx.restore();
+    // Electron
+    const ez=bz+separation*(eTgtZ-bz);
+    const pe=proj(barX,10,ez);const re=Math.max(4,6*pe.sc);
+    ctx.save();ctx.globalAlpha=.72+.28*separation;
+    if(inf&&separation>.08){ctx.shadowColor='#4898ff';ctx.shadowBlur=9;}
+    const eg=ctx.createRadialGradient(pe.sx-1,pe.sy-1.5,0,pe.sx,pe.sy,re);
+    eg.addColorStop(0,C_EHI);eg.addColorStop(.4,C_EMID);eg.addColorStop(1,C_EDARK);
+    ctx.beginPath();ctx.arc(pe.sx,pe.sy,re,0,Math.PI*2);ctx.fillStyle=eg;ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle='rgba(130,200,255,.55)';ctx.lineWidth=.8;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font=`bold ${Math.max(7,Math.round(re*1.4))}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('−',pe.sx,pe.sy);
+    ctx.restore();
+  }
+
+  // Polarity labels
+  if(inf&&separation>.18){
+    const nZ=separationDir*(RZ*.9),pZ=-separationDir*(RZ*.9);
+    const al=clamp((separation-.18)*4,0,1);
+    const pN=proj(barX,32,nZ),pP=proj(barX,32,pZ);
+    ctx.save();ctx.globalAlpha=al;ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#80c8ff';ctx.shadowColor='#4898ff';ctx.shadowBlur=12;ctx.fillText('⊖',pN.sx,pN.sy);
+    ctx.fillStyle='#5de896';ctx.shadowColor='#2ecc71';ctx.fillText('⊕',pP.sx,pP.sy);
+    ctx.shadowBlur=0;ctx.restore();
+  }
+
+  // Force arrows
+  if(inf&&vMag>.05&&lDir!==0){
+    const rZ2=separation*eTgtZ*.6;
+    const fLL=clamp(12+vMag*10*fieldB/2,0,56);
+    a3d(barX,38,rZ2,barX,38,rZ2+lDir*fLL,C_FL,2.5,'F_L');
+    if(separation>.1) a3d(barX,38,rZ2,barX,38,rZ2-lDir*clamp(separation*58,0,56),C_FE,2.5,'F_E');
+  }
+  if(vMag>.07){
+    const vD=Math.sign(barVelocity);
+    a3d(barX-vD*26,52,0,barX+vD*26,52,0,C_VEL,2.5,'v');
+  }
+}
+
+// ═══════════════════════════════════════════
+// MICRO VIEW
+// Looking along +X. Canvas-X = world-Y (bar width), Canvas-Y = world-Z (bar length).
+// B = +Y → points right. v into/out of screen.
+// F on e⁻ = DOWN when v>0 (right-hand rule).
+// ═══════════════════════════════════════════
+const MB={l:52,r:288,t:26,b:388};
+const IC=3,IR=5,IR_PX=14,ER_PX=5.5;
+const NE=15;
+const ISH=(MB.r-MB.l)/(IC+1);
+const ISV=(MB.b-MB.t)/(IR+1);
+
+// Ions
+const mIons=[];
+for(let r=0;r<IR;r++)for(let c=0;c<IC;c++){
+  const bx=MB.l+(c+1)*ISH,by=MB.t+(r+1)*ISV;
+  mIons.push({bx,by,x:bx,y:by,vx:0,vy:0});
+}
+
+// Electrons — placed in gaps
+function noIon(x,y){return mIons.every(io=>Math.hypot(x-io.bx,y-io.by)>IR_PX+ER_PX+10);}
+const mElec=[];
+{let placed=0,tries=0;
+while(placed<NE&&tries<100000){tries++;
+  const x=MB.l+ER_PX+Math.random()*(MB.r-MB.l-2*ER_PX);
+  const y=MB.t+ER_PX+Math.random()*(MB.b-MB.t-2*ER_PX);
+  if(noIon(x,y)){mElec.push({x,y,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
+    ph:Math.random()*Math.PI*2,hitT:0,tx:[x],ty:[y],repFx:0,repFy:0});placed++;}}}
+
+let sparks=[];
+
+function updateMicroIons(mDir,fp,vN){
+  const act=mDir!==0&&fp>.05;
+  const force=act?Math.min(1,separation*2)*vN*fp:0;
+  // Lorentz displacement ≈ half a lattice spacing (ISV/2 ≈ 31 px)
+  const ionTgtDY=-mDir*(ISV*0.48)*force;
+  mIons.forEach(ion=>{
+    // Thermal: apply a random kick only every 3 frames (lower frequency)
+    // and with larger amplitude. We accumulate a slow random walk via ion.kick.
+    if(!ion.kick){ion.kick={x:0,y:0,t:0};}
+    ion.kick.t++;
+    if(ion.kick.t>=3){
+      ion.kick.x=(Math.random()-.5)*0.55;
+      ion.kick.y=(Math.random()-.5)*0.55;
+      ion.kick.t=0;
+    }
+    ion.vx+=ion.kick.x;
+    ion.vy+=ion.kick.y;
+    // Lorentz displacement (spring toward displaced target)
+    ion.vy+=(ion.by+ionTgtDY-ion.y)*.22;
+    // Restoring spring toward base X
+    ion.vx+=(ion.bx-ion.x)*.18;
+    // Lighter damping → larger sustained amplitude
+    ion.vx*=.76;ion.vy*=.76;
+    ion.x+=ion.vx;ion.y+=ion.vy;
+    ion.x=clamp(ion.x,MB.l+IR_PX,MB.r-IR_PX);
+    ion.y=clamp(ion.y,MB.t+IR_PX,MB.b-IR_PX);
+  });
+}
+
+let inFieldNow=false;
+
+function updateMicroElec(mDir,fp,vN){
+  const driftMag=1.08*fp*vN*(fieldB/2)*clamp(1-separation*.88,.05,1);
+  const driftFy=mDir*driftMag;
+
+  // ── 1. Electron–Electron Coulomb repulsion (into velocity) ──────────────────
+  // Range EE_R: all pairs within this distance repel.
+  // No direct position nudge — force goes into vx/vy so inertia is preserved.
+  // This also means when Lorentz vanishes the repulsion keeps pushing electrons
+  // apart until they reach their max-entropy (uniform) distribution.
+  const EE_R=62;
+  inFieldNow=(barX>FX0&&barX<FX1);
+  // Outside field: stronger repulsion constant AND less damping → electrons spread fully
+  const EE_K = inFieldNow ? 0.18 : 0.85;
+  const DAMP = inFieldNow ? 0.88 : 0.94;  // less friction outside → repulsion carries farther
+  const repFx=new Float32Array(mElec.length);
+  const repFy=new Float32Array(mElec.length);
+
+  for(let i=0;i<mElec.length;i++){
+    for(let j=i+1;j<mElec.length;j++){
+      const a=mElec[i],b=mElec[j];
+      const dx=a.x-b.x,dy=a.y-b.y;
+      const d2=dx*dx+dy*dy;
+      const d=Math.sqrt(d2)||0.001;
+      if(d<EE_R){
+        // Force ∝ 1/d² (Coulomb), capped to avoid explosion at d→0
+        const fmag=clamp(EE_K*EE_R*EE_R/d2,0,3.5);
+        const fx=dx/d*fmag, fy=dy/d*fmag;
+        repFx[i]+=fx; repFy[i]+=fy;
+        repFx[j]-=fx; repFy[j]-=fy;
+      }
+    }
+  }
+
+  // ── 2. Lorentz drift + thermal + apply repulsion into velocity ───────────────
+  const THERMAL=0.22; // thermal agitation amplitude
+  mElec.forEach((e,i)=>{
+    // Thermal agitation
+    e.vx+=(Math.random()-.5)*THERMAL;
+    e.vy+=(Math.random()-.5)*THERMAL;
+    // Lorentz drift (vertical)
+    e.vy+=driftFy;
+    // Coulomb repulsion into velocity
+    e.vx+=repFx[i];
+    e.vy+=repFy[i];
+    // Smooth repulsion for display (low-pass, τ≈8 frames → no flicker)
+    const SMOOTH=0.12;
+    e.repFxS=(e.repFxS||0)*(1-SMOOTH)+repFx[i]*SMOOTH;
+    e.repFyS=(e.repFyS||0)*(1-SMOOTH)+repFy[i]*SMOOTH;
+    e.repFx=e.repFxS; e.repFy=e.repFyS;
+    // Damping (less outside field so electrons spread back fully)
+    e.vx*=DAMP; e.vy*=DAMP;
+    // Speed cap
+    const spMax = inFieldNow ? 10 : 14;
+    const sp=Math.hypot(e.vx,e.vy);
+    if(sp>spMax){e.vx*=spMax/sp;e.vy*=spMax/sp;}
+    // Move
+    e.x+=e.vx; e.y+=e.vy;
+    // Trail
+    e.tx.push(e.x);e.ty.push(e.y);
+    if(e.tx.length>6){e.tx.shift();e.ty.shift();}
+    // Wall bounce
+    if(e.x<MB.l+ER_PX){e.x=MB.l+ER_PX;e.vx=Math.abs(e.vx)*.55;}
+    if(e.x>MB.r-ER_PX){e.x=MB.r-ER_PX;e.vx=-Math.abs(e.vx)*.55;}
+    if(e.y<MB.t+ER_PX){e.y=MB.t+ER_PX;e.vy=Math.abs(e.vy)*.55;}
+    if(e.y>MB.b-ER_PX){e.y=MB.b-ER_PX;e.vy=-Math.abs(e.vy)*.55;}
+    if(e.hitT>0)e.hitT--;
+  });
+
+  // ── 3. Hard-core exclusion (position correction to prevent overlap) ──────────
+  // Just push out of overlap — no velocity change here, keeps physics clean.
+  const HARD=ER_PX*2+2;
+  for(let iter=0;iter<3;iter++){
+    for(let i=0;i<mElec.length;i++){
+      for(let j=i+1;j<mElec.length;j++){
+        const a=mElec[i],b=mElec[j];
+        const dx=a.x-b.x,dy=a.y-b.y;
+        const d=Math.hypot(dx,dy)||0.001;
+        if(d<HARD){
+          const half=(HARD-d)*0.5/d;
+          a.x+=dx*half;a.y+=dy*half;
+          b.x-=dx*half;b.y-=dy*half;
+        }
+      }
+    }
+  }
+
+  // ── 4. Electron–Ion collisions ────────────────────────────────────────────────
+  mElec.forEach(e=>{
+    mIons.forEach(ion=>{
+      const dx=e.x-ion.x,dy=e.y-ion.y,d=Math.hypot(dx,dy);
+      const md=IR_PX+ER_PX+1;
+      if(d<md&&d>.001){
+        const nx=dx/d,ny=dy/d,ov=md-d;
+        e.x+=nx*ov;e.y+=ny*ov;
+        const dot=e.vx*nx+e.vy*ny;
+        if(dot<0){
+          e.vx-=2*dot*nx*.70;e.vy-=2*dot*ny*.70;
+          if(e.hitT<=0&&Math.abs(dot)>.5){
+            sparks.push({x:ion.x+nx*IR_PX,y:ion.y+ny*IR_PX,age:0,life:10,
+              intens:clamp(Math.abs(dot)/4,.2,1)});
+            e.hitT=7;
+          }
+        }
+        ion.vy-=ny*ov*.002;
+      }
+    });
+  });
+
+  // Final clamp
+  mElec.forEach(e=>{
+    e.x=clamp(e.x,MB.l+ER_PX,MB.r-ER_PX);
+    e.y=clamp(e.y,MB.t+ER_PX,MB.b-ER_PX);
+  });
+}
+
+function drawMicro(){
+  const ctx=ctxU;
+  const{fp,inf,mDir,lDir}=getFS();
+  const vMag=Math.abs(barVelocity);
+
+  ctx.clearRect(0,0,WU,HU);
+  const bg=ctx.createRadialGradient(WU/2,HU/2,10,WU/2,HU/2,200);
+  bg.addColorStop(0,'#141018');bg.addColorStop(1,'#09090e');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,WU,HU);
+
+  // Rail bands (top = +Z rail, bottom = −Z rail)
+  const rH=18;
+  [[MB.t-rH,MB.t],[MB.b,MB.b+rH]].forEach(([y0,y1])=>{
+    ctx.fillStyle='#4a1e06';ctx.fillRect(0,y0,WU,y1-y0);
+    ctx.fillStyle='#c07028';ctx.fillRect(2,y0+2,WU-4,y1-y0-4);
+    ctx.fillStyle='rgba(255,210,130,.16)';ctx.fillRect(2,y0+2,WU-4,3);
+    ctx.strokeStyle='rgba(184,115,51,.45)';ctx.lineWidth=1;
+    ctx.strokeRect(2,y0+2,WU-4,y1-y0-4);
+  });
+  ctx.fillStyle='rgba(184,115,51,.4)';ctx.font='italic 10px Crimson Text,serif';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  ctx.fillText('binario +Z',WU-5,MB.t-rH/2);
+  ctx.fillText('binario −Z',WU-5,MB.b+rH/2);
+
+  // Bar boundary
+  ctx.strokeStyle='rgba(184,115,51,.33)';ctx.lineWidth=1.5;
+  ctx.strokeRect(MB.l,MB.t,MB.r-MB.l,MB.b-MB.t);
+  ctx.fillStyle='rgba(150,80,20,.04)';ctx.fillRect(MB.l,MB.t,MB.r-MB.l,MB.b-MB.t);
+
+  // Accumulation gradient
+  if(inf&&separation>.07&&mDir!==0){
+    const zH=90,al=separation*fp*.28;
+    const aBot=mDir>0;
+    // Electron side (blue)
+    {const g=ctx.createLinearGradient(0,aBot?MB.b:MB.t,0,aBot?MB.b-zH:MB.t+zH);
+      g.addColorStop(0,`rgba(50,130,255,${al})`);g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.fillRect(MB.l,aBot?MB.b-zH:MB.t,MB.r-MB.l,zH);}
+    // Ion side (green)
+    {const g=ctx.createLinearGradient(0,aBot?MB.t:MB.b,0,aBot?MB.t+40:MB.b-40);
+      g.addColorStop(0,`rgba(46,204,113,${al*.3})`);g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.fillRect(MB.l,aBot?MB.t:MB.b-40,MB.r-MB.l,40);}
+  }
+
+  // Crystal lattice lines
+  ctx.save();ctx.strokeStyle='rgba(46,204,113,.09)';ctx.lineWidth=.8;
+  mIons.forEach(a=>mIons.forEach(b=>{
+    if(a===b)return;
+    const dbc=Math.abs(a.bx-b.bx),dbr=Math.abs(a.by-b.by);
+    if((dbc<ISH+2&&dbr<2)||(dbr<ISV+2&&dbc<2)){
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+  }));
+  ctx.strokeStyle='rgba(46,204,113,.035)';ctx.setLineDash([2,5]);
+  mIons.forEach(a=>mIons.forEach(b=>{
+    if(a===b)return;
+    const dbc=Math.abs(a.bx-b.bx),dbr=Math.abs(a.by-b.by);
+    if(dbc<ISH+2&&dbr<ISV+2&&dbc>2&&dbr>2){
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+  }));
+  ctx.setLineDash([]);ctx.restore();
+
+  // Ion springs
+  mIons.forEach(ion=>{
+    const disp=ion.y-ion.by;
+    if(Math.abs(disp)>.7){
+      ctx.save();ctx.strokeStyle='rgba(93,232,150,.55)';ctx.lineWidth=1.2;ctx.setLineDash([2,3]);
+      ctx.beginPath();
+      for(let s=0;s<=8;s++){const tt=s/8;
+        const sx=ion.bx+Math.sin(tt*Math.PI*3)*Math.min(4,Math.abs(disp));
+        const sy=ion.by+tt*(ion.y-ion.by);
+        s===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+      ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(ion.bx,ion.by,3,0,Math.PI*2);
+      ctx.fillStyle='rgba(93,232,150,.28)';ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  // ── Electron–Electron repulsion: arrow from each electron body, pointing away ──
+  // Arrow length is computed from force normalised by the IN-field K (0.18),
+  // so it stays visually constant regardless of the K boost outside the field.
+  const EE_K_REF=0.18;
+  mElec.forEach(e=>{
+    if(!e.repFx&&!e.repFy)return;
+    const mag=Math.hypot(e.repFx,e.repFy);
+    if(mag<0.06)return;
+    const nx=e.repFx/mag,ny=e.repFy/mag;
+    // Normalise by current EE_K so length doesn't change when K is boosted outside field
+    const curK=inFieldNow?0.18:0.85;
+    const magNorm=mag*(EE_K_REF/curK);
+    const arrowLen=clamp(magNorm*14,4,26);
+    const ax=e.x+nx*(ER_PX+2);
+    const ay=e.y+ny*(ER_PX+2);
+    const ex2=ax+nx*arrowLen;
+    const ey2=ay+ny*arrowLen;
+    const alpha=clamp(magNorm*1.4,0.22,0.88);
+    drawArrow(ctxU,ax,ay,ex2,ey2,
+      `rgba(180,100,255,${alpha.toFixed(2)})`,1.6,null);
+  });
+
+  // Sparks
+  sparks=sparks.filter(s=>s.age<s.life);
+  sparks.forEach(s=>{
+    const al=(1-s.age/s.life)*s.intens,rad=(s.age/s.life)*10;
+    ctx.save();ctx.globalAlpha=al*.85;
+    const sg=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,rad*2);
+    sg.addColorStop(0,'rgba(255,240,180,.9)');sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg;ctx.beginPath();ctx.arc(s.x,s.y,rad*2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,220,120,.9)';ctx.lineWidth=.8;
+    for(let k=0;k<5;k++){
+      const ang=(k/5)*Math.PI*2+s.age*.5;
+      ctx.beginPath();
+      ctx.moveTo(s.x+Math.cos(ang)*rad*.3,s.y+Math.sin(ang)*rad*.3);
+      ctx.lineTo(s.x+Math.cos(ang)*rad*1.2,s.y+Math.sin(ang)*rad*1.2);
+      ctx.stroke();}
+    ctx.restore();s.age++;
+  });
+
+  // Electrons (beneath ions)
+  mElec.forEach(e=>{
+    // Trail
+    if(e.tx.length>1){
+      ctx.save();const sp=Math.hypot(e.vx,e.vy);
+      for(let k=0;k<e.tx.length-1;k++){
+        const tt=k/(e.tx.length-1);
+        ctx.globalAlpha=tt*.30*Math.min(sp/4,1);
+        ctx.strokeStyle='#4898ff';ctx.lineWidth=1.8;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(e.tx[k],e.ty[k]);ctx.lineTo(e.tx[k+1],e.ty[k+1]);ctx.stroke();}
+      ctx.restore();}
+    // Glow
+    ctx.save();ctx.globalAlpha=.15;
+    ctx.beginPath();ctx.arc(e.x,e.y,ER_PX*2.8,0,Math.PI*2);
+    ctx.fillStyle='#4898ff';ctx.fill();ctx.restore();
+    // Body
+    const eg=ctx.createRadialGradient(e.x-1,e.y-1.5,0,e.x,e.y,ER_PX);
+    eg.addColorStop(0,C_EHI);eg.addColorStop(.4,C_EMID);eg.addColorStop(1,C_EDARK);
+    ctx.beginPath();ctx.arc(e.x,e.y,ER_PX,0,Math.PI*2);ctx.fillStyle=eg;ctx.fill();
+    ctx.strokeStyle='rgba(130,200,255,.6)';ctx.lineWidth=.8;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 8px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('−',e.x,e.y+.5);
+  });
+
+  // Ions (on top)
+  mIons.forEach(ion=>{
+    ctx.save();ctx.globalAlpha=.1;
+    ctx.beginPath();ctx.arc(ion.x,ion.y,IR_PX+5,0,Math.PI*2);
+    ctx.fillStyle=C_IRIM;ctx.fill();ctx.restore();
+    const ig=ctx.createRadialGradient(ion.x-3,ion.y-3.5,0,ion.x,ion.y,IR_PX);
+    ig.addColorStop(0,C_IHI);ig.addColorStop(.45,C_IMID);ig.addColorStop(1,C_IDARK);
+    ctx.beginPath();ctx.arc(ion.x,ion.y,IR_PX,0,Math.PI*2);ctx.fillStyle=ig;ctx.fill();
+    ctx.strokeStyle=C_IRIM;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='#ccffdd';ctx.font='bold 15px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('+',ion.x,ion.y);
+  });
+
+  // Force arrows (vertical: Lorentz = down when mDir=+1, Electric = up)
+  if(inf&&vMag>.05&&mDir!==0){
+    const cx=WU/2,cy=(MB.t+MB.b)/2;
+    // F_L length fixed by v and B
+    const fLL=clamp(22+vMag*10*fieldB,0,80);
+    drawArrow(ctx,cx-20,cy,cx-20,cy+mDir*fLL,C_FL,3.5,'F_L');
+    if(separation>.12){
+      // F_E grows from 0 → fLL as separation → equilibrium value
+      // At equilibrium separation≈vMag/3.5 → clamp to fLL
+      const fEL=Math.min(fLL, fLL*separation/(clamp(vMag/3.5,0.05,1)));
+      drawArrow(ctx,cx+20,cy,cx+20,cy-mDir*fEL,C_FE,3.5,'F_E');
+      if(Math.abs(fLL-fEL)<14&&separation>.42){
+        ctx.save();
+        ctx.globalAlpha=clamp((separation-.42)*2.8,0,1);
+        ctx.fillStyle='rgba(0,212,176,.07)';ctx.strokeStyle='rgba(0,212,176,.26)';
+        ctx.lineWidth=1;ctx.setLineDash([4,4]);
+        ctx.fillRect(18,cy-22,WU-36,44);ctx.strokeRect(18,cy-22,WU-36,44);
+        ctx.setLineDash([]);
+        ctx.fillStyle='#e8d5b0';ctx.font='italic bold 13px Crimson Text,serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=6;
+        ctx.fillText('Equilibrio: F\u209c = F\u2091',WU/2,cy);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Terminal labels on rails
+  if(inf&&separation>.12&&mDir!==0){
+    const al=clamp((separation-.12)*3.5,0,1);
+    const aBot=mDir>0;
+    ctx.save();ctx.globalAlpha=al;ctx.font='bold 15px Crimson Text,serif';ctx.textAlign='center';
+    ctx.fillStyle='#80c8ff';ctx.shadowColor='#4898ff';ctx.shadowBlur=8;
+    ctx.fillText('⊖',WU/2,aBot?MB.b+rH/2:MB.t-rH/2);
+    ctx.fillStyle='#5de896';ctx.shadowColor='#2ecc71';
+    ctx.fillText('⊕',WU/2,aBot?MB.t-rH/2:MB.b+rH/2);
+    ctx.shadowBlur=0;ctx.restore();
+  }
+
+  // Status bar
+  {let lbl='',col='#9a8060';
+   const{inf:inf2}=getFS();
+   if(!inf2){lbl='Barra fuori dal campo — nessuna forza di Lorentz';}
+   else if(Math.abs(barVelocity)<.08){lbl='Barra ferma nel campo — equilibrio elettrostatico';}
+   else if(separation<.15){lbl='Forza di Lorentz attiva — elettroni in moto';col='#80c8ff';}
+   else if(separation>.65){lbl='Equilibrio: F\u209c = F\u2091 — corrente interna nulla';col='#00d4b0';}
+   else{lbl='Accumulo: repulsione e\u207b\u2013e\u207b rallenta la deriva';col='#a060ff';}
+   ctx.save();ctx.fillStyle='rgba(8,10,16,.88)';ctx.fillRect(0,HU-24,WU,24);
+   ctx.fillStyle=col;ctx.font='italic 11px Crimson Text,serif';
+   ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(lbl,WU/2,HU-12);ctx.restore();}
+}
+
+// ═══════════════ MAIN LOOP ═══════════════
+function loop(){
+  time++;
+  updatePhysics();
+  const{mDir,fp,vN}=getFS();
+  updateMicroIons(mDir,fp,vN);
+  updateMicroElec(mDir,fp,vN);
+  drawMacro();
+  drawMicro();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
