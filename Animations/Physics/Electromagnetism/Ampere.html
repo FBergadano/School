@@ -1,0 +1,696 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+const AmpereExperiment = () => {
+  const canvasRef = useRef(null);
+  const [voltage1, setVoltage1] = useState(12);
+  const [voltage2, setVoltage2] = useState(12);
+  const [polarity1, setPolarity1] = useState(1);
+  const [polarity2, setPolarity2] = useState(1);
+  const [distance, setDistance] = useState(60);
+  const [length, setLength] = useState(360);
+  const [medium, setMedium] = useState('aria');
+  
+  const media = {
+    'aria': { name: 'Aria', mu: 1.0 },
+    'acqua': { name: 'Acqua', mu: 1.0 },
+    'ferro': { name: 'Ferro', mu: 200 }
+  };
+
+  const current1Direction = voltage1 * polarity1;
+  const current2Direction = voltage2 * polarity2;
+  const sameDirection = (current1Direction * current2Direction) > 0;
+  
+  const forceMagnitude = (Math.abs(voltage1) * Math.abs(voltage2) * media[medium].mu * length) / (distance * 36);
+  const curvatureAmount = (voltage1 === 0 || voltage2 === 0) ? 0 : 
+                          sameDirection ? forceMagnitude : -forceMagnitude;
+
+  // Animation state for current particles
+  const [particles1, setParticles1] = useState([]);
+  const [particles2, setParticles2] = useState([]);
+  const [t, setT] = useState(0);
+
+  useEffect(() => {
+    const initParticles = () => {
+      const p = [];
+      for (let i = 0; i < 18; i++) {
+        p.push({ 
+          t: Math.random(), 
+          speed: 0.003 + Math.random() * 0.004,
+          size: 2.5 + Math.random() * 1.5 
+        });
+      }
+      return p;
+    };
+    setParticles1(initParticles());
+    setParticles2(initParticles());
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const W = 800, H = 750;
+    const CX = W * 0.5, CY = H * 0.52;
+
+    // Isometric projection (same as Ørsted)
+    const proj = (x, y, z) => {
+      const p = 900;
+      const sc = p / (p + z * 0.25);
+      return {
+        sx: CX + (x - z * 0.45) * sc,
+        sy: CY + (-y + z * 0.52) * sc,
+        sc
+      };
+    };
+
+    const drawBackground = () => {
+      const bg = ctx.createRadialGradient(W/2, H*0.45, 0, W/2, H/2, W*0.75);
+      bg.addColorStop(0, '#161210');
+      bg.addColorStop(1, '#0a0c10');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+    };
+
+    const drawGrid = () => {
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      ctx.strokeStyle = '#b87333';
+      ctx.lineWidth = 1;
+      for (let x = -5; x <= 5; x++) {
+        const a = proj(x * 40, -240, -200);
+        const b = proj(x * 40, -240, 200);
+        ctx.beginPath();
+        ctx.moveTo(a.sx, a.sy);
+        ctx.lineTo(b.sx, b.sy);
+        ctx.stroke();
+      }
+      for (let z = -5; z <= 5; z++) {
+        const a = proj(-200, -240, z * 40);
+        const b = proj(200, -240, z * 40);
+        ctx.beginPath();
+        ctx.moveTo(a.sx, a.sy);
+        ctx.lineTo(b.sx, b.sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    };
+
+    const drawWire = (xPos, curveDir, voltage, polarity, particles) => {
+      const wireLen = length;
+      const y0 = -wireLen / 2;
+      const y1 = wireLen / 2;
+      
+      // Create curved wire using bezier with curvature
+      const numSeg = 40;
+      const points = [];
+      for (let i = 0; i <= numSeg; i++) {
+        const frac = (i / numSeg) * 2 - 1; // -1 to +1
+        const sag = curveDir * curvatureAmount * (1 - frac * frac);
+        const py = frac * wireLen / 2;
+        points.push(proj(xPos + sag, py, 0));
+      }
+
+      // Glow when current on
+      if (voltage > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.12 * (voltage / 24);
+        ctx.strokeStyle = '#f0c060';
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Copper wire
+      ctx.beginPath();
+      points.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.strokeStyle = '#7a3d10';
+      ctx.lineWidth = 11;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      ctx.beginPath();
+      points.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.strokeStyle = '#c87030';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      
+      ctx.beginPath();
+      points.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.strokeStyle = '#e8a040';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      points.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.strokeStyle = 'rgba(255,210,120,0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Terminals
+      const dir = current1Direction > 0 ? 1 : -1;
+      const topIdx = dir > 0 ? numSeg : 0;
+      const botIdx = dir > 0 ? 0 : numSeg;
+      
+      const topColor = voltage > 0 ? (polarity > 0 ? '#e74c3c' : '#2ecc71') : '#444';
+      const botColor = voltage > 0 ? (polarity > 0 ? '#2ecc71' : '#e74c3c') : '#444';
+      
+      // Top terminal
+      ctx.beginPath();
+      ctx.arc(points[topIdx].sx, points[topIdx].sy, 9, 0, Math.PI * 2);
+      ctx.fillStyle = topColor;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px Crimson Text, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(polarity > 0 ? '–' : '+', points[topIdx].sx, points[topIdx].sy);
+
+      // Bottom terminal
+      ctx.beginPath();
+      ctx.arc(points[botIdx].sx, points[botIdx].sy, 9, 0, Math.PI * 2);
+      ctx.fillStyle = botColor;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px Crimson Text, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(polarity > 0 ? '+' : '–', points[botIdx].sx, points[botIdx].sy);
+
+      // Current arrow
+      if (voltage > 0) {
+        const dir = voltage * polarity;
+        const arrowDir = dir > 0 ? 1 : -1;
+        const mid = Math.floor(numSeg / 2);
+        const arrowStart = proj(xPos, arrowDir * (-30), 0);
+        const arrowEnd = proj(xPos, arrowDir * 40, 0);
+        
+        ctx.save();
+        ctx.strokeStyle = '#ffe080';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#ffe080';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(arrowStart.sx, arrowStart.sy);
+        ctx.lineTo(arrowEnd.sx, arrowEnd.sy);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        // Arrowhead
+        const dx = arrowEnd.sx - arrowStart.sx;
+        const dy = arrowEnd.sy - arrowStart.sy;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = dx / len, ny = dy / len;
+        ctx.fillStyle = '#ffe080';
+        ctx.beginPath();
+        ctx.moveTo(arrowEnd.sx, arrowEnd.sy);
+        ctx.lineTo(arrowEnd.sx - nx * 12 - ny * 6, arrowEnd.sy - ny * 12 + nx * 6);
+        ctx.lineTo(arrowEnd.sx - nx * 12 + ny * 6, arrowEnd.sy - ny * 12 - nx * 6);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Label
+        ctx.fillStyle = '#ffe080';
+        ctx.font = 'italic bold 13px Crimson Text, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(arrowDir > 0 ? 'I ↑' : '↓ I', arrowEnd.sx + 25, arrowEnd.sy);
+        ctx.restore();
+      }
+
+      // Current particles
+      if (voltage > 0) {
+        const dir = voltage * polarity;
+        const dirSign = dir > 0 ? 1 : -1;
+        const speed = 0.003 + (voltage / 24) * 0.007;
+        
+        particles.forEach(p => {
+          p.t += dirSign * speed;
+          if (p.t > 1) p.t -= 1;
+          if (p.t < 0) p.t += 1;
+          
+          const segF = p.t * numSeg;
+          const seg = Math.floor(segF);
+          const rem = segF - seg;
+          const idx = Math.min(seg, numSeg - 1);
+          const pp = {
+            sx: points[idx].sx + (points[idx + 1].sx - points[idx].sx) * rem,
+            sy: points[idx].sy + (points[idx + 1].sy - points[idx].sy) * rem,
+          };
+          
+          ctx.save();
+          ctx.globalAlpha = 0.9;
+          const g = ctx.createRadialGradient(pp.sx, pp.sy, 0, pp.sx, pp.sy, p.size * 3);
+          g.addColorStop(0, 'rgba(255,220,80,0.95)');
+          g.addColorStop(1, 'transparent');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(pp.sx, pp.sy, p.size * 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#fffacc';
+          ctx.beginPath();
+          ctx.arc(pp.sx, pp.sy, p.size * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+    };
+
+    const drawForceIndicator = () => {
+      if (voltage1 === 0 || voltage2 === 0) return;
+      
+      const x1 = -distance / 2 - 20;
+      const x2 = distance / 2 + 20;
+      const y = -length / 2 - 60;
+      
+      const p1 = proj(x1, y, 0);
+      const p2 = proj(x2, y, 0);
+      
+      ctx.save();
+      ctx.strokeStyle = sameDirection ? '#059669' : '#dc2626';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.moveTo(p1.sx, p1.sy);
+      ctx.lineTo(p2.sx, p2.sy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Arrows
+      if (sameDirection) {
+        // Attraction arrows pointing toward each other
+        const mid = proj(0, y, 0);
+        drawArrowHead(ctx, p1.sx, p1.sy, mid.sx, mid.sy, '#059669');
+        drawArrowHead(ctx, p2.sx, p2.sy, mid.sx, mid.sy, '#059669');
+      } else {
+        // Repulsion arrows pointing away from each other
+        const mid = proj(0, y, 0);
+        drawArrowHead(ctx, mid.sx, mid.sy, p1.sx, p1.sy, '#dc2626');
+        drawArrowHead(ctx, mid.sx, mid.sy, p2.sx, p2.sy, '#dc2626');
+      }
+      
+      // Label
+      const midP = proj(0, y - 20, 0);
+      ctx.fillStyle = sameDirection ? '#059669' : '#dc2626';
+      ctx.font = 'bold 16px Playfair Display, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(sameDirection ? 'Attrazione' : 'Repulsione', midP.sx, midP.sy);
+      ctx.restore();
+    };
+
+    const drawArrowHead = (ctx, x0, y0, x1, y1, color) => {
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const nx = dx / len, ny = dy / len;
+      const headX = x0 + nx * len * 0.4;
+      const headY = y0 + ny * len * 0.4;
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(headX, headY);
+      ctx.lineTo(headX - nx * 10 - ny * 6, headY - ny * 10 + nx * 6);
+      ctx.lineTo(headX - nx * 10 + ny * 6, headY - ny * 10 - nx * 6);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    const drawDistanceLine = () => {
+      const y = length / 2 + 70;
+      const x1 = -distance / 2 - 20;
+      const x2 = distance / 2 + 20;
+      
+      const p1 = proj(x1, y, 0);
+      const p2 = proj(x2, y, 0);
+      const pm = proj(0, y, 0);
+      
+      ctx.save();
+      ctx.strokeStyle = 'rgba(184,115,51,0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(p1.sx, p1.sy);
+      ctx.lineTo(p2.sx, p2.sy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      ctx.fillStyle = 'rgba(184,115,51,0.6)';
+      ctx.font = 'italic 12px Crimson Text, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`d = ${distance}`, pm.sx, pm.sy + 16);
+      ctx.restore();
+    };
+
+    // Main render
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawGrid();
+    drawWire(-distance / 2 - 20, 1, voltage1, polarity1, particles1);
+    drawWire(distance / 2 + 20, -1, voltage2, polarity2, particles2);
+    drawForceIndicator();
+    drawDistanceLine();
+
+    const animationFrame = requestAnimationFrame(() => setT(t + 1));
+    return () => cancelAnimationFrame(animationFrame);
+  }, [voltage1, voltage2, polarity1, polarity2, distance, length, medium, curvatureAmount, sameDirection, particles1, particles2, t]);
+
+  return (
+    <div style={{ 
+      width: '100%', 
+      minHeight: '100vh', 
+      background: '#0d0a08',
+      color: '#e8d5b0',
+      fontFamily: "'Crimson Text', serif",
+      padding: '20px'
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+      `}</style>
+      
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        {/* Header */}
+        <header style={{ textAlign: 'center', padding: '40px 20px 20px' }}>
+          <span style={{ 
+            fontSize: '0.85rem', 
+            letterSpacing: '0.4em', 
+            color: '#b87333', 
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: '10px'
+          }}>
+            Paris · 1820
+          </span>
+          <h1 style={{ 
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+            fontWeight: 700,
+            lineHeight: 1.1,
+            marginBottom: '8px'
+          }}>
+            L'Esperimento di <em style={{ color: '#e8983a', fontStyle: 'italic' }}>Ampère</em>
+          </h1>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '15px',
+            justifyContent: 'center',
+            margin: '20px 0'
+          }}>
+            <div style={{ width: '70px', height: '1px', background: 'linear-gradient(90deg, transparent, #b87333)' }} />
+            <div style={{ width: '7px', height: '7px', background: '#b87333', transform: 'rotate(45deg)' }} />
+            <div style={{ width: '70px', height: '1px', background: 'linear-gradient(90deg, #b87333, transparent)' }} />
+          </div>
+          <p style={{ 
+            fontSize: '1.1rem',
+            color: '#9a8060',
+            fontStyle: 'italic',
+            maxWidth: '500px',
+            margin: '0 auto',
+            lineHeight: 1.6
+          }}>
+            Due fili percorsi da corrente si attraggono o respingono a seconda del verso
+          </p>
+        </header>
+
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          {/* Canvas */}
+          <div style={{ 
+            flex: 1,
+            minWidth: '300px',
+            background: '#1a1208',
+            borderRadius: '6px',
+            border: '1px solid rgba(184,115,51,0.22)',
+            boxShadow: '0 0 70px rgba(184,115,51,0.07), inset 0 0 35px rgba(0,0,0,0.6)',
+            overflow: 'hidden'
+          }}>
+            <canvas 
+              ref={canvasRef} 
+              width={800} 
+              height={750}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </div>
+
+          {/* Controls */}
+          <div style={{ 
+            width: '280px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px'
+          }}>
+            {/* Filo 1 */}
+            <div style={{
+              background: 'rgba(16,20,28,0.8)',
+              border: '1px solid rgba(184,115,51,0.15)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <h3 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '0.95rem',
+                color: '#b87333',
+                marginBottom: '12px',
+                fontStyle: 'italic'
+              }}>
+                Filo 1 — Tensione
+              </h3>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '0.85rem', color: '#9a8060', display: 'block', marginBottom: '6px' }}>
+                  {voltage1} V
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="24"
+                  value={voltage1}
+                  onChange={(e) => setVoltage1(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <button
+                onClick={() => setPolarity1(-polarity1)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: 'transparent',
+                  border: '1.5px solid #b87333',
+                  borderRadius: '2px',
+                  color: '#e8983a',
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.3s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#b87333'}
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+              >
+                ⇄ Inverti polarità
+              </button>
+            </div>
+
+            {/* Filo 2 */}
+            <div style={{
+              background: 'rgba(16,20,28,0.8)',
+              border: '1px solid rgba(184,115,51,0.15)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <h3 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '0.95rem',
+                color: '#b87333',
+                marginBottom: '12px',
+                fontStyle: 'italic'
+              }}>
+                Filo 2 — Tensione
+              </h3>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '0.85rem', color: '#9a8060', display: 'block', marginBottom: '6px' }}>
+                  {voltage2} V
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="24"
+                  value={voltage2}
+                  onChange={(e) => setVoltage2(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <button
+                onClick={() => setPolarity2(-polarity2)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: 'transparent',
+                  border: '1.5px solid #b87333',
+                  borderRadius: '2px',
+                  color: '#e8983a',
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.3s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#b87333'}
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+              >
+                ⇄ Inverti polarità
+              </button>
+            </div>
+
+            {/* Distanza */}
+            <div style={{
+              background: 'rgba(16,20,28,0.8)',
+              border: '1px solid rgba(184,115,51,0.15)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <h3 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '0.95rem',
+                color: '#b87333',
+                marginBottom: '12px',
+                fontStyle: 'italic'
+              }}>
+                Distanza (d)
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: '#9a8060', display: 'block', marginBottom: '6px' }}>
+                  {distance}
+                </label>
+                <input
+                  type="range"
+                  min="30"
+                  max="120"
+                  value={distance}
+                  onChange={(e) => setDistance(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            {/* Lunghezza */}
+            <div style={{
+              background: 'rgba(16,20,28,0.8)',
+              border: '1px solid rgba(184,115,51,0.15)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <h3 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '0.95rem',
+                color: '#b87333',
+                marginBottom: '12px',
+                fontStyle: 'italic'
+              }}>
+                Lunghezza (L)
+              </h3>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: '#9a8060', display: 'block', marginBottom: '6px' }}>
+                  {length}
+                </label>
+                <input
+                  type="range"
+                  min="200"
+                  max="600"
+                  value={length}
+                  onChange={(e) => setLength(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            {/* Mezzo */}
+            <div style={{
+              background: 'rgba(16,20,28,0.8)',
+              border: '1px solid rgba(184,115,51,0.15)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <h3 style={{ 
+                fontFamily: "'Playfair Display', serif",
+                fontSize: '0.95rem',
+                color: '#b87333',
+                marginBottom: '12px',
+                fontStyle: 'italic'
+              }}>
+                Mezzo
+              </h3>
+              <select
+                value={medium}
+                onChange={(e) => setMedium(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: '#10141c',
+                  color: '#e8d5b0',
+                  border: '1px solid rgba(184,115,51,0.4)',
+                  borderRadius: '2px',
+                  fontFamily: "'Crimson Text', serif",
+                  fontSize: '0.95rem',
+                  cursor: 'pointer'
+                }}
+              >
+                {Object.entries(media).map(([key, value]) => (
+                  <option key={key} value={key}>{value.name}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: '0.8rem', color: '#9a8060', marginTop: '8px' }}>
+                µᵣ = {media[medium].mu}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(184,115,51,0.15) 0%, rgba(232,152,58,0.1) 100%)',
+              border: '1px solid rgba(184,115,51,0.3)',
+              borderRadius: '5px',
+              padding: '15px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ 
+                  width: '10px', 
+                  height: '10px', 
+                  borderRadius: '50%',
+                  background: voltage1 === 0 || voltage2 === 0 ? '#6b7280' : sameDirection ? '#059669' : '#dc2626',
+                  boxShadow: voltage1 > 0 && voltage2 > 0 ? '0 0 12px currentColor' : 'none'
+                }} />
+                <span style={{ 
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  color: '#e8d5b0'
+                }}>
+                  {voltage1 === 0 || voltage2 === 0 ? 'Nessuna forza' : 
+                   sameDirection ? 'ATTRAZIONE' : 'REPULSIONE'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#9a8060', lineHeight: 1.6 }}>
+                <p style={{ margin: '4px 0' }}>• Correnti parallele → attrazione</p>
+                <p style={{ margin: '4px 0' }}>• Correnti antiparallele → repulsione</p>
+                <p style={{ margin: '8px 0 0', fontStyle: 'italic', color: '#b87333' }}>
+                  F ∝ I₁·I₂·L·µᵣ / d
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AmpereExperiment;
