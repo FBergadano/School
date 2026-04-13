@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hertz's Experiment — 1887</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #10141c;
+    --copper: #b87333;
+    --copper-bright: #e8983a;
+    --glow: rgba(184,115,51,0.4);
+    --text-primary: #e8d5b0;
+    --text-secondary: #9a8060;
+    --node-col: #e87040;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Crimson Text', serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(184,115,51,0.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    text-align: center;
+    padding: 2.5rem 2rem 1.2rem;
+    position: relative; z-index: 1;
+  }
+
+  .year-badge {
+    font-size: 0.82rem; letter-spacing: 0.42em;
+    color: var(--copper); text-transform: uppercase;
+    margin-bottom: 0.7rem; display: block;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.9rem, 4.5vw, 3.2rem);
+    font-weight: 700; color: var(--text-primary);
+    line-height: 1.1; margin-bottom: 0.4rem;
+  }
+  h1 em { color: var(--copper-bright); font-style: italic; }
+
+  .subtitle {
+    font-size: 1rem; color: var(--text-secondary);
+    font-style: italic; max-width: 560px; margin: 0 auto; line-height: 1.6;
+  }
+
+  .ornament {
+    display: flex; align-items: center; gap: 1rem;
+    justify-content: center; margin: 1.2rem 0;
+  }
+  .ornament::before,.ornament::after {
+    content:''; width:70px; height:1px;
+    background:linear-gradient(90deg,transparent,var(--copper));
+  }
+  .ornament::after { background:linear-gradient(90deg,var(--copper),transparent); }
+  .ornament-diamond { width:7px; height:7px; background:var(--copper); transform:rotate(45deg); }
+
+  .stage {
+    width:100%; max-width:960px;
+    padding:0 1.5rem 2.5rem;
+    display:flex; flex-direction:column; align-items:center; gap:1.6rem;
+    position:relative; z-index:1;
+  }
+
+  .canvas-wrap {
+    width:100%; max-width:900px;
+    border:1px solid rgba(184,115,51,0.22);
+    border-radius:5px;
+    background: var(--surface);
+    overflow:hidden;
+    box-shadow: 0 0 70px rgba(184,115,51,0.07), inset 0 0 35px rgba(0,0,0,0.6);
+  }
+  canvas { display:block; width:100%; height:auto; }
+
+  .sine-panel {
+    width:100%; max-width:900px;
+    border:1px solid rgba(184,115,51,0.15);
+    border-radius:5px;
+    background:rgba(16,20,28,0.9);
+    overflow:hidden;
+    display: none;
+  }
+  .sine-panel.visible { display:block; }
+  .sine-panel canvas { display:block; width:100%; height:auto; }
+
+  .controls {
+    width:100%; max-width:900px;
+    display:grid; grid-template-columns:1fr auto 1fr; gap:1.4rem; align-items:start;
+  }
+
+  .control-group { display:flex; flex-direction:column; gap:0.55rem; }
+  .control-label {
+    font-size:0.76rem; letter-spacing:0.26em; text-transform:uppercase;
+    color:var(--text-secondary);
+  }
+  .slider-wrap { display:flex; align-items:center; gap:0.9rem; }
+
+  input[type=range] {
+    -webkit-appearance:none; appearance:none; flex:1; height:3px;
+    background:rgba(184,115,51,0.2); border-radius:2px; outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:17px; height:17px; border-radius:50%;
+    background:var(--copper); border:2px solid var(--copper-bright);
+    cursor:pointer; box-shadow:0 0 9px var(--glow); transition:transform .2s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+
+  .slider-val {
+    font-family:'Playfair Display',serif; font-size:0.96rem; color:var(--copper-bright);
+    min-width:5rem; text-align:right; white-space:nowrap;
+  }
+
+  .centre-controls {
+    display:flex; flex-direction:column; align-items:center; gap:0.65rem;
+  }
+
+  .btn-main {
+    position:relative; padding:0.7rem 1.7rem;
+    background:transparent; border:1.5px solid var(--copper); border-radius:2px;
+    color:var(--copper-bright); font-family:'Playfair Display',serif; font-size:0.9rem;
+    cursor:pointer; letter-spacing:0.1em; transition:all .3s; overflow:hidden; white-space:nowrap;
+  }
+  .btn-main::before {
+    content:''; position:absolute; inset:0; background:var(--copper);
+    transform:scaleX(0); transform-origin:left; transition:transform .3s; z-index:-1;
+  }
+  .btn-main:hover { color:var(--bg); }
+  .btn-main:hover::before { transform:scaleX(1); }
+  .btn-main.active { background:var(--copper); color:var(--bg); }
+
+  .btn-label {
+    font-size:0.67rem; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--text-secondary); text-align:center;
+  }
+
+  .info-panel {
+    width:100%; max-width:900px;
+    border:1px solid rgba(184,115,51,.15);
+    padding:1.3rem 1.7rem; background:rgba(16,20,28,.8);
+  }
+  .info-block h3 {
+    font-family:'Playfair Display',serif; font-size:.86rem;
+    color:var(--copper); letter-spacing:.07em; margin-bottom:.45rem; font-style:italic;
+  }
+  .info-block p { font-size:.92rem; color:var(--text-secondary); line-height:1.75; }
+  .hi { color:var(--text-primary); font-weight:600; }
+  .hi-spark { color:#a0d8ff; font-weight:700; }
+  .hi-node  { color:var(--node-col); font-weight:700; }
+
+  .status-indicator { display:flex; align-items:center; gap:.55rem; font-size:.9rem; margin-bottom:.5rem; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--text-secondary); transition:all .4s; flex-shrink:0; }
+  .dot.spark { background:#a0d8ff; box-shadow:0 0 12px #a0d8ff; animation:sblink .45s ease-in-out infinite; }
+  .dot.node  { background:var(--node-col); box-shadow:0 0 10px var(--node-col); }
+  @keyframes sblink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  .legend {
+    display:flex; gap:1.3rem; flex-wrap:wrap;
+    justify-content:center; font-size:.8rem; color:var(--text-secondary);
+  }
+  .legend-item { display:flex; align-items:center; gap:.35rem; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; }
+
+  @media(max-width:640px) { .controls { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="year-badge">Karlsruhe · 1887</span>
+  <h1><em>Hertz's</em> Experiment</h1>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+  <p class="subtitle">
+    The transmitter generates standing electromagnetic waves.
+    The detector ring sparks at antinodes — and falls silent at nodes.
+  </p>
+</header>
+
+<div class="stage">
+
+  <div class="canvas-wrap">
+    <canvas id="cMain" width="900" height="440"></canvas>
+  </div>
+
+  <div class="sine-panel" id="sinePanel">
+    <canvas id="cSine" width="900" height="140"></canvas>
+  </div>
+
+  <div class="controls">
+
+    <div class="control-group">
+      <span class="control-label">Transmitter position</span>
+      <div class="slider-wrap">
+        <input type="range" id="txSlider" min="0" max="28" value="8">
+        <span class="slider-val" id="txVal">8 cm</span>
+      </div>
+      <span class="control-label" style="margin-top:.35rem">Oscillator frequency</span>
+      <div class="slider-wrap">
+        <input type="range" id="freqSlider" min="1" max="5" value="2" step="0.1">
+        <span class="slider-val" id="freqVal">2.0 GHz</span>
+      </div>
+    </div>
+
+    <div class="centre-controls">
+      <button class="btn-main" id="runBtn">Start oscillator</button>
+      <button class="btn-main" id="sineBtn" style="font-size:.82rem;padding:.55rem 1.2rem;">Wave graph: OFF</button>
+      <span class="btn-label" id="statusLabel">Oscillator off</span>
+    </div>
+
+    <div class="control-group">
+      <span class="control-label">Detector position (Rx)</span>
+      <div class="slider-wrap">
+        <input type="range" id="rxSlider" min="15" max="95" value="55">
+        <span class="slider-val" id="rxVal">55 cm</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="info-panel">
+    <div class="info-block">
+      <h3>System state</h3>
+      <div class="status-indicator">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">Oscillator off — no wave</span>
+      </div>
+      <p>
+        Tx → Rx distance: <span class="hi" id="distVal">—</span> &nbsp;|&nbsp;
+        λ/2 = <span class="hi" id="lambdaVal">—</span> &nbsp;|&nbsp;
+        Field at Rx: <span class="hi" id="eVal">—</span><br>
+        Detector: <span class="hi-spark" id="sparkState">—</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#b87333"></div> Transmitter (Hertz dipole + Ruhmkorff coil)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a0d8ff"></div> Spark — antinode detected</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00d4aa"></div> E-field envelope (wave graph)</div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let running  = false;
+let showSine = false;
+let phase    = 0;
+let txPos    = 0.08;
+let rxPos    = 0.55;
+let freqGHz  = 2.0;
+
+function lambdaCm() { return 30 / freqGHz; }
+const SPARK_THRESHOLD = 0.38;
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+const cMain = document.getElementById('cMain');
+const ctx   = cMain.getContext('2d');
+const W = 900, H = 440;
+
+const cSine = document.getElementById('cSine');
+const ctxS  = cSine.getContext('2d');
+const SW = 900, SH = 140;
+
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+const runBtn      = document.getElementById('runBtn');
+const sineBtn     = document.getElementById('sineBtn');
+const txSlider    = document.getElementById('txSlider');
+const rxSlider    = document.getElementById('rxSlider');
+const freqSlider  = document.getElementById('freqSlider');
+const txValEl     = document.getElementById('txVal');
+const rxValEl     = document.getElementById('rxVal');
+const freqValEl   = document.getElementById('freqVal');
+const statusDot   = document.getElementById('statusDot');
+const statusText  = document.getElementById('statusText');
+const statusLabel = document.getElementById('statusLabel');
+const distValEl   = document.getElementById('distVal');
+const lambdaValEl = document.getElementById('lambdaVal');
+const eValEl      = document.getElementById('eVal');
+const sparkStateEl= document.getElementById('sparkState');
+const sinePanel   = document.getElementById('sinePanel');
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+runBtn.addEventListener('click', () => {
+  running = !running;
+  runBtn.classList.toggle('active', running);
+  runBtn.textContent = running ? 'Stop oscillator' : 'Start oscillator';
+  statusLabel.textContent = running ? 'Standing wave propagating' : 'Oscillator off';
+});
+
+sineBtn.addEventListener('click', () => {
+  showSine = !showSine;
+  sineBtn.textContent = 'Wave graph: ' + (showSine ? 'ON' : 'OFF');
+  sineBtn.classList.toggle('active', showSine);
+  sinePanel.classList.toggle('visible', showSine);
+});
+
+txSlider.addEventListener('input', () => {
+  txPos = +txSlider.value / 100;
+  txValEl.textContent = txSlider.value + ' cm';
+});
+rxSlider.addEventListener('input', () => {
+  rxPos = +rxSlider.value / 100;
+  rxValEl.textContent = rxSlider.value + ' cm';
+});
+freqSlider.addEventListener('input', () => {
+  freqGHz = +freqSlider.value;
+  freqValEl.textContent = freqGHz.toFixed(1) + ' GHz';
+});
+
+// ─── Scene geometry ───────────────────────────────────────────────────────────
+const MARGIN    = 55;
+const BENCH_X0  = MARGIN;
+const BENCH_X1  = W - MARGIN;
+const BENCH_LEN = BENCH_X1 - BENCH_X0;
+const BENCH_Y   = H * 0.70;
+const AXIS_Y    = H * 0.40;
+
+function fracToPx(f) { return BENCH_X0 + f * BENCH_LEN; }
+
+// ─── Wave physics ─────────────────────────────────────────────────────────────
+function fieldAtFrac(xFrac) {
+  const k = (2 * Math.PI) / lambdaCm();
+  const d = (1 - xFrac) * 100;   // distance from reflector
+  return Math.sin(k * d);
+}
+function instantField(xFrac) { return fieldAtFrac(xFrac) * Math.cos(phase); }
+
+// ─── Background ───────────────────────────────────────────────────────────────
+function drawBackground() {
+  const bg = ctx.createRadialGradient(W/2, H*0.38, 0, W/2, H/2, W*0.75);
+  bg.addColorStop(0, '#141210'); bg.addColorStop(1, '#0a0c10');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+}
+
+// ─── Bench ────────────────────────────────────────────────────────────────────
+function drawBench() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(BENCH_X0-4, BENCH_Y+15, BENCH_LEN+8, 8);
+
+  const bg2 = ctx.createLinearGradient(0, BENCH_Y, 0, BENCH_Y+15);
+  bg2.addColorStop(0,'#2a1e10'); bg2.addColorStop(1,'#1a1208');
+  ctx.fillStyle = bg2; ctx.fillRect(BENCH_X0, BENCH_Y, BENCH_LEN, 15);
+  ctx.strokeStyle = 'rgba(184,115,51,0.35)'; ctx.lineWidth=1;
+  ctx.strokeRect(BENCH_X0, BENCH_Y, BENCH_LEN, 15);
+
+  for (let cm=0; cm<=100; cm+=10) {
+    const px = BENCH_X0 + (cm/100)*BENCH_LEN;
+    ctx.beginPath(); ctx.moveTo(px, BENCH_Y); ctx.lineTo(px, BENCH_Y-(cm%50===0?9:5));
+    ctx.strokeStyle='rgba(184,115,51,0.38)'; ctx.lineWidth=1; ctx.stroke();
+    if (cm%20===0) {
+      ctx.fillStyle='rgba(154,128,96,0.5)';
+      ctx.font='italic 10px Crimson Text,serif'; ctx.textAlign='center';
+      ctx.fillText(cm+' cm', px, BENCH_Y-13);
+    }
+  }
+
+  // Reflector plate
+  ctx.fillStyle='rgba(184,115,51,0.16)';
+  ctx.fillRect(BENCH_X1-5, BENCH_Y-110, 6, 110);
+  ctx.fillStyle='rgba(184,115,51,0.40)';
+  ctx.fillRect(BENCH_X1, BENCH_Y-118, 10, 133);
+  ctx.strokeStyle='rgba(184,115,51,0.5)'; ctx.lineWidth=1;
+  ctx.strokeRect(BENCH_X1, BENCH_Y-118, 10, 133);
+  ctx.fillStyle='rgba(154,128,96,0.5)';
+  ctx.font='italic 10px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.save(); ctx.translate(BENCH_X1+14, BENCH_Y-52); ctx.rotate(Math.PI/2);
+  ctx.fillText('REFLECTOR', 0, 0); ctx.restore();
+
+  ctx.restore();
+}
+
+// ─── Spark bolt ───────────────────────────────────────────────────────────────
+// Draws a vivid lightning bolt between two points with glow + zigzag bolts.
+function drawSparkBolt(x1, y1, x2, y2, intensity, large) {
+  const midX = (x1+x2)/2, midY = (y1+y2)/2;
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
+  const glowR = large ? len*3 : len*4;
+
+  // Outer diffuse glow
+  ctx.save();
+  ctx.globalAlpha = 0.40 * intensity;
+  const grd = ctx.createRadialGradient(midX,midY,0, midX,midY,glowR);
+  grd.addColorStop(0,'rgba(160,216,255,1)'); grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;
+  ctx.beginPath(); ctx.arc(midX,midY,glowR,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Zigzag bolts
+  const numBolts = large ? 5 : 4;
+  for (let b=0; b<numBolts; b++) {
+    const a = (0.55+0.45*Math.random()) * Math.min(1, intensity*1.4);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = b===0 ? '#ffffff' : (b===1 ? '#d8efff' : '#7fc8ff');
+    ctx.lineWidth   = b===0 ? (large?3:2.5) : (large?2:1.5);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.shadowColor='#a0d8ff'; ctx.shadowBlur = large ? 20 : 16;
+
+    // Build a jagged path with 3 intermediate random kink points
+    const perp = len * 0.35;
+    const nx = -dy/len, ny = dx/len;   // perpendicular unit vector
+    const k1x = x1 + dx*0.25 + nx*(Math.random()-0.5)*perp;
+    const k1y = y1 + dy*0.25 + ny*(Math.random()-0.5)*perp;
+    const k2x = x1 + dx*0.5  + nx*(Math.random()-0.5)*perp;
+    const k2y = y1 + dy*0.5  + ny*(Math.random()-0.5)*perp;
+    const k3x = x1 + dx*0.75 + nx*(Math.random()-0.5)*perp;
+    const k3y = y1 + dy*0.75 + ny*(Math.random()-0.5)*perp;
+
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(k1x,k1y); ctx.lineTo(k2x,k2y); ctx.lineTo(k3x,k3y);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Thin bright core
+  ctx.save();
+  ctx.globalAlpha = 0.95*intensity;
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=large?1.5:1.2;
+  ctx.shadowColor='#ffffff'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.restore();
+}
+
+// ─── Transmitter ──────────────────────────────────────────────────────────────
+function drawTransmitter() {
+  const px      = fracToPx(txPos);
+  const dipoleH = 88;    // arm half-length
+  const gapH    = 14;    // spark gap half-height
+  const sphR    = 10;    // sphere radius
+
+  ctx.save();
+
+  // Support rod (bench → bottom sphere base)
+  ctx.strokeStyle='#5a2a08'; ctx.lineWidth=8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(px,BENCH_Y); ctx.lineTo(px, AXIS_Y+gapH+dipoleH); ctx.stroke();
+  ctx.strokeStyle='#c87030'; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(px,BENCH_Y); ctx.lineTo(px, AXIS_Y+gapH+dipoleH); ctx.stroke();
+  ctx.strokeStyle='#e8a040'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(px,BENCH_Y); ctx.lineTo(px, AXIS_Y+gapH+dipoleH); ctx.stroke();
+
+  // Ruhmkorff induction coil box
+  const bw=48, bh=28;
+  ctx.fillStyle='#3a1804';
+  ctx.fillRect(px-bw/2, BENCH_Y-bh, bw, bh);
+  ctx.strokeStyle='rgba(184,115,51,0.55)'; ctx.lineWidth=1.2;
+  ctx.strokeRect(px-bw/2, BENCH_Y-bh, bw, bh);
+  for (let i=0;i<6;i++) {
+    const wy=BENCH_Y-bh+5+i*4;
+    ctx.strokeStyle='rgba(184,115,51,0.2)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(px-bw/2+5,wy); ctx.lineTo(px+bw/2-5,wy); ctx.stroke();
+  }
+  ctx.fillStyle='rgba(184,115,51,0.7)';
+  ctx.font='italic 9px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.fillText('Ruhmkorff coil', px, BENCH_Y-6);
+
+  // Dipole arms
+  const drawArm = (y0, y1) => {
+    ctx.strokeStyle='#5a2a08'; ctx.lineWidth=10; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(px,y0); ctx.lineTo(px,y1); ctx.stroke();
+    ctx.strokeStyle='#c87030'; ctx.lineWidth=7;
+    ctx.beginPath(); ctx.moveTo(px,y0); ctx.lineTo(px,y1); ctx.stroke();
+    ctx.strokeStyle='#e8a040'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(px,y0); ctx.lineTo(px,y1); ctx.stroke();
+    ctx.strokeStyle='rgba(255,210,130,0.25)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(px,y0); ctx.lineTo(px,y1); ctx.stroke();
+  };
+  drawArm(AXIS_Y-gapH, AXIS_Y-gapH-dipoleH);
+  drawArm(AXIS_Y+gapH, AXIS_Y+gapH+dipoleH);
+
+  // Spherical terminal ends
+  [AXIS_Y-gapH-dipoleH, AXIS_Y+gapH+dipoleH].forEach(sy => {
+    ctx.beginPath(); ctx.arc(px, sy, sphR, 0, Math.PI*2);
+    ctx.fillStyle='#c07030'; ctx.fill();
+    ctx.strokeStyle='#f0c060'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px-sphR*0.32, sy-sphR*0.32, sphR*0.38, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,230,170,0.3)'; ctx.fill();
+  });
+
+  // Gap electrode discs
+  ctx.fillStyle='#b87333';
+  ctx.beginPath(); ctx.arc(px, AXIS_Y-gapH, 6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px, AXIS_Y+gapH, 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#e8a040'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(px, AXIS_Y-gapH, 6, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px, AXIS_Y+gapH, 6, 0, Math.PI*2); ctx.stroke();
+
+  // Tx spark — vigorous, always on when running
+  if (running) {
+    const intensity = 0.65 + 0.35 * Math.abs(Math.cos(phase * 1.9));
+    drawSparkBolt(px, AXIS_Y-gapH, px, AXIS_Y+gapH, intensity, true);
+  }
+
+  // Label
+  ctx.fillStyle='rgba(232,152,58,0.75)';
+  ctx.font='italic 12px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.fillText('Tx', px, AXIS_Y-gapH-dipoleH-16);
+
+  ctx.restore();
+}
+
+// ─── Receiver ─────────────────────────────────────────────────────────────────
+// Hertz ring resonator: a circular loop, wire ends bent inward terminating
+// in two small spheres that face each other across a gap at the TOP of the ring.
+function drawReceiver() {
+  const px    = fracToPx(rxPos);
+  const loopR = 40;     // ring radius
+  const gapW  = 13;     // horizontal half-distance between the two electrode tips
+  const sphR  = 7;      // electrode sphere radius
+
+  const envAmp  = running ? Math.abs(fieldAtFrac(rxPos))  : 0;
+  const instAmp = running ? Math.abs(instantField(rxPos)) : 0;
+  const hasSpark = running && instAmp > SPARK_THRESHOLD;
+
+  ctx.save();
+
+  // Support rod
+  ctx.strokeStyle='#555'; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(px,BENCH_Y); ctx.lineTo(px, AXIS_Y+loopR+4); ctx.stroke();
+  ctx.strokeStyle='#999'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(px,BENCH_Y); ctx.lineTo(px, AXIS_Y+loopR+4); ctx.stroke();
+
+  // Glow halo when sparking
+  if (hasSpark) {
+    ctx.save();
+    ctx.globalAlpha = 0.20 * instAmp;
+    ctx.shadowColor='#a0d8ff'; ctx.shadowBlur=35;
+    ctx.strokeStyle='#a0d8ff'; ctx.lineWidth=14;
+    // arc minus the top gap sector
+    const ga = Math.asin(Math.min(gapW/loopR,0.99));
+    ctx.beginPath();
+    ctx.arc(px, AXIS_Y, loopR, -Math.PI/2+ga, -Math.PI/2-ga+Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Ring wire — open arc (gap at top)
+  const gapAngle = Math.asin(Math.min(gapW/loopR, 0.99));
+  ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.strokeStyle='#666';
+  ctx.beginPath(); ctx.arc(px, AXIS_Y, loopR, -Math.PI/2+gapAngle, -Math.PI/2-gapAngle+Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='#cccccc'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(px, AXIS_Y, loopR, -Math.PI/2+gapAngle, -Math.PI/2-gapAngle+Math.PI*2); ctx.stroke();
+
+  // The two wire ends curve inward at the top, terminating in electrode spheres
+  // that face each other horizontally across the gap.
+  // End-points on the ring at ±gapAngle from the top:
+  const ex1 = px - Math.sin(gapAngle)*loopR;   // left electrode x
+  const ey1 = AXIS_Y - Math.cos(gapAngle)*loopR; // left electrode y (on ring)
+  const ex2 = px + Math.sin(gapAngle)*loopR;   // right electrode x
+  const ey2 = ey1;                              // same height (symmetric)
+
+  // Small inward-bent wire stubs leading to electrode spheres
+  // The tips of the spheres are at ±gapW from centre, at height of the ring top minus a bit
+  const tipY  = AXIS_Y - loopR + sphR*0.5;  // tip y: just below top of ring
+  const tip1x = px - gapW;
+  const tip2x = px + gapW;
+
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(ex1,ey1); ctx.lineTo(tip1x, tipY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ex2,ey2); ctx.lineTo(tip2x, tipY); ctx.stroke();
+
+  // Electrode spheres
+  [[tip1x,tipY],[tip2x,tipY]].forEach(([ex,ey]) => {
+    ctx.beginPath(); ctx.arc(ex, ey, sphR, 0, Math.PI*2);
+    ctx.fillStyle='#b87333'; ctx.fill();
+    ctx.strokeStyle='#f0c060'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ex-sphR*0.3, ey-sphR*0.3, sphR*0.35, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,230,170,0.28)'; ctx.fill();
+  });
+
+  ctx.restore();
+
+  // Spark bolt in the gap between the two sphere tips (screen-space coords)
+  if (hasSpark) {
+    drawSparkBolt(tip1x+sphR, tipY, tip2x-sphR, tipY, instAmp, false);
+  }
+
+  // Rx label
+  ctx.save();
+  ctx.fillStyle = hasSpark ? 'rgba(160,216,255,0.9)' : 'rgba(154,128,96,0.6)';
+  ctx.font='italic 12px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.fillText('Rx', px, AXIS_Y-loopR-18);
+  ctx.restore();
+}
+
+// ─── Sine graph ───────────────────────────────────────────────────────────────
+function drawSineGraph() {
+  ctxS.clearRect(0,0,SW,SH);
+  ctxS.fillStyle='#0d1018'; ctxS.fillRect(0,0,SW,SH);
+
+  const pad=52, midY=SH/2+4, graphW=SW-pad*2;
+
+  ctxS.strokeStyle='rgba(184,115,51,0.2)'; ctxS.lineWidth=1;
+  ctxS.beginPath(); ctxS.moveTo(pad,midY); ctxS.lineTo(SW-pad,midY); ctxS.stroke();
+  ctxS.beginPath(); ctxS.moveTo(pad,8);    ctxS.lineTo(pad,SH-8);    ctxS.stroke();
+
+  ctxS.fillStyle='rgba(154,128,96,0.5)'; ctxS.font='italic 10px Crimson Text,serif';
+  for (let cm=0; cm<=100; cm+=20) {
+    const px=pad+(cm/100)*graphW;
+    ctxS.textAlign='center'; ctxS.fillText(cm+' cm', px, SH-5);
+    ctxS.strokeStyle='rgba(184,115,51,0.12)'; ctxS.lineWidth=1;
+    ctxS.beginPath(); ctxS.moveTo(px,midY); ctxS.lineTo(px,midY+3); ctxS.stroke();
+  }
+  ctxS.textAlign='right'; ctxS.fillText('|E|', pad-4, 16);
+
+  if (!running) {
+    ctxS.fillStyle='rgba(154,128,96,0.3)';
+    ctxS.font='italic 14px Crimson Text,serif'; ctxS.textAlign='center';
+    ctxS.fillText('Start the oscillator to display the field', SW/2, midY);
+    return;
+  }
+
+  const N=600, amp=46;
+
+  // Envelope fill
+  ctxS.save(); ctxS.globalAlpha=0.10; ctxS.fillStyle='#00d4aa';
+  ctxS.beginPath();
+  for (let i=0;i<=N;i++){const xf=i/N,e=Math.abs(fieldAtFrac(xf))*amp,px=pad+xf*graphW; i===0?ctxS.moveTo(px,midY-e):ctxS.lineTo(px,midY-e);}
+  for (let i=N;i>=0;i--){const xf=i/N,e=Math.abs(fieldAtFrac(xf))*amp; ctxS.lineTo(pad+xf*graphW,midY+e);}
+  ctxS.closePath(); ctxS.fill(); ctxS.restore();
+
+  // Envelope dashes
+  ['top','bot'].forEach(s => {
+    ctxS.save(); ctxS.setLineDash([4,6]);
+    ctxS.strokeStyle='rgba(0,212,170,0.28)'; ctxS.lineWidth=1;
+    ctxS.beginPath();
+    for (let i=0;i<=N;i++){const xf=i/N,e=Math.abs(fieldAtFrac(xf))*amp*(s==='top'?1:-1); const px=pad+xf*graphW; i===0?ctxS.moveTo(px,midY-e):ctxS.lineTo(px,midY-e);}
+    ctxS.stroke(); ctxS.setLineDash([]); ctxS.restore();
+  });
+
+  // Instantaneous wave
+  ctxS.save(); ctxS.beginPath(); ctxS.strokeStyle='#00d4aa'; ctxS.lineWidth=2;
+  ctxS.shadowColor='#00d4aa'; ctxS.shadowBlur=6;
+  for (let i=0;i<=N;i++){const xf=i/N,E=instantField(xf)*amp,px=pad+xf*graphW; i===0?ctxS.moveTo(px,midY-E):ctxS.lineTo(px,midY-E);}
+  ctxS.stroke(); ctxS.restore();
+
+  // Rx marker
+  const rxPx=pad+rxPos*graphW, rxE=instantField(rxPos)*amp, rxEnv=Math.abs(fieldAtFrac(rxPos))*amp;
+  const hasSpark=Math.abs(instantField(rxPos))>SPARK_THRESHOLD;
+  ctxS.save(); ctxS.setLineDash([3,5]);
+  ctxS.strokeStyle='rgba(160,216,255,0.4)'; ctxS.lineWidth=1;
+  ctxS.beginPath(); ctxS.moveTo(rxPx,midY-rxEnv-5); ctxS.lineTo(rxPx,midY+rxEnv+5); ctxS.stroke();
+  ctxS.setLineDash([]);
+  ctxS.beginPath(); ctxS.arc(rxPx,midY-rxE,5.5,0,Math.PI*2);
+  ctxS.fillStyle=hasSpark?'#a0d8ff':'#e87040';
+  ctxS.shadowColor=hasSpark?'#a0d8ff':'#e87040'; ctxS.shadowBlur=9;
+  ctxS.fill();
+  ctxS.fillStyle=hasSpark?'rgba(160,216,255,0.85)':'rgba(232,112,64,0.85)';
+  ctxS.font='italic 10px Crimson Text,serif';
+  ctxS.textAlign=rxPos>0.5?'right':'left';
+  ctxS.fillText('Rx — '+(hasSpark?'antinode':'node'), rxPx+(rxPos>0.5?-8:8), midY-rxEnv-12);
+  ctxS.restore();
+
+  // Tx marker
+  const txPx=pad+txPos*graphW;
+  ctxS.save(); ctxS.setLineDash([2,4]);
+  ctxS.strokeStyle='rgba(184,115,51,0.4)'; ctxS.lineWidth=1;
+  ctxS.beginPath(); ctxS.moveTo(txPx,8); ctxS.lineTo(txPx,SH-8); ctxS.stroke();
+  ctxS.setLineDash([]);
+  ctxS.fillStyle='rgba(184,115,51,0.75)'; ctxS.font='italic 10px Crimson Text,serif'; ctxS.textAlign='center';
+  ctxS.fillText('Tx',txPx,12); ctxS.restore();
+
+  // Node / antinode labels
+  const lam=lambdaCm(); ctxS.font='italic 9px Crimson Text,serif';
+  for (let nc=lam/2;nc<100;nc+=lam/2){const xf=1-nc/100;if(xf<=0||xf>=1)continue;ctxS.fillStyle='rgba(232,112,64,0.55)';ctxS.textAlign='center';ctxS.fillText('N',pad+xf*graphW,midY+16);}
+  for (let ac=lam/4;ac<100;ac+=lam/2){const xf=1-ac/100;if(xf<=0||xf>=1)continue;ctxS.fillStyle='rgba(160,216,255,0.5)';ctxS.textAlign='center';ctxS.fillText('A',pad+xf*graphW,midY-54);}
+}
+
+// ─── Info panel ───────────────────────────────────────────────────────────────
+function updateInfo() {
+  if (!running) {
+    statusDot.className='dot';
+    statusText.textContent='Oscillator off — no wave';
+    distValEl.textContent=lambdaValEl.textContent=eValEl.textContent='—';
+    sparkStateEl.textContent='—'; sparkStateEl.style.color='';
+    return;
+  }
+  const envAmp  = Math.abs(fieldAtFrac(rxPos));
+  const instAmp = Math.abs(instantField(rxPos));
+  const hasSpark= instAmp > SPARK_THRESHOLD;
+  const dist    = Math.round(Math.abs(rxPos-txPos)*100);
+  const lam     = lambdaCm();
+
+  statusDot.className = hasSpark ? 'dot spark' : 'dot node';
+  statusText.textContent = hasSpark
+    ? `Antinode detected — spark visible (|E| = ${(envAmp*100).toFixed(0)}%)`
+    : `Node detected — zero field (|E| = ${(envAmp*100).toFixed(0)}%)`;
+
+  distValEl.textContent   = dist+' cm';
+  lambdaValEl.textContent = (lam/2).toFixed(1)+' cm';
+  eValEl.textContent      = (envAmp*100).toFixed(0)+'%';
+  sparkStateEl.textContent = hasSpark ? '⚡ SPARK — wave antinode' : '○ silence — wave node';
+  sparkStateEl.style.color = hasSpark ? '#a0d8ff' : '#e87040';
+}
+
+// ─── Loop ─────────────────────────────────────────────────────────────────────
+const OMEGA = 0.062;
+
+function loop() {
+  if (running) phase += OMEGA;
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  drawBench();
+  drawTransmitter();
+  drawReceiver();
+  updateInfo();
+  if (showSine) drawSineGraph();
+  requestAnimationFrame(loop);
+}
+
+updateInfo();
+loop();
+</script>
+</body>
+</html>
