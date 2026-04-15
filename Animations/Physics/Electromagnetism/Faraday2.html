@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Faraday's Second Experiment — 1831</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root {
+    --bg:#0a0c10; --surface:#10141c; --copper:#b87333; --copper-bright:#e8983a;
+    --glow:rgba(184,115,51,0.4); --tp:#e8d5b0; --ts:#9a8060;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{overflow-x:hidden;}
+  body{
+    background:var(--bg);color:var(--tp);font-family:'Crimson Text',serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse at 50% 0%,rgba(0,212,170,.025) 0%,transparent 60%);
+    pointer-events:none;z-index:0;
+  }
+  header{text-align:center;padding:1.8rem 1rem 1rem;position:relative;z-index:1;width:100%;}
+  .year-badge{font-size:.76rem;letter-spacing:.42em;color:var(--copper);
+    text-transform:uppercase;margin-bottom:.55rem;display:block;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,5vw,2.9rem);
+    font-weight:700;color:var(--tp);line-height:1.1;margin-bottom:.3rem;}
+  h1 em{color:var(--copper-bright);font-style:italic;}
+  .subtitle{font-size:clamp(.84rem,2.2vw,.98rem);color:var(--ts);font-style:italic;
+    max-width:620px;margin:0 auto;line-height:1.6;padding:0 .5rem;}
+  .ornament{display:flex;align-items:center;gap:.8rem;justify-content:center;margin:.9rem 0;}
+  .ornament::before,.ornament::after{content:'';width:55px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--copper));}
+  .ornament::after{background:linear-gradient(90deg,var(--copper),transparent);}
+  .ornament-diamond{width:6px;height:6px;background:var(--copper);transform:rotate(45deg);}
+  .stage{
+    width:100%;max-width:820px;padding:0 .75rem 2rem;
+    display:flex;flex-direction:column;gap:1rem;position:relative;z-index:1;
+  }
+  .canvas-wrap{
+    width:100%;border:1px solid rgba(184,115,51,.22);border-radius:5px;
+    background:var(--surface);overflow:hidden;
+    box-shadow:0 0 60px rgba(184,115,51,.07),inset 0 0 30px rgba(0,0,0,.55);
+    cursor:grab;user-select:none;
+  }
+  .canvas-wrap:active{cursor:grabbing;}
+  canvas{display:block;width:100%;height:auto;touch-action:none;}
+  .controls{
+    display:flex;flex-wrap:wrap;gap:.9rem;align-items:center;justify-content:center;
+    background:rgba(16,20,28,.8);padding:1rem 1.4rem;
+    border:1px solid rgba(184,115,51,.15);border-radius:5px;
+  }
+  .ctrl-group{display:flex;flex-direction:column;gap:.4rem;flex:1;min-width:150px;max-width:240px;}
+  .ctrl-label{font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ts);}
+  .slider-wrap{display:flex;align-items:center;gap:.7rem;}
+  input[type=range]{
+    -webkit-appearance:none;flex:1;height:3px;
+    background:rgba(184,115,51,.2);border-radius:2px;outline:none;cursor:pointer;min-width:80px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--copper);border:2px solid var(--copper-bright);cursor:pointer;
+    box-shadow:0 0 9px var(--glow);transition:transform .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25);}
+  .slider-val{font-family:'Playfair Display',serif;font-size:.9rem;
+    color:var(--copper-bright);min-width:2.8rem;text-align:right;white-space:nowrap;}
+  .btn-flip{
+    position:relative;padding:.65rem 1.5rem;background:transparent;
+    border:1.5px solid var(--copper);border-radius:2px;color:var(--copper-bright);
+    font-family:'Playfair Display',serif;font-size:.9rem;cursor:pointer;
+    letter-spacing:.08em;transition:all .3s;overflow:hidden;white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-flip::before{
+    content:'';position:absolute;inset:0;background:var(--copper);
+    transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:-1;
+  }
+  .btn-flip:hover{color:var(--bg);}.btn-flip:hover::before{transform:scaleX(1);}
+  .info-panel{
+    background:rgba(16,20,28,.8);padding:1rem 1.4rem;
+    border:1px solid rgba(184,115,51,.15);border-radius:5px;
+    display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;
+  }
+  @media(max-width:480px){.info-panel{grid-template-columns:1fr;}}
+  .info-block h3{
+    font-family:'Playfair Display',serif;font-size:.84rem;
+    color:var(--copper);letter-spacing:.06em;margin-bottom:.45rem;font-style:italic;
+  }
+  .info-block p{font-size:.93rem;color:var(--ts);line-height:1.72;}
+  .hi{color:var(--tp);font-weight:600;}
+  .dot-row{display:flex;align-items:center;gap:.6rem;font-size:.9rem;}
+  .sdot{width:9px;height:9px;border-radius:50%;background:var(--ts);transition:all .4s;flex-shrink:0;}
+  .sdot.on{background:#ffe040;box-shadow:0 0 10px #ffe040;animation:sdotblink 1.1s ease-in-out infinite;}
+  @keyframes sdotblink{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="year-badge">London · Royal Institution · 1831</span>
+  <h1><em>Faraday's</em> Second Experiment</h1>
+  <div class="ornament"><div class="ornament-diamond"></div></div>
+  <p class="subtitle">
+    A conducting coil is connected to a light bulb. Moving a magnet in or out of the coil
+    induces a current — and lights the bulb. The faster the motion, the brighter the light.
+    <br><small style="opacity:.55">Drag the magnet to try it.</small>
+  </p>
+</header>
+
+<div class="stage">
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="c" width="780" height="420"></canvas>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Magnet strength</span>
+      <div class="slider-wrap">
+        <input type="range" id="strengthSlider" min="0.5" max="3" value="1.5" step="0.05">
+        <span class="slider-val" id="strengthVal">1.5 T</span>
+      </div>
+    </div>
+    <button class="btn-flip" onclick="flipMagnet()">⇄ Flip polarity</button>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Coil turns</span>
+      <div class="slider-wrap">
+        <input type="range" id="turnsSlider" min="2" max="14" value="6" step="1">
+        <span class="slider-val" id="turnsVal">6</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-block">
+      <h3>System state</h3>
+      <div class="dot-row">
+        <div class="sdot" id="sdot"></div>
+        <span id="stateText">Magnet stationary — no current</span>
+      </div>
+      <br>
+      <p>
+        Magnet position: <span class="hi" id="posVal">—</span><br>
+        Speed: <span class="hi" id="velVal">0 m/s</span><br>
+        Current: <span class="hi" id="currVal">none</span><br>
+        Direction: <span class="hi" id="dirVal">—</span>
+      </p>
+    </div>
+    <div class="info-block">
+      <h3>Key observation</h3>
+      <p>
+        A stationary magnet — however strong — induces <em>no</em> current.
+        Only a <strong style="color:#ffe090">changing</strong> flux matters:
+        moving in, moving out, or changing the number of turns all affect the current.
+        Reversing the magnet reverses the current direction.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Canvas / HiDPI ───────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 780, H = 420;
+const dpr = window.devicePixelRatio || 1;
+canvas.width  = W * dpr; canvas.height = H * dpr;
+canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+ctx.scale(dpr, dpr);
+
+// ─── Layout constants ─────────────────────────────────────────────────────────
+const COIL_CX   = 390;   // coil horizontal centre
+const COIL_CY   = H / 2 + 8;
+const COIL_RY   = 108;   // coil ellipse y-radius (height)
+const COIL_THICK = 28;   // coil "tube" wall thickness (how wide the winding looks)
+const MAG_W     = 100;
+const MAG_H     = 36;
+
+// Bulb geometry
+const BX = W - 90, BY = COIL_CY - 10;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let magX     = 155;
+let prevMagX = 155;
+let smoothVel= 0;
+let polarity = 1;       // +1 → right face is N
+let strength = 1.5;
+let turns    = 6;
+let flux     = 0;
+let emf      = 0;       // smoothed induced signal
+let rawEmf   = 0;
+let currentPhase = 0;
+let isDragging   = false, dragCX = 0, dragMX = 0;
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+document.getElementById('strengthSlider').addEventListener('input', e => {
+  strength = +e.target.value;
+  document.getElementById('strengthVal').textContent = strength.toFixed(2) + ' T';
+});
+document.getElementById('turnsSlider').addEventListener('input', e => {
+  turns = +e.target.value;
+  document.getElementById('turnsVal').textContent = turns;
+});
+function flipMagnet(){ polarity *= -1; }
+
+function startDrag(cx){
+  isDragging = true;
+  dragCX = cx; dragMX = magX;
+}
+function moveDrag(cx){
+  if(!isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  magX = Math.max(50, Math.min(W - 50, dragMX + (cx - dragCX) * (W / rect.width)));
+}
+canvas.addEventListener('mousedown',  e => startDrag(e.clientX));
+window.addEventListener('mousemove',  e => moveDrag(e.clientX));
+window.addEventListener('mouseup',    () => { isDragging = false; });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); startDrag(e.touches[0].clientX); }, {passive:false});
+window.addEventListener('touchmove',  e => { if(isDragging){ e.preventDefault(); moveDrag(e.touches[0].clientX); }}, {passive:false});
+window.addEventListener('touchend',   () => { isDragging = false; });
+
+// ─── Physics ──────────────────────────────────────────────────────────────────
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+function computeFlux(mx){
+  // Dipole-like decay: flux ∝ 1/(1 + (dx/L)²)  so it falls off slowly with distance.
+  // L is a characteristic length chosen so the peak is at dx=0 and
+  // at dx = ±3×coilWidth the flux is still ~10% of peak — always non-zero.
+  const dx = mx - COIL_CX;
+  const L  = COIL_RY * 1.1;   // characteristic scale ~120px, much wider than before
+  return strength * polarity / (1 + (dx / L) * (dx / L));
+}
+
+function update(){
+  const rawV = magX - prevMagX;
+  smoothVel  = smoothVel * 0.78 + rawV * 0.22;
+  prevMagX   = magX;
+
+  const newFlux = computeFlux(magX);
+  const dFlux   = newFlux - flux;
+  flux          = newFlux;
+
+  rawEmf = -turns * dFlux * 32;
+  emf    = emf * 0.80 + rawEmf * 0.20;
+
+  if(Math.abs(emf) > 0.4) currentPhase += emf * 0.014;
+
+  // UI
+  const vMag = Math.abs(smoothVel);
+  const inside = Math.abs(magX - COIL_CX) < COIL_THICK * 3;
+  const posLabel = magX < COIL_CX - COIL_THICK ? 'left of coil'
+                 : magX > COIL_CX + COIL_THICK  ? 'right of coil'
+                 : 'inside coil';
+  document.getElementById('posVal').textContent  = posLabel;
+  document.getElementById('velVal').textContent  = (vMag * 0.5).toFixed(2) + ' m/s' +
+    (smoothVel > 0.05 ? ' →' : smoothVel < -0.05 ? ' ←' : '');
+  const absEmf = Math.abs(emf);
+  if(absEmf < 0.4){
+    document.getElementById('currVal').textContent = 'none';
+    document.getElementById('dirVal').textContent  = '—';
+    document.getElementById('stateText').textContent = 'Magnet stationary — no current';
+    document.getElementById('sdot').className = 'sdot';
+  } else {
+    const dir = emf > 0 ? 'clockwise' : 'counter-clockwise';
+    document.getElementById('currVal').textContent = (absEmf * 0.55).toFixed(1) + ' mA';
+    document.getElementById('dirVal').textContent  = dir;
+    document.getElementById('stateText').textContent = 'Current flowing — bulb lit';
+    document.getElementById('sdot').className = 'sdot on';
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function drawArrowhead(ctx, x, y, nx, ny, size, col){
+  ctx.save();
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - nx*size - ny*size*.4, y - ny*size + nx*size*.4);
+  ctx.lineTo(x - nx*size + ny*size*.4, y - ny*size - nx*size*.4);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw background ──────────────────────────────────────────────────────────
+function drawBg(){
+  const bg = ctx.createRadialGradient(W/2, H*.42, 0, W/2, H/2, W*.72);
+  bg.addColorStop(0,'#161210'); bg.addColorStop(1,'#0a0c10');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+}
+
+// ─── Draw coil (proper winding ellipses) ──────────────────────────────────────
+// The coil is a solenoid drawn as overlapping elliptical loops.
+// Each loop is an ellipse of horizontal semi-axis COIL_THICK and vertical COIL_RY,
+// spaced along x. Front halves are drawn after the magnet, back halves before.
+function drawCoilHalves(front){
+  const absEmf = Math.abs(emf);
+  const spacing = 13;
+  const totalW  = (turns - 1) * spacing;
+  const x0      = COIL_CX - totalW / 2;
+
+  for(let i = 0; i < turns; i++){
+    const tx   = x0 + i * spacing;
+    const inFront = tx >= magX - 4;
+    if(inFront !== front) continue;
+
+    ctx.save();
+    if(absEmf > 0.5){
+      ctx.shadowColor = '#ffe040';
+      ctx.shadowBlur  = 4 + absEmf * 0.4;
+    }
+    // Copper tube layers
+    [[9,'#4a1a04'],[7,'#8a4010'],[5,'#c07828'],[3,'#e0a040'],[1.5,'rgba(255,220,140,.4)']].forEach(([lw,col])=>{
+      ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.ellipse(tx, COIL_CY, COIL_THICK, COIL_RY, 0, 0, Math.PI*2);
+      ctx.stroke();
+    });
+
+    // Current particles
+    if(absEmf > 0.5){
+      const nParticles = 2;
+      for(let p = 0; p < nParticles; p++){
+        const ph = currentPhase + (i / turns) * Math.PI * 2 + (p / nParticles) * Math.PI * 2;
+        const px = tx + Math.cos(ph) * COIL_THICK;
+        const py = COIL_CY + Math.sin(ph) * COIL_RY;
+        // Tangent direction for arrowhead
+        const tx2 = -Math.sin(ph) * COIL_THICK;
+        const ty2 =  Math.cos(ph) * COIL_RY;
+        const tLen = Math.hypot(tx2, ty2) || 1;
+        const dirSign = emf > 0 ? 1 : -1;
+        const tnx = tx2 / tLen * dirSign, tny = ty2 / tLen * dirSign;
+        const pal = clamp(absEmf / 20, 0.2, 0.95);
+        ctx.save();
+        ctx.globalAlpha = pal;
+        const g = ctx.createRadialGradient(px,py,0,px,py,4);
+        g.addColorStop(0,'rgba(255,230,60,1)'); g.addColorStop(1,'rgba(255,180,0,0)');
+        ctx.fillStyle = g; ctx.shadowColor='#ffe040'; ctx.shadowBlur=8;
+        ctx.beginPath(); ctx.arc(px,py,3.5,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// ─── Wire circuit ──────────────────────────────────────────────────────────────
+// Proper wire: rounded corners, two parallel conductors (top and bottom),
+// current particles animated along them.
+function drawWire(){
+  const absEmf = Math.abs(emf);
+  const spacing = 13;
+  const totalW  = (turns - 1) * spacing;
+  const coilLeft  = COIL_CX - totalW / 2;
+  const coilRight = COIL_CX + totalW / 2;
+  const topY      = COIL_CY - COIL_RY - 22;
+  const botY      = COIL_CY + COIL_RY + 22;
+  const wireGap   = 5;   // gap between the two conductors of the pair
+
+  // Wire path: a rounded rectangle from coil right end → bulb base → coil left end
+  // We draw two parallel lines (insulated conductors) with rounded corners.
+  // Top conductor: botY - wireGap/2, bottom conductor: botY + wireGap/2
+  const R = 22; // corner radius
+  const bx = BX, by = BY;
+
+  // Shared colour fn
+  const wireCol   = absEmf > 0.4 ? '#d09040' : '#8a5018';
+  const wireGlow  = absEmf > 0.4;
+
+  function drawWirePath(offsetY, reverse){
+    // Path goes:
+    //   from coilRight, COIL_CY+COIL_RY+offsetY
+    //   down to botY+offsetY, rightward to bx, up to topY+offsetY
+    //   leftward to coilLeft, up to COIL_CY-COIL_RY+offsetY
+    // (this forms a closed loop around the scene, bottom+right portion only visible)
+    const startX = coilRight, startY = COIL_CY + COIL_RY;
+    const endX   = coilLeft,  endY   = COIL_CY - COIL_RY;
+
+    ctx.beginPath();
+    // Right coil exit → corner
+    ctx.moveTo(startX, startY + offsetY);
+    ctx.lineTo(startX, botY + offsetY - R);
+    ctx.quadraticCurveTo(startX, botY + offsetY, startX + R, botY + offsetY);
+    // Bottom run → bulb corner
+    ctx.lineTo(bx - R, botY + offsetY);
+    ctx.quadraticCurveTo(bx, botY + offsetY, bx, botY + offsetY - R);
+    // Up to bulb
+    ctx.lineTo(bx, topY + offsetY + R);
+    ctx.quadraticCurveTo(bx, topY + offsetY, bx - R, topY + offsetY);
+    // Top run ← left
+    ctx.lineTo(endX + R, topY + offsetY);
+    ctx.quadraticCurveTo(endX, topY + offsetY, endX, topY + offsetY + R);
+    // Up to left coil exit
+    ctx.lineTo(endX, endY + offsetY);
+    ctx.stroke();
+  }
+
+  // Draw each conductor in layers for copper look
+  [-wireGap/2, wireGap/2].forEach(off => {
+    ctx.save();
+    if(wireGlow){ ctx.shadowColor='#ffe040'; ctx.shadowBlur=7; }
+    [[5,'#3a1004'],[3.5,'#904018'],[2,'#c07030'],[1,'rgba(255,200,120,.45)']].forEach(([lw,col])=>{
+      ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round';
+      drawWirePath(off, false);
+    });
+    ctx.restore();
+  });
+
+  // Current direction arrows on wire segments
+  if(absEmf > 0.15){
+    const arrowAlpha = clamp(absEmf / 12, 0.25, 0.90);
+    const sign = emf > 0 ? 1 : -1;  // +1 → clockwise loop (right on bottom, left on top)
+    const arrowCol = `rgba(255,220,60,${arrowAlpha.toFixed(2)})`;
+    const ah = 9; // arrowhead half-size
+
+    function arrowAt(x,y,nx,ny){
+      ctx.save();
+      ctx.fillStyle = arrowCol;
+      ctx.shadowColor = '#ffe040'; ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(x + nx*ah, y + ny*ah);
+      ctx.lineTo(x - nx*ah - ny*ah*.5, y - ny*ah + nx*ah*.5);
+      ctx.lineTo(x - nx*ah + ny*ah*.5, y - ny*ah - nx*ah*.5);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    // Bottom wire: runs rightward (nx=1,ny=0) when sign=+1, leftward when sign=-1
+    arrowAt((coilRight + bx)/2, botY, sign*1, 0);
+    // Right wire (beside bulb): runs upward (nx=0,ny=-1) when sign=+1
+    arrowAt(bx, (botY + topY)/2, 0, -sign*1);
+    // Top wire: runs leftward when sign=+1
+    arrowAt((coilLeft + bx)/2, topY, -sign*1, 0);
+    // Left wire (coil): runs downward when sign=+1
+    arrowAt(coilLeft, (topY + botY)/2, 0, sign*1);
+  }
+  if(absEmf > 0.4){
+    const np = 8;
+    const pal = clamp(absEmf / 20, 0.25, 0.90);
+    for(let p = 0; p < np; p++){
+      // Parametric position along the wire loop path (simplified: linear in t)
+      let t = ((currentPhase * 0.28 + p / np + (emf < 0 ? 0.5 : 0)) % 1 + 1) % 1;
+      // Map t to a point on the rectangular path
+      const pts = wirePathPoints(coilRight, coilLeft, BX, BY, COIL_CY, COIL_RY, botY, topY);
+      const {x, y} = pathPoint(pts, t);
+      ctx.save();
+      ctx.globalAlpha = pal;
+      const g = ctx.createRadialGradient(x,y,0,x,y,4.5);
+      g.addColorStop(0,'rgba(255,235,70,1)'); g.addColorStop(1,'rgba(255,180,0,0)');
+      ctx.fillStyle = g; ctx.shadowColor='#ffe040'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// Build a list of waypoints for the wire loop (simplified for particle animation)
+function wirePathPoints(x0, x1, bx, by, cy, ry, botY, topY){
+  return [
+    {x: x0,    y: cy + ry},
+    {x: x0,    y: botY},
+    {x: bx,    y: botY},
+    {x: bx,    y: topY},
+    {x: x1,    y: topY},
+    {x: x1,    y: cy - ry},
+  ];
+}
+
+function pathPoint(pts, t){
+  // Compute cumulative distances
+  const dists = [];
+  let total = 0;
+  for(let i = 0; i < pts.length - 1; i++){
+    const d = Math.hypot(pts[i+1].x - pts[i].x, pts[i+1].y - pts[i].y);
+    dists.push(d); total += d;
+  }
+  let target = t * total;
+  for(let i = 0; i < dists.length; i++){
+    if(target <= dists[i]){
+      const tt = target / dists[i];
+      return { x: pts[i].x + tt*(pts[i+1].x - pts[i].x),
+               y: pts[i].y + tt*(pts[i+1].y - pts[i].y) };
+    }
+    target -= dists[i];
+  }
+  return pts[pts.length - 1];
+}
+
+// ─── Light bulb ────────────────────────────────────────────────────────────────
+function drawBulb(){
+  const absEmf = Math.abs(emf);
+  const bright  = clamp(absEmf / 12, 0, 1);
+  const bx = BX;
+
+  // Geometry — anchored so the screw base bottom is at BY+60
+  const baseBot  = BY + 60;    // bottom of screw base
+  const baseH    = 32;
+  const baseW    = 22;
+  const baseTop  = baseBot - baseH;
+  const collarH  = 7;
+  const neckBot  = baseTop - collarH;
+  const neckW    = 14;
+  const neckH    = 18;
+  const neckTop  = neckBot - neckH;
+  // Glass bulb: an A19-shaped bulb centred around bulbCY
+  const bulbCY   = neckTop - 38;  // centre of the round part
+  const bulbR    = 32;             // radius of the round part
+
+  // ── Outer warm glow ──────────────────────────────────────────────────────────
+  if(bright > 0.02){
+    const gr = 52 + bright * 60;
+    const hg = ctx.createRadialGradient(bx, bulbCY, 2, bx, bulbCY, gr);
+    hg.addColorStop(0,  `rgba(255,230,100,${(bright*.55).toFixed(2)})`);
+    hg.addColorStop(.45,`rgba(255,180,30,${(bright*.18).toFixed(2)})`);
+    hg.addColorStop(1,  'rgba(255,140,0,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(bx, bulbCY, gr, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Screw base (aluminium-grey, threaded) ─────────────────────────────────────
+  ctx.save();
+  // Main body
+  const baseGx = ctx.createLinearGradient(bx-baseW/2, 0, bx+baseW/2, 0);
+  baseGx.addColorStop(0,   '#1c1c1c');
+  baseGx.addColorStop(.18, '#606060');
+  baseGx.addColorStop(.5,  '#909090');
+  baseGx.addColorStop(.82, '#606060');
+  baseGx.addColorStop(1,   '#1c1c1c');
+  ctx.fillStyle = baseGx;
+  ctx.beginPath(); ctx.roundRect(bx-baseW/2, baseTop, baseW, baseH, [0,0,3,3]); ctx.fill();
+  // Thread grooves
+  ctx.strokeStyle = 'rgba(0,0,0,.38)'; ctx.lineWidth = 1;
+  for(let t = 4; t < baseH; t += 6){
+    ctx.beginPath(); ctx.moveTo(bx-baseW/2+1, baseTop+t); ctx.lineTo(bx+baseW/2-1, baseTop+t); ctx.stroke();
+  }
+  // Sheen stripe
+  ctx.fillStyle = 'rgba(255,255,255,.07)';
+  ctx.beginPath(); ctx.roundRect(bx-baseW/2+3, baseTop+2, 5, baseH-4, 1); ctx.fill();
+  ctx.restore();
+
+  // ── Collar (brass ring between base and neck) ─────────────────────────────────
+  ctx.save();
+  const colGx = ctx.createLinearGradient(bx-(baseW/2+2), 0, bx+(baseW/2+2), 0);
+  colGx.addColorStop(0,'#2a1404'); colGx.addColorStop(.45,'#d0882a'); colGx.addColorStop(1,'#2a1404');
+  ctx.fillStyle = colGx;
+  ctx.beginPath(); ctx.roundRect(bx-baseW/2-1, neckBot, baseW+2, collarH, [2,2,0,0]); ctx.fill();
+  ctx.restore();
+
+  // ── Neck (clear glass tube) ───────────────────────────────────────────────────
+  ctx.save();
+  const neckGx = ctx.createLinearGradient(bx-neckW/2, 0, bx+neckW/2, 0);
+  neckGx.addColorStop(0,  'rgba(180,210,230,.18)');
+  neckGx.addColorStop(.3, 'rgba(200,230,255,.32)');
+  neckGx.addColorStop(.7, 'rgba(200,230,255,.32)');
+  neckGx.addColorStop(1,  'rgba(180,210,230,.18)');
+  ctx.fillStyle = neckGx;
+  ctx.beginPath(); ctx.rect(bx-neckW/2, neckTop, neckW, neckH); ctx.fill();
+  ctx.strokeStyle = 'rgba(180,220,240,.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx-neckW/2, neckTop); ctx.lineTo(bx-neckW/2, neckBot); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+neckW/2, neckTop); ctx.lineTo(bx+neckW/2, neckBot); ctx.stroke();
+  ctx.restore();
+
+  // ── Glass envelope (A19 bulb shape) ──────────────────────────────────────────
+  // Shape: circular top, tapering sides meeting the neck
+  ctx.save();
+
+  // Build the glass path
+  const glassPath = new Path2D();
+  // Top arc (full circle top half)
+  glassPath.arc(bx, bulbCY, bulbR, -Math.PI, 0);
+  // Right side curving down to neck
+  glassPath.bezierCurveTo(
+    bx + bulbR,    bulbCY + bulbR * 1.05,
+    bx + neckW/2 + 3, neckTop + 4,
+    bx + neckW/2,  neckTop
+  );
+  // Bottom of neck opening
+  glassPath.lineTo(bx - neckW/2, neckTop);
+  // Left side back up
+  glassPath.bezierCurveTo(
+    bx - neckW/2 - 3, neckTop + 4,
+    bx - bulbR,    bulbCY + bulbR * 1.05,
+    bx - bulbR,    bulbCY
+  );
+  glassPath.closePath();
+
+  // Fill: clear glass tint + warm glow when lit
+  const glassAlpha = 0.08 + bright * 0.30;
+  const glassFill = ctx.createRadialGradient(bx - bulbR*.3, bulbCY - bulbR*.3, 1, bx, bulbCY, bulbR*1.2);
+  glassFill.addColorStop(0, `rgba(255,248,230,${(glassAlpha*1.8).toFixed(2)})`);
+  glassFill.addColorStop(.5, `rgba(255,220,120,${(glassAlpha*.9).toFixed(2)})`);
+  glassFill.addColorStop(1, `rgba(255,180,60,${(glassAlpha*.3).toFixed(2)})`);
+  ctx.fillStyle = glassFill;
+  ctx.shadowColor = bright > 0.05 ? `rgba(255,200,50,${bright.toFixed(2)})` : 'transparent';
+  ctx.shadowBlur  = bright * 30;
+  ctx.fill(glassPath);
+  ctx.shadowBlur = 0;
+
+  // Glass edge
+  ctx.strokeStyle = `rgba(200,230,255,${(0.22 + bright*.25).toFixed(2)})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke(glassPath);
+
+  // Specular crescent (upper-left)
+  ctx.save();
+  ctx.clip(glassPath);
+  const specG = ctx.createRadialGradient(bx - bulbR*.48, bulbCY - bulbR*.42, 0,
+                                          bx - bulbR*.38, bulbCY - bulbR*.28, bulbR*.55);
+  specG.addColorStop(0, `rgba(255,255,255,${(0.18+bright*.05).toFixed(2)})`);
+  specG.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = specG;
+  ctx.fillRect(bx - bulbR*1.1, bulbCY - bulbR*1.1, bulbR*1.1, bulbR*1.1);
+  ctx.restore();
+
+  ctx.restore(); // glass
+
+  // ── Support wires (inside glass, from neck up to filament) ───────────────────
+  const filY = bulbCY - 4;   // filament vertical centre
+  const wireSpread = 8;
+  ctx.save();
+  ctx.strokeStyle = `rgba(180,180,180,${(0.35+bright*.2).toFixed(2)})`;
+  ctx.lineWidth = 1.2;
+  // Left support
+  ctx.beginPath(); ctx.moveTo(bx-2, neckTop+2); ctx.lineTo(bx-wireSpread, filY+8); ctx.stroke();
+  // Right support
+  ctx.beginPath(); ctx.moveTo(bx+2, neckTop+2); ctx.lineTo(bx+wireSpread, filY+8); ctx.stroke();
+  ctx.restore();
+
+  // ── Filament (coiled tungsten) ────────────────────────────────────────────────
+  // Draw as a series of small horizontal arcs (coil cross-section view)
+  ctx.save();
+  const fAlpha = 0.30 + bright * 0.70;
+  const fR2 = Math.round(255);
+  const fG2 = Math.round(100 + bright * 155);
+  const fB2 = Math.round(10  + bright * 50);
+  ctx.strokeStyle = `rgba(${fR2},${fG2},${fB2},${fAlpha.toFixed(2)})`;
+  ctx.lineWidth   = 2.5;
+  ctx.lineCap     = 'round'; ctx.lineJoin = 'round';
+  ctx.shadowColor = bright > 0.08 ? `rgba(255,200,60,${bright.toFixed(2)})` : 'rgba(180,80,0,.12)';
+  ctx.shadowBlur  = 2 + bright * 22;
+
+  // Coil: a tight back-and-forth zigzag of 12 segments
+  const coilW = 18, coilH = 16, coilSegs = 12;
+  const cx0 = bx - coilW/2, cy0 = filY - coilH/2;
+  ctx.beginPath();
+  for(let s = 0; s <= coilSegs; s++){
+    const fx = cx0 + (s / coilSegs) * coilW;
+    const fy = cy0 + (s % 2 === 0 ? 0 : coilH);
+    s === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+  }
+  ctx.stroke();
+
+  // Connect support wires to filament ends
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(bx-wireSpread, filY+8); ctx.lineTo(cx0, cy0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+wireSpread, filY+8); ctx.lineTo(cx0+coilW, cy0); ctx.stroke();
+  ctx.restore();
+
+  // ── Label ────────────────────────────────────────────────────────────────────
+  ctx.save(); ctx.globalAlpha = .35;
+  ctx.fillStyle = '#e8d5b0'; ctx.font = 'italic 11px Crimson Text,serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Bulb', bx, baseBot + 6);
+  ctx.restore();
+}
+
+// ─── Draw magnet ──────────────────────────────────────────────────────────────
+function drawMagnet(){
+  const mx = magX, my = COIL_CY;
+  const hw = MAG_W / 2, hh = MAG_H / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 5;
+
+  const rightCol = polarity > 0 ? '#c01c1c' : '#163c9a';
+  const leftCol  = polarity > 0 ? '#163c9a'  : '#c01c1c';
+
+  // Left half
+  ctx.fillStyle = leftCol;
+  ctx.beginPath(); ctx.roundRect(mx - hw, my - hh, hw, MAG_H, [5,0,0,5]); ctx.fill();
+  // Right half
+  ctx.fillStyle = rightCol;
+  ctx.beginPath(); ctx.roundRect(mx, my - hh, hw, MAG_H, [0,5,5,0]); ctx.fill();
+
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // Sheen
+  const sh = ctx.createLinearGradient(mx - hw, my - hh, mx - hw, my + hh);
+  sh.addColorStop(0, 'rgba(255,255,255,.20)'); sh.addColorStop(.5,'rgba(255,255,255,0)');
+  ctx.fillStyle = sh;
+  ctx.beginPath(); ctx.roundRect(mx - hw, my - hh, MAG_W, MAG_H, 5); ctx.fill();
+
+  // Dividing line
+  ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(mx, my - hh + 3); ctx.lineTo(mx, my + hh - 3); ctx.stroke();
+
+  // Labels
+  ctx.font = 'bold 14px Playfair Display,serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.fillText(polarity > 0 ? 'S' : 'N', mx - hw/2, my);
+  ctx.fillText(polarity > 0 ? 'N' : 'S', mx + hw/2, my);
+
+  // Drag hint
+  ctx.globalAlpha = .22; ctx.font = 'italic 10px Crimson Text,serif';
+  ctx.fillStyle = '#e8d5b0'; ctx.fillText('drag', mx, my + hh + 13);
+  ctx.restore();
+}
+
+// ─── Main loop ────────────────────────────────────────────────────────────────
+function loop(){
+  update();
+  ctx.clearRect(0, 0, W, H);
+  drawBg();
+
+  // Draw wire circuit (behind everything)
+  drawWire();
+
+  // Coil back halves
+  drawCoilHalves(false);
+
+  // Bulb (always in front of wire, behind magnet when magnet is far right)
+  drawBulb();
+
+  // Magnet
+  drawMagnet();
+
+  // Coil front halves (over magnet)
+  drawCoilHalves(true);
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
