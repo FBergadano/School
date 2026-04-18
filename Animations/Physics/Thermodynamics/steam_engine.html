@@ -475,8 +475,8 @@ function drawSteam(){
   const spoolRight = spoolCX + spoolHW;   // range: [320, 420] — stays inside bore
 
   // Port positions symmetric about vcCX, within spool travel reach
-  const lPortCX = CX_L;   // = 233, near left wall
-  const rPortCX = CX_R;   // = 387, near right wall
+  const lPortCX = CX_L+60;   // = 233, near left wall
+  const rPortCX = CX_R-60;   // = 387, near right wall
   const portW   = 20;
 
   // C-valve cavity (hollow exhaust interior)
