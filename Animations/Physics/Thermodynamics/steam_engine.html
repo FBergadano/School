@@ -53,13 +53,8 @@ input[type=range]{accent-color:var(--ec,#60c8ff);width:80px}
 </style>
 </head>
 <body>
-<h1>Thermodynamic Engine Cycles</h1>
-<p class="sub">Steam · Petrol (2-stroke) · Diesel (4-stroke)</p>
-<div class="sel">
-  <button class="sbtn active" id="bSteam"  onclick="setEng('steam',this)">♨ Steam</button>
-  <button class="sbtn"        id="bPetrol" onclick="setEng('petrol',this)">⚡ Petrol</button>
-  <button class="sbtn"        id="bDiesel" onclick="setEng('diesel',this)">🔩 Diesel</button>
-</div>
+<h1>The Steam Engine</h1>
+<p class="sub">Invented by James Watt · Birmingham, England · 1769</p>
 <div class="wrap">
   <div class="cpanel" id="cpanel">
     <div class="badge" id="badge">—</div>
@@ -433,9 +428,14 @@ function drawSteam(){
   const boreW=CX_R-CX_L;
   const cyTop=CY-boreH/2-wallT, cyBot=CY+boreH/2+wallT;
 
-  const crankR=60, L_conrod=185, pisL=70, pisRodLen=22;
-  // wheelCX: piston reaches LEFT wall at θ=0, RIGHT wall at θ=π (exact geometry)
-  const wheelCX = CX_L + pisL + pisRodLen + crankR + L_conrod; // 552
+  const crankR=52, L_conrod=185, pisL=70, pisRodLen=22;
+  // deadGap=8 on both sides: pisTravel = boreW-pisL-2*deadGap = 190-70-16 = 104 = 2*crankR ✓
+  const deadGap = 8;
+  // wheelCX satisfies both TDC constraints simultaneously:
+  //   left TDC:  pisLeftX  = CX_L + deadGap  → wheelCX = CX_L+deadGap+crankR+L_conrod+pisRodLen+pisL
+  //   right TDC: pisRightX = CX_R - deadGap  → wheelCX = CX_R-deadGap+L_conrod+pisRodLen-crankR
+  // Both give wheelCX = 552 ✓
+  const wheelCX = CX_L + deadGap + crankR + L_conrod + pisRodLen + pisL; // = 552
 
   const cpX = wheelCX - crankR*Math.cos(crankAngle);
   const cpY = CY      + crankR*Math.sin(crankAngle);
@@ -447,46 +447,36 @@ function drawSteam(){
   const leftW  = clamp(pisLeftX - CX_L, 0, boreW);
   const rightW = clamp(CX_R - pisRightX, 0, boreW);
 
-  // ── VALVE TIMING (3/4 cutoff) ─────────────────────────────────────────────────
-  // strokeFrac: 0 = piston all left, 1 = piston all right
-  const pisTravel  = boreW - pisL;                      // 120 px total travel
-  const strokeFrac = clamp(leftW / pisTravel, 0, 1);
+  // ── VALVE TIMING (3/4 cutoff, direction-locked) ──────────────────────────────
+  // pistonFrac: 0 = all left, 1 = all right
+  // ── SPOOL POSITION — continuous sinusoidal eccentric motion ───────────────────
+  const vcCX = CX_L + boreW/2;          // = 310
+  const spoolHW = 80, spoolTravel = 40;
 
-  // Right port: hot steam enters during last 1/4 of rightward stroke (0.75→1.0→0.75 back)
-  // Left  port: hot steam enters during last 1/4 of leftward  stroke (0.25→0.0→0.25 back)
-  const rPortSteamWanted = strokeFrac >= 0.75;
-  const lPortSteamWanted = strokeFrac <= 0.25;
+  // Eccentric phase φ = 5π/6 ensures:
+  //   sin(2π/3 + 5π/6) = sin(3π/2) = -1  → spool full left  → right port open at 3/4 rightward ✓
+  //   sin(5π/3 + 5π/6) = sin(5π/2) = +1  → spool full right → left  port open at 3/4 leftward  ✓
+  const eccPhase   = 5 * Math.PI / 6;
+  const targetOffset = spoolTravel * Math.sin(crankAngle + eccPhase);
 
-  // ── SPOOL POSITION (derived from cycle, no separate eccentric formula) ────────
-  const vcCX = CX_L + boreW/2;          // 310 — spool centre position
-  const spoolHW = 80, spoolTravel = 40; // spool half-width and travel ±40px
-
-  // Target offset: +travel → spool RIGHT (left port exposed)
-  //               -travel → spool LEFT  (right port exposed)
-  let targetOffset;
-  if      (lPortSteamWanted) targetOffset = +spoolTravel;
-  else if (rPortSteamWanted) targetOffset = -spoolTravel;
-  else {
-    // Transition zone 0.25–0.75: slide smoothly between extremes
-    targetOffset = lerp(spoolTravel, -spoolTravel, (strokeFrac-0.25)/0.5);
-  }
   const spoolCX    = vcCX + targetOffset;
-  const spoolLeft  = spoolCX - spoolHW;   // range: [220, 320]
-  const spoolRight = spoolCX + spoolHW;   // range: [320, 420] — stays inside bore
+  const spoolLeft  = spoolCX - spoolHW;
+  const spoolRight = spoolCX + spoolHW;
 
-  // Port positions symmetric about vcCX, within spool travel reach
-  const lPortCX = CX_L+40;   // = 233, near left wall
-  const rPortCX = CX_R-40;   // = 387, near right wall
+  // Port positions: inside spool when centred (offset=0 → [230,390]),
+  // exposed when spool at extreme (±40 → [190,350] or [270,430])
+  const lPortCX = CX_L + 22;   // = 237
+  const rPortCX = CX_R - 22;   // = 383
   const portW   = 20;
 
-  // C-valve cavity (hollow exhaust interior)
+  // C-valve cavity
   const cWallT = 12;
   const cavLeft  = spoolCX - spoolHW + cWallT;
   const cavRight = spoolCX + spoolHW - cWallT;
 
-  // Port logic
-  const lPisBlocks = (lPortCX >= pisLeftX && lPortCX <= pisRightX);
-  const rPisBlocks = (rPortCX >= pisLeftX && rPortCX <= pisRightX);
+  // Port logic (purely geometric — no discrete state)
+  const lPisBlocks  = (lPortCX >= pisLeftX && lPortCX <= pisRightX);
+  const rPisBlocks  = (rPortCX >= pisLeftX && rPortCX <= pisRightX);
   const lPortExposed = lPortCX < spoolLeft || lPortCX > spoolRight;
   const rPortExposed = rPortCX < spoolLeft || rPortCX > spoolRight;
   const lInCav = !lPortExposed;
@@ -494,22 +484,17 @@ function drawSteam(){
   const lSteamIn = lPortExposed && !lPisBlocks;
   const rSteamIn = rPortExposed && !rPisBlocks;
 
-  // ── GAS HOTNESS (pale orange only — never blue) ───────────────────────────────
-  // All hotness values stay in [0.44, 0.92] → hotColor produces pale→bright ORANGE
-  // 0.44 → pale warm orange  (exhaust / cooled steam)
-  // 0.92 → bright orange-red (freshly admitted hot steam)
-
-  // RIGHT side:
-  let rightHot;
-  if      (rPortSteamWanted)          rightHot = lerp(0.80, 0.92, (strokeFrac-0.75)/0.25);
-  else if (strokeFrac > 0.25)         rightHot = lerp(0.47, 0.80, (strokeFrac-0.25)/0.50);
-  else                                rightHot = 0.44;
-
-  // LEFT side (mirror):
-  let leftHot;
-  if      (lPortSteamWanted)          leftHot  = lerp(0.80, 0.92, (0.25-strokeFrac)/0.25);
-  else if (strokeFrac < 0.75)         leftHot  = lerp(0.47, 0.80, (0.75-strokeFrac)/0.50);
-  else                                leftHot  = 0.44;
+  // ── GAS HOTNESS — purely volume-based (min vol → max T, max vol → min T) ────
+  // T ∝ 1/V (adiabatic approximation): as gas expands it cools, as it compresses it heats.
+  // volFrac = 0 (min volume, near wall) → hotness 0.92 (bright red-orange)
+  // volFrac = 1 (max volume, piston at opposite end) → hotness 0.30 (dark cool orange)
+  const maxVol = boreW - pisL - deadGap;  // max volume each compartment can reach
+  const minVol = deadGap;                  // min volume (dead space at wall)
+  const rightVolFrac = clamp((rightW - minVol) / (maxVol - minVol), 0, 1);
+  const leftVolFrac  = clamp((leftW  - minVol) / (maxVol - minVol), 0, 1);
+  // Power 0.35: stays very hot until gas is well expanded, then drops steeply near max vol
+  const rightHot = lerp(0.92, 0.30, Math.pow(rightVolFrac, 0.35));
+  const leftHot  = lerp(0.92, 0.30, Math.pow(leftVolFrac,  0.35));
 
   const ph = lPortExposed ? 0 : 1;
 
@@ -610,37 +595,53 @@ function drawSteam(){
   const pipeY=chiTopY+4;
   pipe([[chiX,chiBaseY],[chiX,pipeY],[vcCX,pipeY],[vcCX,scY]],true,9);
 
-  // Hot steam particles in pipe
+  // Frantic red-orange particles along pipe path (chaotic, not ordered)
   {
     const seg1H=chiBaseY-pipeY, seg2W=vcCX-chiX, seg3H=scY-pipeY;
     const totalLen=seg1H+seg2W+Math.abs(seg3H);
     ctx.save();
-    for(let i=0;i<12;i++){
-      const phase=((i/12)+st2*0.28)%1.0, dist=phase*totalLen;
+    for(let i=0;i<22;i++){
+      // Each particle has its own random-feeling phase and speed
+      const speed=0.18+i*0.03;
+      const phase=((i*0.137+st2*speed)%1.0);
+      const dist=phase*totalLen;
       let px3,py3;
       if(dist<seg1H){px3=chiX;py3=chiBaseY-dist;}
       else if(dist<seg1H+seg2W){px3=chiX+(dist-seg1H);py3=pipeY;}
       else{px3=vcCX;py3=pipeY+(dist-seg1H-seg2W);}
-      ctx.globalAlpha=0.55+Math.sin(st2*4+i*1.3)*0.2;
-      ctx.fillStyle=hotColor(0.84,1);
-      ctx.shadowColor=hotColor(0.84,1); ctx.shadowBlur=4;
-      ctx.beginPath(); ctx.arc(px3+Math.sin(st2*2+i)*1.5,py3+Math.cos(st2*1.5+i)*1.5,2.5,0,Math.PI*2); ctx.fill();
+      // Large chaotic jitter off-path
+      const jx=Math.sin(st2*5.3+i*2.1)*6+Math.cos(st2*3.7+i*1.4)*4;
+      const jy=Math.cos(st2*4.1+i*1.8)*6+Math.sin(st2*6.2+i*2.7)*4;
+      // All red-orange: hotColor range 0.72–0.96
+      const h=0.72+((i*0.041+st2*0.12)%1)*0.24;
+      ctx.globalAlpha=0.45+Math.sin(st2*5+i*1.1)*0.25;
+      ctx.fillStyle=hotColor(h,1);
+      ctx.shadowColor=hotColor(0.90,1); ctx.shadowBlur=3;
+      const sz=1.5+i%4*0.6;
+      ctx.beginPath(); ctx.arc(px3+jx,py3+jy,sz,0,Math.PI*2); ctx.fill();
     }
     ctx.shadowBlur=0; ctx.globalAlpha=1; ctx.restore();
   }
 
-  // ── STEAM CHAMBER ──────────────────────────────────────────────────────────────
+  // ── STEAM CHAMBER ─────────────────────────────────────────────────────────────
   const scGrad=ctx.createLinearGradient(scX,scY,scX,scY+scH);
-  scGrad.addColorStop(0,'rgba(255,180,60,.18)'); scGrad.addColorStop(1,'rgba(255,100,20,.35)');
+  scGrad.addColorStop(0,'rgba(255,180,60,.22)'); scGrad.addColorStop(1,'rgba(255,100,20,.42)');
   ctx.fillStyle=scGrad; ctx.beginPath(); ctx.roundRect(scX,scY,scW,scH,3); ctx.fill();
-  for(let i=0;i<8;i++){
-    const px2=scX+6+((Math.sin(i*2.3+st2*.8)*.5+.5))*(scW-12);
-    const py2=scY+4+((Math.cos(i*1.7+st2*.7)*.5+.5))*(scH-8);
-    ctx.save(); ctx.globalAlpha=0.35+Math.sin(st2*2+i)*.2;
-    ctx.fillStyle=hotColor(0.88,1);
-    ctx.beginPath(); ctx.arc(px2,py2,2+Math.sin(st2+i),0,Math.PI*2); ctx.fill(); ctx.restore();
+
+  // Many frantic hot particles in the steam chamber
+  {
+    ctx.save();
+    for(let i=0;i<28;i++){
+      const px2=scX+5+((Math.sin(i*2.3+st2*(0.8+i*0.07))*.5+.5))*(scW-10);
+      const py2=scY+3+((Math.cos(i*1.7+st2*(0.6+i*0.05))*.5+.5))*(scH-6);
+      const sz=1.2+i%5*0.55;
+      ctx.globalAlpha=0.30+Math.sin(st2*3+i)*.22;
+      ctx.fillStyle=hotColor(0.80+i%4*0.035, 1);
+      ctx.beginPath(); ctx.arc(px2,py2,sz,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
   }
-  ctx.strokeStyle='rgba(255,160,60,0.7)'; ctx.lineWidth=1.5;
+  ctx.strokeStyle='rgba(255,160,60,0.75)'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.roundRect(scX,scY,scW,scH,3); ctx.stroke();
   ctx.fillStyle='#e09050'; ctx.font='700 7px Rajdhani'; ctx.textAlign='center';
   ctx.fillText('STEAM CHAMBER',vcCX,scY+10);
@@ -674,7 +675,59 @@ function drawSteam(){
   ctx.fillStyle=vcG; ctx.strokeStyle='#243858'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.roundRect(vcX,vcY,vcW,vcH,2); ctx.fill(); ctx.stroke();
 
-  // C-valve metallic shell
+  // ── STEAM CHANNELS through valve chest ────────────────────────────────────────
+  // Drawn AFTER chest background so they're visible, BEFORE spool so spool covers them.
+  // Each channel runs from steam chamber floor → through chest → into cylinder top wall.
+  const chanW = portW + 4;
+  [{cx: lPortCX, exposed: lPortExposed},
+   {cx: rPortCX, exposed: rPortExposed}].forEach(({cx, exposed}) => {
+    const chanX = cx - chanW/2;
+    const chanTop = scY + scH;   // bottom of steam chamber
+    const chanBot = cyTop + wallT; // into cylinder top wall
+    const chanH = chanBot - chanTop;
+
+    // How open is this channel? Distance of port from nearest spool edge.
+    const distFromEdge = exposed
+      ? Math.min(Math.abs(cx - spoolLeft), Math.abs(cx - spoolRight))
+      : 0;
+    const flowStr = clamp(distFromEdge / 25, 0, 1);
+
+    // Dark tunnel background
+    ctx.fillStyle = '#05090f';
+    ctx.fillRect(chanX, chanTop, chanW, chanH);
+
+    if(exposed && flowStr > 0.01){
+      // Hot steam filling the channel
+      const cg = ctx.createLinearGradient(cx, chanTop, cx, chanBot);
+      cg.addColorStop(0, hotColor(0.92, flowStr * 0.90));
+      cg.addColorStop(0.55, hotColor(0.86, flowStr * 0.65));
+      cg.addColorStop(1, hotColor(0.80, flowStr * 0.30));
+      ctx.fillStyle = cg;
+      ctx.fillRect(chanX, chanTop, chanW, chanH);
+
+      // Particles streaming downward
+      ctx.save();
+      const nP = 2 + Math.round(flowStr * 6);
+      for(let i=0;i<nP;i++){
+        const speed = 0.55 + i * 0.18;
+        const phase = ((st2 * speed + i * 0.28) % 1.0);
+        const py2 = chanTop + phase * chanH;
+        const px2 = cx + Math.sin(st2*3.5+i*1.4) * (chanW*0.22);
+        ctx.globalAlpha = flowStr * (0.6 + Math.sin(st2*4+i)*0.2);
+        ctx.fillStyle = hotColor(0.92 - phase*0.10, 1);
+        ctx.shadowColor = hotColor(0.90, 1); ctx.shadowBlur = 4;
+        ctx.beginPath(); ctx.arc(px2, py2, 2 + flowStr*1.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.shadowBlur=0; ctx.restore();
+    }
+
+    // Channel border
+    ctx.strokeStyle = exposed && flowStr>0.05 ? hotColor(0.88, 0.55+flowStr*0.3) : '#1e2e40';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(chanX, chanTop, chanW, chanH);
+  });
+
+  // C-valve metallic shell (drawn AFTER channels → spool visually covers channels)
   const cY1=vcY+3, cY2=vcY+vcH-3;
   const cvG=ctx.createLinearGradient(spoolLeft,cY1,spoolRight,cY1);
   cvG.addColorStop(0,'#4a6070'); cvG.addColorStop(.12,'#8aa8be');
@@ -688,7 +741,7 @@ function drawSteam(){
     // Base dark fill
     ctx.fillStyle='#07101c'; ctx.fillRect(cavLeft,cY1+cTopT,cavRight-cavLeft,cY2-cY1-cTopT+2);
     // Pale orange steam fill: bright when exhaust entering, dims quickly when not
-    const cavFill = (lInCav&&!lPisBlocks)||(rInCav&&!rPisBlocks) ? 0.7 : 0.15;
+    const cavFill = (lInCav&&!lPisBlocks)||(rInCav&&!rPisBlocks) ? 0.70 : 0.32;
     const cavFillG=ctx.createLinearGradient(cavLeft,cY1+cTopT,cavLeft,cY2);
     cavFillG.addColorStop(0, hotColor(0.55, cavFill*0.75));
     cavFillG.addColorStop(0.5, hotColor(0.52, cavFill*0.55));
@@ -710,7 +763,7 @@ function drawSteam(){
     ctx.strokeStyle='#5a7898'; ctx.lineWidth=1;
     ctx.strokeRect(cavLeft,cY1+cTopT,cavRight-cavLeft,cY2-cY1-cTopT+2);
     if(cavRight-cavLeft>30){
-      ctx.fillStyle=cavFill>0.4?hotColor(0.52,0.85):'#4060a0';
+      ctx.fillStyle=hotColor(0.52,0.85);
       ctx.font='600 6px Rajdhani'; ctx.textAlign='center';
       ctx.fillText('exhaust',(cavLeft+cavRight)/2,cY1+cTopT+(cY2-cY1-cTopT)/2+3);
     }
@@ -848,8 +901,13 @@ function drawSteam(){
   ctx.fillRect(guideX0, CY+boreH/2-7, guideX1-guideX0, 7);   // bottom rail only
   // (no strokeRect around whole guide area)
 
-  // Piston rod: from piston right face to crosshead, fixed length pisRodLen
-  // (piston rod is internal — no visual rectangle at junction)
+  // Piston rod: thin rod from piston right face to crosshead pin
+  ctx.save();
+  const rg2=ctx.createLinearGradient(0,CY-3,0,CY+3);
+  rg2.addColorStop(0,'#8aaaba'); rg2.addColorStop(.5,'#4a6070'); rg2.addColorStop(1,'#2a3e50');
+  ctx.fillStyle=rg2; ctx.fillRect(pisRightX,CY-3,pisRodLen,6);
+  ctx.strokeStyle='#2e4458'; ctx.lineWidth=1; ctx.strokeRect(pisRightX,CY-3,pisRodLen,6);
+  ctx.restore();
 
   // Crosshead block
   const chBW=20, chBH=boreH-4;
@@ -908,488 +966,15 @@ function drawSteam(){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PETROL ENGINE — 2-stroke
-// ═══════════════════════════════════════════════════════════════════════════════
-function drawPetrol(){
-  const ph=curPhase();
-  const acol='#ff7040';
-
-  const CX=300, CY=28, CW=112, CH=272;
-  const wallT=14;
-  const innerX=CX+wallT, innerW=CW-wallT*2;
-  const pisH=48;
-  const crankCX=CX+CW/2, crankCY=CY+CH+92, crankR=42;
-  const pisTopMin=CY+8, pisTopMax=CY+CH-pisH-8;
-
-  const frac=pistonFrac(crankAngle);
-  const pistonTopY=lerp(pisTopMin,pisTopMax,frac);
-  const pistonBotY=pistonTopY+pisH;
-  const gasTop=CY+2, gasH=pistonTopY-CY-2;
-
-  // ── CONTINUOUS HOTNESS ─────────────────────────────────────────────────────
-  // Phase 0: compression → frac goes from ~1 to 0, gas heats up continuously
-  // Phase 1: explosion → starts at TDC (frac=0), very hot, cools as piston descends
-  // Phase 2: scavenging → cool
-  let hotness;
-  if(ph===0){
-    // compression: piston rises (frac 1→0). Hotness rises from 0.12 to 0.65
-    hotness=lerp(0.65,0.12,frac);
-  } else if(ph===1){
-    // power: piston descends (frac 0→1). Starts very hot, cools as gas expands
-    hotness=lerp(0.96,0.30,frac);
-  } else {
-    hotness=0.12;
-  }
-
-  // Port geometry: port top edge is at a fixed position in the cylinder wall
-  // Port MUST be just below the maximum downward position of the piston skirt bottom
-  // i.e., slightly above BDC (pistonBotY max)
-  const portTopY=pisTopMax+pisH+4; // just below where piston skirt end is at BDC
-  const portH=CH*0.09;
-  // Port opens when piston skirt bottom (pistonBotY) rises ABOVE portTopY
-  const portOpen=(pistonBotY<portTopY);
-
-  // Exhaust channel cut into RIGHT wall
-  const exCX=CX+CW;
-  // Draw the channel INSIDE the cylinder wall as a slot
-  ctx.fillStyle='#0a1420';
-  ctx.fillRect(CX+CW-wallT+1,portTopY,wallT-1,portH); // slot in right wall
-
-  // External exhaust duct
-  ctx.fillStyle='#0c1820'; ctx.strokeStyle='#1e3040'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(exCX,portTopY,52,portH,3); ctx.fill(); ctx.stroke();
-
-  // ── LEFT WALL ─────────────────────────────────────────────────────────────
-  const lg=ctx.createLinearGradient(CX,0,CX+wallT,0);
-  lg.addColorStop(0,'#0e1828'); lg.addColorStop(1,'#1e3040');
-  ctx.fillStyle=lg; ctx.fillRect(CX,CY,wallT,CH);
-
-  // ── RIGHT WALL (with port slot) ────────────────────────────────────────────
-  const rg=ctx.createLinearGradient(CX+CW-wallT,0,CX+CW,0);
-  rg.addColorStop(0,'#1e3040'); rg.addColorStop(1,'#0e1828');
-  ctx.fillStyle=rg; ctx.fillRect(CX+CW-wallT,CY,wallT,CH);
-  // Restore the slot colour on top (visual port opening)
-  if(portOpen){
-    ctx.fillStyle='#1a2f48';
-    ctx.fillRect(CX+CW-wallT+1,portTopY+1,wallT-2,portH-2);
-  }
-  ctx.strokeStyle='#233445'; ctx.lineWidth=1.5; ctx.strokeRect(CX,CY,CW,CH);
-
-  // ── TRANSFER PORT (left wall) ─────────────────────────────────────────────
-  const trTopY=portTopY-5, trH=portH*.85;
-  const trOpen=(pistonBotY<trTopY);
-  ctx.fillStyle=trOpen?'#1a2f20':'#0a1420';
-  ctx.fillRect(CX+1,trTopY,wallT-1,trH); // left wall slot
-  ctx.fillStyle='#0c1820'; ctx.strokeStyle='#1e3040'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(CX-50,trTopY,50,trH,3); ctx.fill(); ctx.stroke();
-
-  // Port labels
-  ctx.font='700 7px Rajdhani'; ctx.textAlign='center';
-  ctx.fillStyle=portOpen?'#6080ff':'#2a3a50';
-  ctx.fillText('EXHAUST',exCX+26,portTopY+portH*.4);
-  ctx.fillText(portOpen?'OPEN':'BLOCKED',exCX+26,portTopY+portH*.78);
-
-  ctx.fillStyle=trOpen?acol:'#2a3a50';
-  ctx.fillText('TRANSFER',CX-25,trTopY+trH*.4);
-  ctx.fillText(trOpen?'OPEN':'BLOCKED',CX-25,trTopY+trH*.78);
-
-  // Exhaust gas puff
-  if(portOpen&&ph>=1){
-    ctx.save(); const t=Date.now()*.001;
-    for(let i=0;i<10;i++){
-      const sx=exCX+52+i*8+Math.sin(t+i)*3, sy=portTopY+portH/2+Math.cos(t+i)*5;
-      ctx.fillStyle=`rgba(110,90,55,${.48-i*.04})`;
-      ctx.beginPath(); ctx.arc(sx,sy,3+i*.7,0,Math.PI*2); ctx.fill();
-    }
-    ctx.restore();
-    glowLabel(exCX+52+55,portTopY+portH/2,'exhaust →','#4050a0',8);
-  }
-
-  // Crankcase
-  ctx.fillStyle='#0c1520'; ctx.strokeStyle='#1a3048'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(CX,CY+CH,CW,54,0); ctx.fill(); ctx.stroke();
-  ctx.fillStyle='#253545'; ctx.font='700 7px Rajdhani'; ctx.textAlign='center';
-  ctx.fillText('CRANKCASE — fresh air+fuel mix',CX+CW/2,CY+CH+13);
-  const cmg=ctx.createLinearGradient(CX,CY+CH,CX,CY+CH+50);
-  cmg.addColorStop(0,'rgba(255,100,30,0.14)'); cmg.addColorStop(1,'rgba(255,80,20,0.02)');
-  ctx.fillStyle=cmg; ctx.fillRect(CX+2,CY+CH+2,CW-4,48);
-
-  // ── GAS ────────────────────────────────────────────────────────────────────
-  if(gasH>3) fillGasRect(innerX,gasTop,innerW,gasH,hotness);
-
-  // ── ARROWS ─────────────────────────────────────────────────────────────────
-  if(ph===0&&gasH>20){
-    // upward arrows indicating compression
-    ctx.save(); ctx.globalAlpha=0.55;
-    ctx.strokeStyle='#80a8d0'; ctx.lineWidth=2;
-    [innerX+innerW*.3,innerX+innerW*.7].forEach(ax=>{
-      ctx.beginPath(); ctx.moveTo(ax,gasTop+gasH*.8); ctx.lineTo(ax,gasTop+gasH*.15); ctx.stroke();
-    }); ctx.restore();
-  }
-  if(ph===1) pressArrows(innerX,innerW,pistonTopY,acol,0.9);
-
-  // ── GAS LABEL ──────────────────────────────────────────────────────────────
-  const midGasY=gasTop+gasH*.44;
-  if(ph===0&&gasH>40) glowLabel(CX+CW/2,midGasY,['Air+Fuel','fully compressed'],hotColor(hotness,1),9);
-  if(ph===1&&gasH>24) glowLabel(CX+CW/2,midGasY,['EXPLOSION!','piston pushed ↓'],acol,10);
-  if(ph===2)           glowLabel(CX+CW/2,portTopY-18,['ports open','scavenging'],'#7090b0',8);
-
-  // ── CYLINDER HEAD ──────────────────────────────────────────────────────────
-  const hG=ctx.createLinearGradient(CX,CY-18,CX,CY+2);
-  hG.addColorStop(0,'#0e1828'); hG.addColorStop(1,'#1e3040');
-  ctx.fillStyle=hG; ctx.strokeStyle='#2a4055'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.roundRect(CX-5,CY-18,CW+10,22,3); ctx.fill(); ctx.stroke();
-
-  // ── SPARK PLUG (detailed, always in head) ──────────────────────────────────
-  const spCX=CX+CW/2, spHY=CY+1;
-  const firing=(ph===1&&frac<0.09);
-  // hex body
-  ctx.save();
-  const spBodyG=ctx.createLinearGradient(spCX-7,spHY-26,spCX+7,spHY);
-  spBodyG.addColorStop(0,'#b0bec8'); spBodyG.addColorStop(.5,'#7a8a98'); spBodyG.addColorStop(1,'#5a6a78');
-  ctx.fillStyle=spBodyG;
-  // hex shape
-  const hex=6, hexR=7;
-  ctx.beginPath();
-  for(let i=0;i<hex;i++){
-    const ha=(i/hex)*Math.PI*2-Math.PI/6;
-    const hx=spCX+hexR*Math.cos(ha), hy2=spHY-20+hexR*Math.sin(ha);
-    i===0?ctx.moveTo(hx,hy2):ctx.lineTo(hx,hy2);
-  }
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='#3a4a58'; ctx.lineWidth=1; ctx.stroke();
-  // threaded body below hex
-  ctx.fillStyle='#5a6a78';
-  ctx.beginPath(); ctx.roundRect(spCX-4,spHY-14,8,14,1); ctx.fill();
-  // thread lines
-  ctx.strokeStyle='#3a4a58'; ctx.lineWidth=1;
-  for(let i=0;i<4;i++){
-    const ty=spHY-13+i*4;
-    ctx.beginPath(); ctx.moveTo(spCX-4,ty); ctx.lineTo(spCX+4,ty); ctx.stroke();
-  }
-  // electrode tip
-  ctx.fillStyle='#8090a0';
-  ctx.beginPath(); ctx.roundRect(spCX-3,spHY-1,6,5,1); ctx.fill();
-  ctx.strokeStyle='#b8c0cc'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(spCX,spHY+4); ctx.lineTo(spCX,spHY+7); ctx.stroke();
-  // side electrode
-  ctx.beginPath(); ctx.moveTo(spCX-4,spHY+5); ctx.lineTo(spCX,spHY+5); ctx.stroke();
-
-  // spark burst
-  if(firing){
-    const t=Date.now()*.001;
-    const s=Math.abs(Math.sin(t*15));
-    ctx.globalAlpha=0.5+s*0.5;
-    ctx.shadowColor='#ffe050'; ctx.shadowBlur=22;
-    for(let i=0;i<10;i++){
-      const a=(i/10)*Math.PI*2+t*12;
-      ctx.strokeStyle=i%2?'#ffe050':'#ff8800'; ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.moveTo(spCX+3*Math.cos(a),spHY+5+3*Math.sin(a));
-      ctx.lineTo(spCX+(10+s*8)*Math.cos(a),spHY+5+(10+s*8)*Math.sin(a));
-      ctx.stroke();
-    }
-    // central flash
-    ctx.fillStyle='rgba(255,240,100,0.8)';
-    ctx.beginPath(); ctx.arc(spCX,spHY+5,3+s*3,0,Math.PI*2); ctx.fill();
-    glowLabel(spCX,CY-26,['SPARK!'],'#ffe050',11);
-  }
-  ctx.restore();
-
-  // ── PISTON ─────────────────────────────────────────────────────────────────
-  drawVertPiston(CX+CW/2,pistonTopY,innerW,pisH,false);
-
-  // ── CRANK ASSEMBLY ─────────────────────────────────────────────────────────
-  const wristY=pistonTopY+pisH*0.79+3;
-  const wristX=CX+CW/2;
-  drawCrankVert(wristX,wristY,crankCX,crankCY,crankR,crankAngle);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DIESEL ENGINE — 4-stroke
-// ═══════════════════════════════════════════════════════════════════════════════
-function getDieselHotness(){
-  const ph=curPhase();
-  const frac=pistonFrac(crankAngle);
-  switch(ph){
-    case 0: return 0.05;
-    case 1: return lerp(0.68,0.04,frac);   // heats as piston rises (frac 1→0 but frac IS 1→0)
-    case 2: return 0.98;
-    case 3: return lerp(0.98,0.32,frac);
-    case 4: return 0.15;
-    default: return 0.05;
-  }
-}
-
-// Continuous poppet valve: lift is smooth sin from crank angle
-// For diesel 4-stroke, one valve open per 2 full rotations
-function dieselValveLift(valveIndex){
-  // valveIndex 0=intake, 1=exhaust
-  // Full cycle = 4π. Use crank angle mod 4π
-  const norm=((crankAngle%(4*Math.PI))+4*Math.PI)%(4*Math.PI);
-  const f=norm/(4*Math.PI); // 0..1
-  // intake open roughly f 0..0.22, exhaust open f 0.78..1.0
-  const maxLift=12;
-  if(valveIndex===0){
-    // intake: open during phase 0 (f 0..0.22)
-    if(f<0.22){
-      const t=f/0.22; // 0..1
-      return maxLift*Math.sin(t*Math.PI);
-    }
-    return 0;
-  } else {
-    // exhaust: open during phase 4 (f 0.78..1.0)
-    if(f>0.78){
-      const t=(f-0.78)/0.22;
-      return maxLift*Math.sin(t*Math.PI);
-    }
-    return 0;
-  }
-}
-
-function dieselInjectorFlow(){
-  // injection during phase 2 (f 0.44..0.56), peaking at 0.50
-  const norm=((crankAngle%(4*Math.PI))+4*Math.PI)%(4*Math.PI);
-  const f=norm/(4*Math.PI);
-  if(f>=0.44&&f<=0.56){
-    const t=(f-0.44)/0.12;
-    return Math.sin(t*Math.PI);
-  }
-  return 0;
-}
-
-function drawDiesel(){
-  const ph=curPhase();
-  const acol='#80e080';
-
-  const CX=275, CY=25, CW=120, CH=285;
-  const wallT=14;
-  const innerX=CX+wallT, innerW=CW-wallT*2;
-  const pisH=48;
-  const crankCX=CX+CW/2, crankCY=CY+CH+94, crankR=42;
-  const pisTopMin=CY+8, pisTopMax=CY+CH-pisH-8;
-
-  const frac=pistonFrac(crankAngle);
-  const pistonTopY=lerp(pisTopMin,pisTopMax,frac);
-  const gasTop=CY+2, gasH=pistonTopY-CY-2;
-  const hotness=getDieselHotness();
-
-  // ── CYLINDER WALLS ─────────────────────────────────────────────────────────
-  const lg=ctx.createLinearGradient(CX,0,CX+wallT,0);
-  lg.addColorStop(0,'#0e1828'); lg.addColorStop(1,'#1e3040');
-  ctx.fillStyle=lg; ctx.fillRect(CX,CY,wallT,CH);
-  const rg=ctx.createLinearGradient(CX+CW-wallT,0,CX+CW,0);
-  rg.addColorStop(0,'#1e3040'); rg.addColorStop(1,'#0e1828');
-  ctx.fillStyle=rg; ctx.fillRect(CX+CW-wallT,CY,wallT,CH);
-  ctx.strokeStyle='#233445'; ctx.lineWidth=1.5; ctx.strokeRect(CX,CY,CW,CH);
-
-  // ── HEAD ───────────────────────────────────────────────────────────────────
-  const headH=44;
-  const headTopY=CY-headH, headBotY=CY;
-  const hG=ctx.createLinearGradient(CX,headTopY,CX,headBotY+2);
-  hG.addColorStop(0,'#0c1822'); hG.addColorStop(1,'#1e3040');
-  ctx.fillStyle=hG; ctx.strokeStyle='#2a4055'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.roundRect(CX-6,headTopY,CW+12,headH+4,4); ctx.fill(); ctx.stroke();
-
-  // ── INTAKE & EXHAUST DUCTS (from head sides) ────────────────────────────────
-  const inLift=dieselValveLift(0);
-  const exLift=dieselValveLift(1);
-  const inOpen=(inLift>0.5);
-  const exOpen=(exLift>0.5);
-  const valveX_in=CX+CW*0.27;
-  const valveX_ex=CX+CW*0.73;
-  const ductW=24, ductH=32;
-
-  // Intake duct (left side of head, going up)
-  ctx.fillStyle=inOpen?'rgba(96,200,255,0.12)':'#0a1420';
-  ctx.strokeStyle=inOpen?acol:'#1e3040'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(valveX_in-ductW/2,headTopY-ductH,ductW,ductH+4,3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle=inOpen?acol:'#2a4060'; ctx.font='600 7px Rajdhani'; ctx.textAlign='center';
-  ctx.fillText('AIR IN',valveX_in,headTopY-ductH+9);
-  // arrow in duct
-  if(inOpen){
-    ctx.strokeStyle=acol; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(valveX_in,headTopY-ductH+14); ctx.lineTo(valveX_in,headTopY-4); ctx.stroke();
-    ctx.fillStyle=acol;
-    ctx.beginPath(); ctx.moveTo(valveX_in,headTopY-4); ctx.lineTo(valveX_in-4,headTopY-12); ctx.lineTo(valveX_in+4,headTopY-12); ctx.closePath(); ctx.fill();
-  }
-
-  // Exhaust duct (right side)
-  ctx.fillStyle=exOpen?'rgba(100,130,200,0.12)':'#0a1420';
-  ctx.strokeStyle=exOpen?'#6080ff':'#1e3040'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(valveX_ex-ductW/2,headTopY-ductH,ductW,ductH+4,3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle=exOpen?'#6080ff':'#2a4060'; ctx.font='600 7px Rajdhani'; ctx.textAlign='center';
-  ctx.fillText('GAS OUT',valveX_ex,headTopY-ductH+9);
-  if(exOpen){
-    ctx.strokeStyle='#6080ff'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(valveX_ex,headTopY-4); ctx.lineTo(valveX_ex,headTopY-ductH+14); ctx.stroke();
-    ctx.fillStyle='#6080ff';
-    ctx.beginPath(); ctx.moveTo(valveX_ex,headTopY-ductH+14); ctx.lineTo(valveX_ex-4,headTopY-ductH+22); ctx.lineTo(valveX_ex+4,headTopY-ductH+22); ctx.closePath(); ctx.fill();
-  }
-
-  // ── POPPET VALVES (open downward into cylinder) ─────────────────────────────
-  function drawValve(vx,lift,col){
-    const seatY=headBotY;         // seat flush with head bottom
-    const discY=seatY+lift;       // disc drops DOWN when open
-    const stemTopY=headTopY+6;
-    const discR=11;
-
-    // seat ring
-    ctx.strokeStyle='#3a5068'; ctx.lineWidth=2.5;
-    ctx.beginPath(); ctx.ellipse(vx,seatY,discR+2,3.5,0,0,Math.PI*2); ctx.stroke();
-
-    // disc
-    const dg=ctx.createRadialGradient(vx,discY,0,vx,discY,discR);
-    if(lift>0.5){dg.addColorStop(0,col+'ff');dg.addColorStop(.6,col+'99');dg.addColorStop(1,col+'22');}
-    else{dg.addColorStop(0,'#2a3c4e');dg.addColorStop(1,'#1a2c3c');}
-    ctx.fillStyle=dg; ctx.strokeStyle=lift>0.5?col:'#2a3c4e'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.ellipse(vx,discY,discR,3.5,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-
-    // stem (goes UP from disc to top of head)
-    ctx.strokeStyle='#5a7080'; ctx.lineWidth=4; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(vx,discY-3); ctx.lineTo(vx,stemTopY+6); ctx.stroke();
-
-    // spring
-    const s1=stemTopY+8, s2=discY-4;
-    if(s2>s1+4){
-      const coils=5, ch2=(s2-s1)/coils;
-      ctx.strokeStyle='#3a5060'; ctx.lineWidth=1.5;
-      ctx.beginPath();
-      for(let i=0;i<coils;i++){
-        const sy=s1+i*ch2;
-        ctx.moveTo(vx-7,sy); ctx.bezierCurveTo(vx+7,sy,vx+7,sy+ch2/2,vx-7,sy+ch2/2);
-        if(i<coils-1) ctx.bezierCurveTo(vx-7,sy+ch2/2,vx-7,sy+ch2,vx+7,sy+ch2);
-      }
-      ctx.stroke();
-    }
-    // retainer
-    ctx.fillStyle='#4a6070';
-    ctx.beginPath(); ctx.ellipse(vx,stemTopY+6,7,2.5,0,0,Math.PI*2); ctx.fill();
-  }
-
-  drawValve(valveX_in, inLift, acol);
-  drawValve(valveX_ex, exLift, '#6080ff');
-
-  // ── INJECTOR (centre of head) ────────────────────────────────────────────────
-  const injFlow=dieselInjectorFlow();
-  const injCX=CX+CW/2;
-  ctx.save();
-  // fuel rail
-  ctx.fillStyle='#2a4050'; ctx.strokeStyle='#3a6070'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(injCX-20,headTopY-10,40,12,3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle='#5a7888'; ctx.font='600 7px Rajdhani'; ctx.textAlign='center';
-  ctx.fillText('FUEL RAIL',injCX,headTopY-2);
-  // body
-  const ibG=ctx.createLinearGradient(injCX-7,headTopY,injCX+7,headBotY);
-  ibG.addColorStop(0,'#3a5060'); ibG.addColorStop(1,'#1e3040');
-  ctx.fillStyle=ibG; ctx.strokeStyle='#4a6070'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.roundRect(injCX-7,headTopY,14,headH+2,2); ctx.fill(); ctx.stroke();
-  // connector to rail
-  ctx.fillStyle='#2a4050'; ctx.strokeStyle='#3a5060'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.roundRect(injCX-4,headTopY-10,8,12,1); ctx.fill(); ctx.stroke();
-  // tip
-  ctx.fillStyle='#5a7080';
-  ctx.beginPath(); ctx.moveTo(injCX-6,headBotY+2); ctx.lineTo(injCX+6,headBotY+2); ctx.lineTo(injCX,headBotY+8); ctx.closePath(); ctx.fill();
-
-  if(injFlow>0.05){
-    // INJECTION HIGHLIGHT
-    ctx.globalAlpha=0.3+injFlow*0.5;
-    ctx.fillStyle='#70b8ff';
-    ctx.fillRect(injCX-7,headTopY,14,headH);
-
-    ctx.globalAlpha=0.6+injFlow*0.4;
-    ctx.shadowColor='#70b8ff'; ctx.shadowBlur=14;
-    // spray cone
-    for(let i=0;i<10;i++){
-      const ang=(i-4.5)*0.13;
-      const spLen=20+injFlow*18;
-      ctx.strokeStyle=`rgba(80,150,255,0.75)`;
-      ctx.lineWidth=1.5;
-      ctx.beginPath();
-      ctx.moveTo(injCX,headBotY+8);
-      ctx.lineTo(injCX+Math.sin(ang)*spLen, headBotY+8+Math.cos(ang)*spLen);
-      ctx.stroke();
-    }
-    // droplets
-    ctx.fillStyle='#70b8ff';
-    for(let i=0;i<7;i++){
-      const sx=injCX+(i-3)*4+Math.sin(Date.now()*.005+i)*2;
-      const sy=headBotY+14+i*6+Math.sin(Date.now()*.004+i)*3;
-      ctx.beginPath(); ctx.arc(sx,sy,2.5,0,Math.PI*2); ctx.fill();
-    }
-    ctx.globalAlpha=1; ctx.shadowBlur=0;
-
-    glowLabel(injCX,headTopY-22,['DIESEL INJECTED!'],'#70b8ff',10);
-  }
-  ctx.restore();
-
-  // ── GAS ─────────────────────────────────────────────────────────────────────
-  if(gasH>3) fillGasRect(innerX,gasTop,innerW,gasH,hotness);
-
-  // compression glow near TDC
-  if(ph===1&&gasH<60){
-    const gl=ctx.createRadialGradient(CX+CW/2,pistonTopY+10,0,CX+CW/2,pistonTopY+10,62);
-    gl.addColorStop(0,`rgba(255,130,20,${0.52*(1-gasH/62)})`);
-    gl.addColorStop(1,'rgba(255,130,20,0)');
-    ctx.fillStyle=gl; ctx.fillRect(innerX,gasTop,innerW,gasH+8);
-    if(gasH<28) glowLabel(CX+CW/2,pistonTopY+24,'~700°C','#ffa030',10);
-  }
-
-  // auto-ignition burst (phase 2, right at start when gas is smallest)
-  if(ph===2){
-    const s=clamp(1-gasH/40,0,1);
-    if(s>0.05){
-      ctx.save();
-      const t=Date.now()*.001;
-      const p=Math.abs(Math.sin(t*7))*s;
-      ctx.globalAlpha=0.4+p*0.55;
-      ctx.shadowColor='#ff8020'; ctx.shadowBlur=18;
-      const bx=CX+CW/2, by=gasTop+gasH*.5;
-      for(let i=0;i<12;i++){
-        const a=(i/12)*Math.PI*2;
-        const r=8+p*22;
-        const g2=ctx.createLinearGradient(bx,by,bx+r*Math.cos(a),by+r*Math.sin(a));
-        g2.addColorStop(0,'rgba(255,235,60,.95)'); g2.addColorStop(1,'rgba(255,40,0,0)');
-        ctx.strokeStyle=g2; ctx.lineWidth=2.5;
-        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+r*Math.cos(a),by+r*Math.sin(a)); ctx.stroke();
-      }
-      const rg3=ctx.createRadialGradient(bx,by,0,bx,by,16+p*14);
-      rg3.addColorStop(0,'rgba(255,245,120,.95)'); rg3.addColorStop(.4,'rgba(255,100,20,.65)'); rg3.addColorStop(1,'rgba(255,0,0,0)');
-      ctx.fillStyle=rg3; ctx.beginPath(); ctx.arc(bx,by,16+p*14,0,Math.PI*2); ctx.fill();
-      ctx.restore();
-    }
-    pressArrows(innerX,innerW,pistonTopY,acol,0.85);
-    if(gasH<50) glowLabel(CX+CW/2,headTopY-24,['AUTO-IGNITION — no spark!'],acol,9);
-  }
-  if(ph===3) pressArrows(innerX,innerW,pistonTopY,acol,0.40);
-
-  // Phase labels
-  const midY=gasH>60?gasTop+gasH*.42:gasTop+gasH*.5;
-  if(ph===0&&gasH>45) glowLabel(CX+CW/2,midY,['AIR enters','(no fuel)'],'#60b0ff',9);
-  if(ph===1&&gasH>62) glowLabel(CX+CW/2,midY,['air heating up','adiabatically'],hotColor(hotness,1),9);
-  if(ph===2&&gasH>55) glowLabel(CX+CW/2,midY,['self-ignition','piston pushed ↓'],acol,9);
-  if(ph===3&&gasH>65) glowLabel(CX+CW/2,midY,['gas expands','& cools adiabatically'],acol,9);
-  if(ph===4&&gasH>45) glowLabel(CX+CW/2,midY,['burnt gases','expelled'],'#6080b0',9);
-
-  // ── PISTON ──────────────────────────────────────────────────────────────────
-  drawVertPiston(CX+CW/2,pistonTopY,innerW,pisH,true);
-
-  // ── CRANK ──────────────────────────────────────────────────────────────────
-  const wristY=pistonTopY+pisH*0.79+3, wristX=CX+CW/2;
-  drawCrankVert(wristX,wristY,crankCX,crankCY,crankR,crankAngle);
-}
-
 // ─── MAIN RENDER ─────────────────────────────────────────────────────────────
 function render(){
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#060a10'; ctx.fillRect(0,0,W,H);
-  if(eng==='steam') drawSteam();
-  else if(eng==='petrol') drawPetrol();
-  else drawDiesel();
+  drawSteam();
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-setEng('steam',document.getElementById('bSteam'));
+buildList(); updateStatus(); render();
 togglePlay();
 </script>
 </body>
