@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Standing Wave — Interactive</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #fafaf8;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem 3rem;
+  }
+  .page { width: 100%; max-width: 780px; }
+  h1 { font-size: 1.5rem; font-weight: normal; letter-spacing: 0.01em; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 0.875rem; color: #666; margin-bottom: 1.25rem; font-style: italic; }
+  .mode-row { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+  .mode-btn {
+    padding: 7px 20px; font-size: 13px; font-family: 'Georgia', serif;
+    border: 0.5px solid #bbb; border-radius: 5px;
+    background: #fff; color: #555; cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .mode-btn:not(.active):hover { background: #f0ede6; }
+  canvas {
+    display: block; width: 100%;
+    border: 0.5px solid #d8d4cc; border-radius: 6px; background: #fff;
+  }
+  .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 1rem; }
+  .info-card {
+    background: #f2f0ea; border-radius: 6px;
+    padding: 0.6rem 0.75rem; border: 0.5px solid #e0dbd0;
+  }
+  .ic-label { font-size: 11px; color: #777; margin-bottom: 3px; letter-spacing: 0.03em; }
+  .ic-val { font-size: 1rem; font-weight: 500; color: #1a1a1a; }
+  .controls-section {
+    margin-top: 1.5rem; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 1rem 2rem;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 5px; }
+  .ctrl-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .ctrl-name { font-size: 13px; color: #555; }
+  .ctrl-name em { font-style: italic; color: #333; }
+  .ctrl-readout { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+  input[type=range] { width: 100%; accent-color: #378ADD; cursor: pointer; }
+  .bottom-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 1rem; flex-wrap: wrap; gap: 0.75rem;
+  }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #666; }
+  .leg-line { width: 22px; height: 2.5px; border-radius: 2px; }
+  .leg-dash { width: 22px; height: 0; border-top: 2px dashed #999; }
+  .leg-env  { width: 22px; height: 10px; border-radius: 3px; }
+  .play-area { display: flex; align-items: center; gap: 12px; }
+  button.play-btn {
+    padding: 6px 20px; font-size: 13px; font-family: 'Georgia', serif;
+    border: 0.5px solid #bbb; border-radius: 5px;
+    background: #fff; color: #1a1a1a; cursor: pointer; transition: background 0.15s;
+  }
+  button.play-btn:hover { background: #f0ede6; }
+  .t-label { font-size: 13px; color: #888; font-style: italic; }
+  .info-box {
+    margin-top: 1rem; padding: 0.75rem 1rem;
+    border-left: 3px solid #378ADD; border-radius: 0 5px 5px 0;
+    font-size: 13px; color: #444; line-height: 1.65;
+  }
+  .info-box.wave-mode { background: #f4f2ee; border-color: #378ADD; }
+  .info-box.em-mode   { background: #f0f5f0; border-color: #2e8b57; }
+  .info-box strong { font-weight: 500; color: #1a1a1a; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Standing transverse wave</h1>
+  <p class="subtitle">Use the sliders to explore amplitude, wavelength, period and frequency.</p>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="btnWave">Standing wave</button>
+    <button class="mode-btn" id="btnEM">Electromagnetic wave</button>
+  </div>
+
+  <canvas id="c" height="270"></canvas>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="ic-label" id="lbA">Amplitude <em>A</em></div>
+      <div class="ic-val" id="vA">—</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">Wavelength <em>λ</em> (peak to peak)</div>
+      <div class="ic-val" id="vL">—</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">Period <em>T</em></div>
+      <div class="ic-val" id="vT">—</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">Frequency <em>f</em></div>
+      <div class="ic-val" id="vF">—</div>
+    </div>
+  </div>
+
+  <div class="controls-section">
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-name">Amplitude <em>A</em></span>
+        <span class="ctrl-readout"><span id="oA">60</span> u</span>
+      </div>
+      <input type="range" id="sA" min="10" max="85" value="60" step="1">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-name">Number of nodes</span>
+        <span class="ctrl-readout"><span id="oN">3</span></span>
+      </div>
+      <input type="range" id="sN" min="2" max="6" value="3" step="1">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <span class="ctrl-name">Frequency <em>f</em></span>
+        <span class="ctrl-readout"><span id="oF">1.0</span> Hz</span>
+      </div>
+      <input type="range" id="sF" min="2" max="20" value="10" step="1">
+    </div>
+
+    <div class="ctrl" style="justify-content:flex-end">
+      <div class="play-area">
+        <button class="play-btn" id="btn">&#9646;&#9646; Pause</button>
+        <span class="t-label">t = <span id="tDisp">0.00</span> s</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="legend" id="legend">
+      <div class="leg"><div class="leg-line" style="background:#378ADD"></div>wave</div>
+      <div class="leg"><div class="leg-env" style="background:#D4537E;opacity:.4"></div>envelope</div>
+      <div class="leg"><div class="leg-dash"></div>equilibrium</div>
+    </div>
+  </div>
+
+  <div class="info-box wave-mode" id="infoBox">
+    <strong>Node (N)</strong> — a fixed point of zero displacement.&ensp;
+    <strong>Antinode</strong> — oscillates with maximum amplitude <em>A</em>.&ensp;
+    <strong>λ</strong> is the distance between two successive peaks (or minima) — equivalently, between every other node.
+  </div>
+</div>
+
+<script>
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d');
+const legend  = document.getElementById('legend');
+const infoBox = document.getElementById('infoBox');
+
+let A = 60, nNodes = 3, freq = 1.0;
+let running = true, t = 0, lastTs = null;
+let emMode = false;
+
+document.getElementById('btnWave').addEventListener('click', () => {
+  emMode = false;
+  document.getElementById('btnWave').classList.add('active');
+  document.getElementById('btnEM').classList.remove('active');
+  document.getElementById('lbA').innerHTML = 'Amplitude <em>A</em>';
+  legend.innerHTML = `
+    <div class="leg"><div class="leg-line" style="background:#378ADD"></div>wave</div>
+    <div class="leg"><div class="leg-env" style="background:#D4537E;opacity:.4"></div>envelope</div>
+    <div class="leg"><div class="leg-dash"></div>equilibrium</div>`;
+  infoBox.className = 'info-box wave-mode';
+  infoBox.innerHTML = '<strong>Node (N)</strong> — a fixed point of zero displacement.&ensp;<strong>Antinode</strong> — oscillates with maximum amplitude <em>A</em>.&ensp;<strong>λ</strong> is the distance between two successive peaks (or minima) — equivalently, between every other node.';
+});
+
+document.getElementById('btnEM').addEventListener('click', () => {
+  emMode = true;
+  document.getElementById('btnEM').classList.add('active');
+  document.getElementById('btnWave').classList.remove('active');
+  document.getElementById('lbA').innerHTML = 'Amplitude <em>E</em>';
+  legend.innerHTML = `
+    <div class="leg"><div class="leg-line" style="background:#c06000"></div><em>E</em> field (vertical)</div>
+    <div class="leg"><div class="leg-line" style="background:#2e8b57"></div><em>B</em> field (depth — perspective)</div>
+    <div class="leg"><div class="leg-dash"></div>equilibrium</div>`;
+  infoBox.className = 'info-box em-mode';
+  infoBox.innerHTML = `
+    <strong>E</strong> oscillates vertically (↕).&ensp;
+    <strong>B</strong> oscillates into/out of the page (shown with a perspective projection ↗).&ensp;
+    <em>E</em> and <em>B</em> are <strong>in phase</strong> and share the same nodes:
+    wherever <em>E</em> is zero, so is <em>B</em>; wherever <em>E</em> peaks, so does <em>B</em>.
+    They oscillate in two perpendicular planes, both transverse to the direction of propagation.`;
+});
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w   = canvas.parentElement.clientWidth;
+  canvas.width  = w * dpr;
+  canvas.height = 270 * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = '270px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function arrowSeg(x1, y1, x2, y2, color, alpha) {
+  const dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 3) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const ang = Math.atan2(dy,dx), hs = 5;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hs*Math.cos(ang-0.42), y2 - hs*Math.sin(ang-0.42));
+  ctx.lineTo(x2 - hs*Math.cos(ang+0.42), y2 - hs*Math.sin(ang+0.42));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawAxesEM(pad, cy) {
+  const ax = pad - 34, ay = 22, len = 20;
+  ctx.save();
+  ctx.font = '11px Georgia, serif'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#888'; ctx.fillStyle = '#888';
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+len,ay); ctx.stroke();
+  ctx.fillText('x', ax+len+3, ay+4);
+  ctx.strokeStyle = '#c06000'; ctx.fillStyle = '#c06000';
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax,ay-len); ctx.stroke();
+  ctx.fillText('E', ax-14, ay-len+4);
+  ctx.strokeStyle = '#2e8b57'; ctx.fillStyle = '#2e8b57';
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+len*0.6,ay+len*0.35); ctx.stroke();
+  ctx.fillText('B', ax+len*0.6+3, ay+len*0.35+9);
+  ctx.restore();
+}
+
+function draw(ts) {
+  if (running) {
+    if (lastTs !== null) t += (ts - lastTs) / 1000 * freq;
+    lastTs = ts;
+  } else { lastTs = null; }
+
+  const W    = canvas.width  / (window.devicePixelRatio || 1);
+  const H    = 270;
+  const cy   = H / 2 + 8;
+  const pad  = 48;
+  const dW   = W - pad * 2;
+  const nLam = nNodes - 1;
+  const segW = dW / nLam;
+  const k    = (nLam * Math.PI) / dW;
+  const cosT = Math.cos(2 * Math.PI * t);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  /* equilibrium axis */
+  ctx.save();
+  ctx.setLineDash([5,7]);
+  ctx.strokeStyle = 'rgba(0,0,0,0.10)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad,cy); ctx.lineTo(pad+dW,cy); ctx.stroke();
+  ctx.restore();
+
+  if (!emMode) {
+    /* envelope fill */
+    ctx.fillStyle = 'rgba(212,83,126,0.13)';
+    ctx.beginPath();
+    for (let i=0; i<=dW; i++) {
+      const e = A * Math.abs(Math.sin(k*i));
+      i===0 ? ctx.moveTo(pad+i, cy-e) : ctx.lineTo(pad+i, cy-e);
+    }
+    for (let i=dW; i>=0; i--)
+      ctx.lineTo(pad+i, cy + A*Math.abs(Math.sin(k*i)));
+    ctx.closePath(); ctx.fill();
+
+    /* envelope boundary */
+    ctx.save();
+    ctx.setLineDash([3,6]);
+    ctx.strokeStyle = 'rgba(212,83,126,0.5)'; ctx.lineWidth = 1.2;
+    for (const sg of [1,-1]) {
+      ctx.beginPath();
+      for (let i=0; i<=dW; i++) {
+        const e = sg * A * Math.abs(Math.sin(k*i));
+        i===0 ? ctx.moveTo(pad+i,cy-e) : ctx.lineTo(pad+i,cy-e);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    /* wave */
+    ctx.strokeStyle = '#378ADD'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    for (let i=0; i<=dW; i++) {
+      const y = cy - A * Math.sin(k*i) * cosT;
+      i===0 ? ctx.moveTo(pad+i,y) : ctx.lineTo(pad+i,y);
+    }
+    ctx.stroke();
+
+  } else {
+    /* EM mode: E and B in phase, same nodes */
+    drawAxesEM(pad, cy);
+
+    const Bamp = A * 0.75;
+    const steps = Math.min(50, Math.floor(dW/8));
+    const si = dW / steps;
+
+    /* E arrows */
+    for (let i=0; i<=steps; i++) {
+      const xi = pad + i*si;
+      const ev = A * Math.sin(k * i * si) * cosT;
+      if (Math.abs(ev) > 1) arrowSeg(xi, cy, xi, cy-ev, '#c06000', 0.6);
+    }
+    /* B arrows (perspective: z-axis tilted at ~30°) */
+    for (let i=0; i<=steps; i++) {
+      const xi = pad + i*si;
+      const bv = Bamp * Math.sin(k * i * si) * cosT;
+      if (Math.abs(bv) > 1)
+        arrowSeg(xi, cy, xi + bv*0.55, cy + bv*0.30, '#2e8b57', 0.6);
+    }
+
+    /* E curve */
+    ctx.strokeStyle = '#c06000'; ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    for (let i=0; i<=dW; i++) {
+      const y = cy - A * Math.sin(k*i) * cosT;
+      i===0 ? ctx.moveTo(pad+i,y) : ctx.lineTo(pad+i,y);
+    }
+    ctx.stroke();
+
+    /* B curve (perspective) */
+    ctx.strokeStyle = '#2e8b57'; ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    for (let i=0; i<=dW; i++) {
+      const bv = Bamp * Math.sin(k*i) * cosT;
+      const sx = pad + i + bv*0.55;
+      const sy = cy + bv*0.30;
+      i===0 ? ctx.moveTo(sx,sy) : ctx.lineTo(sx,sy);
+    }
+    ctx.stroke();
+  }
+
+  /* nodes */
+  for (let n=0; n<=nLam; n++) {
+    const x = pad + n*segW;
+    ctx.beginPath(); ctx.arc(x,cy,7,0,Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = 'bold 11px Georgia, serif';
+    ctx.fillStyle = '#c0392b'; ctx.textAlign = 'center';
+    ctx.fillText('N', x, cy+4);
+    ctx.font = '10px Georgia, serif';
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.fillText('node', x, cy+22);
+  }
+
+  /* antinodes (standing wave mode only) */
+  if (!emMode) {
+    for (let n=0; n<nLam; n++) {
+      const x = pad + (n+0.5)*segW;
+      ctx.beginPath(); ctx.arc(x,cy,5,0,Math.PI*2);
+      ctx.fillStyle = '#378ADD'; ctx.globalAlpha = 0.7; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.font = '10px Georgia, serif';
+      ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.textAlign = 'center';
+      ctx.fillText('antinode', x, cy-16);
+    }
+  }
+
+  /* ── λ bracket: between first and second envelope positive peaks ──
+     First positive peak of A·sin(kx): kx = π/2  → x = dW/(2·nLam) = segW/2
+     Second positive peak:               kx = π/2 + 2π → x = segW/2 + 2·segW
+  */
+  const px1 = pad + segW * 0.5;
+  const px2 = px1 + 2 * segW;    /* one full λ to the right */
+  const byL = cy - A - 24;       /* above the peak */
+
+  if (px2 <= pad + dW + 1) {
+    /* vertical ticks at peak positions */
+    const pkY1 = cy - A * Math.abs(Math.sin(k * (px1-pad)));  /* ≈ cy - A */
+    const pkY2 = cy - A * Math.abs(Math.sin(k * (px2-pad)));
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px1, byL-5); ctx.lineTo(px1, byL+5);
+    ctx.moveTo(px2, byL-5); ctx.lineTo(px2, byL+5);
+    ctx.moveTo(px1, byL);   ctx.lineTo(px2, byL);
+    ctx.stroke();
+
+    /* small dots at the actual peaks */
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.arc(px1, pkY1, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px2, pkY2, 3, 0, Math.PI*2); ctx.fill();
+
+    /* dashed vertical guides from peaks to bracket */
+    ctx.save(); ctx.setLineDash([2,4]);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(px1, pkY1); ctx.lineTo(px1, byL);
+    ctx.moveTo(px2, pkY2); ctx.lineTo(px2, byL);
+    ctx.stroke(); ctx.restore();
+
+    ctx.font = 'italic 13px Georgia, serif';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText('λ  (peak to peak)', (px1+px2)/2, byL - 8);
+  }
+
+  /* A bracket */
+  const ax  = pad + segW * 0.5;
+  const ayt = cy - A;
+  ctx.strokeStyle = 'rgba(180,120,0,0.65)'; ctx.lineWidth = 1;
+  ctx.save(); ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.moveTo(ax,cy); ctx.lineTo(ax,ayt); ctx.stroke();
+  ctx.restore();
+  ctx.font = 'italic 13px Georgia, serif';
+  ctx.fillStyle = 'rgba(160,100,0,0.85)';
+  ctx.textAlign = 'left';
+  ctx.fillText('A', ax+5, ayt+14);
+
+  /* readouts */
+  const lambdaU = Math.round(dW / nLam * 2);
+  document.getElementById('vA').textContent  = A + ' u';
+  document.getElementById('vL').textContent  = lambdaU + ' u';
+  document.getElementById('vT').textContent  = (1/freq).toFixed(2) + ' s';
+  document.getElementById('vF').textContent  = freq.toFixed(1) + ' Hz';
+  document.getElementById('oA').textContent  = A;
+  document.getElementById('oN').textContent  = nNodes;
+  document.getElementById('oF').textContent  = freq.toFixed(1);
+  document.getElementById('tDisp').textContent = t.toFixed(2);
+
+  requestAnimationFrame(draw);
+}
+
+document.getElementById('sA').addEventListener('input', e => { A = +e.target.value; });
+document.getElementById('sN').addEventListener('input', e => { nNodes = +e.target.value; });
+document.getElementById('sF').addEventListener('input', e => { freq = e.target.value / 10; });
+document.getElementById('btn').addEventListener('click', () => {
+  running = !running;
+  document.getElementById('btn').innerHTML = running ? '&#9646;&#9646; Pause' : '&#9654; Resume';
+});
+window.addEventListener('resize', () => { ctx.setTransform(1,0,0,1,0,0); resize(); });
+
+resize();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
