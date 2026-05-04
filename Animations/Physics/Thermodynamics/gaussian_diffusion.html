@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gaussian Diffusion</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inconsolata:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#060911;color:#ddd8cc;
+  font-family:'EB Garamond',Georgia,serif;
+  display:flex;flex-direction:column;align-items:center;
+  padding:22px 14px 48px;min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(30,50,100,.18) 0%,transparent 70%);
+}
+h1{font-size:1.95rem;letter-spacing:.18em;font-weight:400;color:#f0e8d4;
+   margin-bottom:3px;text-align:center;text-shadow:0 0 40px rgba(200,180,100,.14)}
+.sub{font-size:.8rem;color:#7a7260;font-style:italic;letter-spacing:.08em;
+     margin-bottom:16px;text-align:center}
+.ctrl{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;align-items:center}
+/* scene tabs */
+.tab{
+  padding:7px 20px;border:1px solid #2e3248;border-radius:3px;
+  background:#0d1020;color:#888;cursor:pointer;
+  font-family:'EB Garamond',serif;font-size:.91rem;
+  transition:all .22s;letter-spacing:.05em;white-space:nowrap;
+}
+.tab.on{background:#181c2e;color:#e8d890;border-color:#5a4820;
+         box-shadow:0 0 16px rgba(200,160,40,.12)}
+.tab:hover:not(.on){background:#111424;color:#aaa;border-color:#353855}
+/* action buttons */
+.btn{
+  padding:7px 14px;border:1px solid #252838;border-radius:3px;
+  background:#0d1020;cursor:pointer;
+  font-family:'EB Garamond',serif;font-size:.91rem;letter-spacing:.05em;
+  transition:all .2s;white-space:nowrap;
+}
+#btnFire{color:#b04010;border-color:#3a1808}
+#btnFire.lit{color:#f0b040;border-color:#7a4010;
+             box-shadow:0 0 14px rgba(240,160,30,.18)}
+#btnFire:hover{background:#111424}
+#btnSlow{color:#5080a8;border-color:#2a3848}
+#btnSlow.on{color:#80c0e8;border-color:#3a6888;
+            box-shadow:0 0 12px rgba(80,160,220,.14)}
+#btnSlow:hover{background:#111424}
+#rst{color:#607890;border-color:#252838}
+#rst:hover{background:#111424;color:#80a0b8}
+canvas{
+  border:1px solid #1a1e2e;border-radius:4px;display:block;
+  max-width:100%;cursor:crosshair;
+  box-shadow:0 8px 48px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.03)
+}
+.eq{
+  margin-top:13px;padding:8px 22px;background:#0b0e1a;
+  border:1px solid #1a2030;border-radius:3px;
+  font-family:'Inconsolata',monospace;font-size:.86rem;
+  color:#90b4d8;letter-spacing:.05em;text-align:center;
+  max-width:780px;width:100%
+}
+.hint{margin-top:8px;font-size:.74rem;color:#404050;font-style:italic;letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<div style="text-align:center;margin-bottom:18px;user-select:none">
+  <h1>GAUSSIAN DIFFUSION</h1>
+  <p class="sub">Heat &amp; mass transport — a demonstration of the diffusion equation</p>
+</div>
+
+<div class="ctrl" id="ctrl">
+  <!-- Scene tabs -->
+  <button class="tab on" id="t0" onclick="switchTo(0)">🕯&thinsp; Heat in a Solid</button>
+  <button class="tab"    id="t1" onclick="switchTo(1)">💧&thinsp; Ink in Water</button>
+  <!-- Scene-specific -->
+  <button class="btn" id="btnFire" onclick="toggleFire()">🕯 Accendi</button>
+  <!-- Shared -->
+  <button class="btn" id="btnSlow" onclick="toggleSlow()">🐢 Slow-mo</button>
+  <button class="btn" id="rst"     onclick="resetSim()">↺ Reset</button>
+</div>
+
+<canvas id="cv"></canvas>
+<div class="eq" id="eq">T(x, t) = Q / √(4πDt) · exp( −x² / 4Dt )</div>
+<p class="hint" id="hint">Drag the candle to position it, then accendila per riscaldare il solido</p>
+
+<script>
+'use strict';
+
+/* ═══════════════ LAYOUT ══════════════════ */
+const NX=38, NY=16, CS=18;
+const GW=NX*CS, GH=NY*CS;
+const PX=38, PY=26;
+const GX=PX, GY=PY;
+const CZ=106;           // candle zone
+const TH=144;           // thermometer zone
+const CW=GW+PX*2;
+const CH=GY+GH+CZ+TH+22;
+
+// Thermometer geometry
+const TY=GY+GH+CZ;
+const BULB_Y=TY+TH-12;
+const TUBE_TOP=TY+16;
+const TUBE_H=BULB_Y-9-TUBE_TOP;
+
+const cv=document.getElementById('cv');
+cv.width=CW; cv.height=CH;
+const gx=cv.getContext('2d');
+
+/* ═══════════════ STATE ═══════════════════ */
+let scene=0;
+let slowMo=false;
+let candleLit=false;        // heat: candle starts OFF
+let candleX=GX+GW*.5;
+let candleBaseY=GY+GH+CZ-16;  // starts far from grid
+let dragging=false;
+
+// Heat field
+let T, T2, particles;
+
+// Ink field — particle-based Brownian
+let inkParticles=[];
+let inkPress=false, inkSX=0, inkSY=0;
+let inkPeak=1;              // normalisation for meters
+let waterMols=[];
+
+const gi=(ix,iy)=>iy*NX+ix;
+
+/* ═══════════════ PHYSICS CONSTANTS ══════ */
+const DH    =0.045;   // heat diffusivity (slow)
+const COOL  =2.8e-4;  // ambient cooling/step
+const TAMB  =0.04;
+const PROX  =44;      // depth→proximity px scale
+let tScale  =0.01;    // dynamic thermometer scale (always > current max)
+
+const INK_ADD  =3;     // particles/frame while pressing
+const MAX_INK  =600;
+const INK_PER_CELL=10; // density for full saturation
+
+/* ═══════════════ INIT ════════════════════ */
+function mkGrid(base,noise=0){
+  return Float32Array.from({length:NX*NY},
+    ()=>Math.max(0,base+(Math.random()-.5)*noise));
+}
+function mkParticles(){
+  return Array.from({length:NX*NY},(_,i)=>({
+    ix:i%NX, iy:Math.floor(i/NX),
+    ph :Math.random()*Math.PI*2,
+    ph2:Math.random()*Math.PI*2,
+    sp :0.6+Math.random()*.8,
+    sp2:0.5+Math.random()*1.0,
+  }));
+}
+function mkWaterMols(n=200){
+  return Array.from({length:n},()=>({
+    x:GX+4+Math.random()*(GW-8), y:GY+4+Math.random()*(GH-8),
+    vx:(Math.random()-.5)*.45,   vy:(Math.random()-.5)*.45,
+  }));
+}
+
+function resetSim(){
+  T=mkGrid(TAMB,.022); T2=T.slice();
+  particles=mkParticles();
+  inkParticles=[]; inkPeak=1;
+  tScale=0.01;
+  waterMols=mkWaterMols();
+  candleLit=false;
+  updateFireBtn();
+  dragging=false; inkPress=false;
+}
+resetSim();
+
+/* ═══════════════ HEAT PHYSICS ═══════════ */
+function candleProx(){
+  const tip=candleBaseY-42-9-3; // base − body − wick − bit
+  const depth=(GY+GH)-tip;
+  return depth<=0 ? 0 : Math.min(1,depth/PROX);
+}
+
+function injectHeat(){
+  if(!candleLit) return;
+  const prox=candleProx(); if(prox<0.01) return;
+  const col=Math.round((candleX-GX)/CS);
+  const amt=0.09*prox;
+  for(let dx=-1;dx<=1;dx++){
+    const jx=col+dx; if(jx<0||jx>=NX) continue;
+    const w=dx===0?1.0:0.35;
+    T[gi(jx,NY-1)]=Math.min(1,T[gi(jx,NY-1)]+amt*w);
+    T[gi(jx,NY-2)]=Math.min(1,T[gi(jx,NY-2)]+amt*w*.5);
+  }
+}
+
+function diffuseHeat(){
+  for(let iy=1;iy<NY-1;iy++)
+    for(let ix=1;ix<NX-1;ix++){
+      const v=T[gi(ix,iy)];
+      const lap=T[gi(ix+1,iy)]+T[gi(ix-1,iy)]+T[gi(ix,iy+1)]+T[gi(ix,iy-1)]-4*v;
+      T2[gi(ix,iy)]=Math.max(0,v+DH*lap-COOL*(v-TAMB));
+    }
+  for(let iy=0;iy<NY;iy++){
+    T2[gi(0,iy)]=T2[gi(1,iy)]; T2[gi(NX-1,iy)]=T2[gi(NX-2,iy)];
+  }
+  for(let ix=0;ix<NX;ix++){
+    T2[gi(ix,0)]=T2[gi(ix,1)]; T2[gi(ix,NY-1)]=T2[gi(ix,NY-2)];
+  }
+  [T,T2]=[T2,T];
+}
+
+/* ═══════════════ INK + WATER PHYSICS (Brownian collision) ══════════ */
+function updateWaterAndInk(){
+  const DAMP  = 0.80;   // ink velocity damping per step
+  const KICK  = 0.30;   // fraction of water velocity transferred on collision
+  const R2    = 10*10;  // collision radius² (px)
+  const NOISE = slowMo ? 0.5 : 1.4; // residual thermal jitter on ink
+
+  // ── Add new ink particles at injection point ──
+  if(inkPress){
+    for(let i=0;i<INK_ADD&&inkParticles.length<MAX_INK;i++){
+      inkParticles.push({
+        x:inkSX+(Math.random()-.5)*CS*.9,
+        y:inkSY+(Math.random()-.5)*CS*.9,
+        vx:0, vy:0,
+      });
+    }
+  }
+
+  // ── Build spatial hash of ink particles (cell = CS × CS) ──
+  const inkGrid=new Map();
+  for(let i=0;i<inkParticles.length;i++){
+    const p=inkParticles[i];
+    const cx=Math.floor((p.x-GX)/CS);
+    const cy=Math.floor((p.y-GY)/CS);
+    const key=cx*100+cy;
+    let b=inkGrid.get(key); if(!b){b=[];inkGrid.set(key,b);} b.push(i);
+  }
+
+  // ── Move water molecules; on collision kick nearby ink ──
+  const wSpeed=slowMo?0.18:0.28;
+  for(const m of waterMols){
+    m.vx+=(Math.random()-.5)*wSpeed; m.vy+=(Math.random()-.5)*wSpeed;
+    m.vx*=.87; m.vy*=.87;
+    m.x+=m.vx; m.y+=m.vy;
+    if(m.x<GX+2){m.x=GX+2;m.vx=Math.abs(m.vx);}
+    if(m.x>GX+GW-2){m.x=GX+GW-2;m.vx=-Math.abs(m.vx);}
+    if(m.y<GY+2){m.y=GY+2;m.vy=Math.abs(m.vy);}
+    if(m.y>GY+GH-2){m.y=GY+GH-2;m.vy=-Math.abs(m.vy);}
+
+    // Check this cell + 8 neighbours for ink particles to collide with
+    const mcx=Math.floor((m.x-GX)/CS);
+    const mcy=Math.floor((m.y-GY)/CS);
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      const bucket=inkGrid.get((mcx+dx)*100+(mcy+dy));
+      if(!bucket) continue;
+      for(const i of bucket){
+        const p=inkParticles[i];
+        const ddx=p.x-m.x, ddy=p.y-m.y;
+        if(ddx*ddx+ddy*ddy<R2){
+          p.vx+=m.vx*KICK;
+          p.vy+=m.vy*KICK;
+        }
+      }
+    }
+  }
+
+  // ── Advance ink particles by accumulated velocity + residual noise ──
+  for(const p of inkParticles){
+    p.vx*=DAMP; p.vy*=DAMP;
+    p.vx+=(Math.random()-.5)*NOISE;
+    p.vy+=(Math.random()-.5)*NOISE;
+    p.x+=p.vx; p.y+=p.vy;
+    p.x=Math.max(GX+1,Math.min(GX+GW-1,p.x));
+    p.y=Math.max(GY+1,Math.min(GY+GH-1,p.y));
+  }
+}
+
+/* count ink particles per column */
+function inkColCount(){
+  const counts=new Float32Array(NX);
+  for(const p of inkParticles){
+    const ix=Math.floor((p.x-GX)/CS);
+    if(ix>=0&&ix<NX) counts[ix]++;
+  }
+  return counts;
+}
+
+/* build NX×NY density map for cell coloring */
+function inkCellDensity(){
+  const d=new Float32Array(NX*NY);
+  for(const p of inkParticles){
+    const ix=Math.floor((p.x-GX)/CS);
+    const iy=Math.floor((p.y-GY)/CS);
+    if(ix>=0&&ix<NX&&iy>=0&&iy<NY) d[gi(ix,iy)]++;
+  }
+  return d;
+}
+
+/* ═══════════════ COLORS ═════════════════ */
+function heatRGB(t){
+  t=Math.max(0,Math.min(1,t));
+  if(t<.25){const f=t/.25;   return[40+f*70,   80+f*55,  205-f*55];}
+  if(t<.55){const f=(t-.25)/.3;return[110+f*145,135-f*75, 150-f*115];}
+  const f=(t-.55)/.45;       return[255, 60-f*48, 35-f*28];
+}
+
+/* ═══════════════ DRAW UTILS ═════════════ */
+function rr(x,y,w,h,r){
+  gx.beginPath();
+  gx.moveTo(x+r,y); gx.lineTo(x+w-r,y);
+  gx.arcTo(x+w,y,x+w,y+r,r); gx.lineTo(x+w,y+h-r);
+  gx.arcTo(x+w,y+h,x+w-r,y+h,r); gx.lineTo(x+r,y+h);
+  gx.arcTo(x,y+h,x,y+h-r,r); gx.lineTo(x,y+r);
+  gx.arcTo(x,y,x+r,y,r); gx.closePath();
+}
+
+/* ═══════════════ DRAW LATTICE ═══════════ */
+function drawLattice(ts){
+  gx.fillStyle='#0a0f1e'; gx.fillRect(GX,GY,GW,GH);
+
+  // Heat glow from candle proximity
+  if(candleLit){
+    const prox=candleProx();
+    if(prox>0.04){
+      const col=Math.round((candleX-GX)/CS);
+      const hx=GX+col*CS+CS*.5;
+      const gl=gx.createRadialGradient(hx,GY+GH,0,hx,GY+GH,CS*3.5*prox);
+      gl.addColorStop(0,`rgba(255,120,14,${prox*.3})`);
+      gl.addColorStop(1,'rgba(255,60,0,0)');
+      gx.fillStyle=gl; gx.beginPath(); gx.arc(hx,GY+GH,CS*3.5*prox,0,Math.PI*2); gx.fill();
+    }
+  }
+
+  // Bonds
+  gx.strokeStyle='#15203a'; gx.lineWidth=.75;
+  for(let iy=0;iy<NY;iy++)
+    for(let ix=0;ix<NX;ix++){
+      const bx=GX+ix*CS+CS*.5, by=GY+iy*CS+CS*.5;
+      if(ix<NX-1){gx.beginPath();gx.moveTo(bx,by);gx.lineTo(bx+CS,by);gx.stroke();}
+      if(iy<NY-1){gx.beginPath();gx.moveTo(bx,by);gx.lineTo(bx,by+CS);gx.stroke();}
+    }
+
+  // Atoms — slow-mo uses a slower effective timestamp
+  const eff=slowMo ? ts*.22 : ts;
+  for(const p of particles){
+    const t=T[gi(p.ix,p.iy)];
+    const amp=2.0+t*5.5, freq=1.8+t*4.5;
+    const ox=amp*Math.sin(freq*eff*.001+p.ph);
+    const oy=amp*Math.cos(freq*eff*.001*p.sp+p.ph2);
+    const ax=GX+p.ix*CS+CS*.5+ox;
+    const ay=GY+p.iy*CS+CS*.5+oy;
+    const [r,gr,b]=heatRGB(t);
+    const rad=2.2+t*2.8;
+
+    if(t>.13){
+      const gg=gx.createRadialGradient(ax,ay,0,ax,ay,rad*4);
+      gg.addColorStop(0,`rgba(${r},${gr},${b},.25)`);
+      gg.addColorStop(1,`rgba(${r},${gr},${b},0)`);
+      gx.fillStyle=gg; gx.beginPath(); gx.arc(ax,ay,rad*4,0,Math.PI*2); gx.fill();
+    }
+    gx.fillStyle=`rgb(${r},${gr},${b})`;
+    gx.beginPath(); gx.arc(ax,ay,rad,0,Math.PI*2); gx.fill();
+    gx.fillStyle='rgba(255,255,255,.27)';
+    gx.beginPath(); gx.arc(ax-rad*.3,ay-rad*.3,rad*.28,0,Math.PI*2); gx.fill();
+  }
+
+  gx.strokeStyle='#283050'; gx.lineWidth=1.5; gx.strokeRect(GX,GY,GW,GH);
+}
+
+/* ═══════════════ DRAW CANDLE ════════════ */
+function drawCandle(ts){
+  const cx=candleX, baseY=candleBaseY;
+  const bW=13, bH=42, wkH=9;
+  // Use real time for flicker always (even in slow-mo — it's just the flame)
+  const flk=Math.sin(ts*.0132)*3+Math.cos(ts*.0191)*1.8;
+  const fH =22+Math.sin(ts*.0165)*4;
+
+  // ── Body (always drawn) ──
+  const cg=gx.createLinearGradient(cx-bW*.5,0,cx+bW*.5,0);
+  cg.addColorStop(0,'#a88858'); cg.addColorStop(.3,'#d8c898');
+  cg.addColorStop(.65,'#ece0a4'); cg.addColorStop(1,'#9e8458');
+  gx.fillStyle=cg; rr(cx-bW*.5,baseY-bH,bW,bH,2); gx.fill();
+  gx.fillStyle='#c2b280'; rr(cx-bW*.5-1,baseY-bH,bW+2,4,1); gx.fill();
+
+  // ── Wick ──
+  const wx=cx+(candleLit ? flk*.1 : 0);
+  gx.strokeStyle='#3a2a18'; gx.lineWidth=1.5;
+  gx.beginPath(); gx.moveTo(cx,baseY-bH);
+  gx.quadraticCurveTo(wx,baseY-bH-wkH*.5,wx,baseY-bH-wkH); gx.stroke();
+
+  if(candleLit){
+    const fBase=baseY-bH-wkH+1, fTip=fBase-fH;
+    const ftx=wx+flk*.42;
+
+    // Outer flame
+    const fg=gx.createRadialGradient(ftx,fTip+fH*.3,1,ftx,fBase,fH);
+    fg.addColorStop(0,'rgba(255,250,195,.99)');
+    fg.addColorStop(.2,'rgba(255,152,20,.92)');
+    fg.addColorStop(.55,'rgba(255,44,0,.55)');
+    fg.addColorStop(1,'rgba(255,0,0,0)');
+    gx.fillStyle=fg;
+    gx.beginPath();
+    gx.moveTo(ftx,fTip);
+    gx.bezierCurveTo(ftx+9,fTip+fH*.42,ftx+11,fBase,ftx,fBase+2);
+    gx.bezierCurveTo(ftx-11,fBase,ftx-9,fTip+fH*.42,ftx,fTip);
+    gx.fill();
+
+    // Inner core
+    const ic=gx.createLinearGradient(ftx,fTip+fH*.12,ftx,fBase);
+    ic.addColorStop(0,'rgba(255,255,238,1)');
+    ic.addColorStop(.38,'rgba(255,220,55,.9)');
+    ic.addColorStop(1,'rgba(255,135,12,.22)');
+    gx.fillStyle=ic;
+    gx.beginPath(); gx.ellipse(ftx,fTip+fH*.4,3,fH*.35,flk*.012,0,Math.PI*2); gx.fill();
+
+    // Glow halo (bleeds into grid when close)
+    const prox=candleProx();
+    if(prox>0.05){
+      const gl=gx.createRadialGradient(ftx,fTip+fH*.2,0,ftx,fTip+fH*.2,64);
+      gl.addColorStop(0,`rgba(255,168,34,${prox*.15})`);
+      gl.addColorStop(1,'rgba(255,90,0,0)');
+      gx.fillStyle=gl; gx.beginPath(); gx.arc(ftx,fTip+fH*.2,64,0,Math.PI*2); gx.fill();
+    }
+  } else {
+    // Smoke wisp on extinguished wick
+    gx.strokeStyle='rgba(160,160,180,.22)'; gx.lineWidth=1.2;
+    gx.beginPath(); gx.moveTo(wx,baseY-bH-wkH);
+    gx.quadraticCurveTo(wx+4,baseY-bH-wkH-8,wx-2,baseY-bH-wkH-16); gx.stroke();
+  }
+
+  // Proximity hint when candle is lit but far
+  if(candleLit && candleProx()<0.15){
+    gx.fillStyle='rgba(255,195,55,.62)';
+    gx.font='12px "EB Garamond",Georgia'; gx.textAlign='center';
+    gx.fillText('↑ avvicina al solido', cx, baseY-bH-wkH-fH-18);
+  }
+}
+
+/* ═══════════════ HEAT METERS ════════════ */
+function drawHeatMeters(){
+  const tW=5, bulbR=7;
+  const vals=new Float32Array(NX);
+  for(let ix=0;ix<NX;ix++){
+    let s=0; for(let iy=0;iy<NY;iy++) s+=T[gi(ix,iy)]; s/=NY;
+    vals[ix]=Math.max(0,s-TAMB);
+  }
+  const curMax=Math.max(...vals,0.001);
+  // Dynamic scale: always at least 1.45× the current max → peak stays ≤ 69% of tube
+  // Decay slowly so the scale comes down when candle is removed
+  tScale=Math.max(tScale*0.9994, curMax*1.45);
+  const showCurve=curMax>0.006;
+
+  gx.fillStyle='#6e7e98'; gx.font='italic 11px "EB Garamond",Georgia';
+  gx.textAlign='left'; gx.fillText('Temperature  T(x, t)', GX, TY+12);
+
+  // Tick marks
+  gx.strokeStyle='#1e2438'; gx.lineWidth=.8;
+  for(let k=0;k<=4;k++){
+    const ty=BULB_Y-8-(k/4)*(TUBE_H-2);
+    gx.beginPath(); gx.moveTo(GX-4,ty); gx.lineTo(GX,ty); gx.stroke();
+  }
+
+  for(let ix=0;ix<NX;ix++){
+    const x=GX+ix*CS+CS*.5;
+    const frac=Math.min(1,vals[ix]/tScale);
+    const fillH=frac*(TUBE_H-2);
+
+    gx.fillStyle='rgba(4,7,18,.96)';
+    gx.strokeStyle='rgba(65,105,155,.42)'; gx.lineWidth=.7;
+    rr(x-tW*.5,TUBE_TOP,tW,TUBE_H,2.5); gx.fill(); gx.stroke();
+
+    if(fillH>0.8){
+      gx.fillStyle='#cc2020';
+      rr(x-tW*.5+.5,BULB_Y-7-fillH,tW-1,fillH,1.5); gx.fill();
+    }
+    gx.fillStyle='#cc2020';
+    gx.beginPath(); gx.arc(x,BULB_Y,bulbR,0,Math.PI*2); gx.fill();
+    gx.fillStyle='rgba(255,255,255,.2)';
+    gx.beginPath(); gx.arc(x-2.5,BULB_Y-2.5,2.5,0,Math.PI*2); gx.fill();
+  }
+
+  if(showCurve){
+    gx.strokeStyle='rgba(255,200,55,.88)'; gx.lineWidth=2.2; gx.setLineDash([]);
+    gx.shadowColor='rgba(255,175,38,.42)'; gx.shadowBlur=6;
+    gx.beginPath();
+    for(let ix=0;ix<NX;ix++){
+      const x=GX+ix*CS+CS*.5;
+      const tipY=BULB_Y-7-Math.min(1,vals[ix]/tScale)*(TUBE_H-2);
+      ix===0?gx.moveTo(x,tipY):gx.lineTo(x,tipY);
+    }
+    gx.stroke(); gx.shadowBlur=0;
+    gx.fillStyle='rgba(255,200,55,.88)';
+    for(let ix=0;ix<NX;ix++){
+      const x=GX+ix*CS+CS*.5;
+      const tipY=BULB_Y-7-Math.min(1,vals[ix]/tScale)*(TUBE_H-2);
+      gx.beginPath(); gx.arc(x,tipY,2.4,0,Math.PI*2); gx.fill();
+    }
+    gx.fillStyle='rgba(255,200,55,.85)';
+    gx.font='10px "EB Garamond",Georgia'; gx.textAlign='right';
+    gx.fillText('Gaussian profile →', GX+GW, TY+12);
+  }
+}
+
+/* ═══════════════ DRAW WATER ═════════════ */
+function drawWater(){
+  // Base water fill
+  const wg=gx.createLinearGradient(GX,GY,GX,GY+GH);
+  wg.addColorStop(0,'#091630'); wg.addColorStop(1,'#0c1e44');
+  gx.fillStyle=wg; gx.fillRect(GX,GY,GW,GH);
+
+  // Per-cell ink density → red tint water
+  const dens=inkCellDensity();
+  for(let iy=0;iy<NY;iy++)
+    for(let ix=0;ix<NX;ix++){
+      const c=dens[gi(ix,iy)];
+      if(c>0){
+        const f=Math.min(1,c/INK_PER_CELL);
+        // Water blue blends into blood red as f→1
+        const r=Math.round(10 +f*220);
+        const g=Math.round(22 -f*20);
+        const b=Math.round(68 -f*62);
+        gx.fillStyle=`rgba(${r},${g},${b},${Math.min(.94,f*.78+.18)})`;
+        gx.fillRect(GX+ix*CS,GY+iy*CS,CS,CS);
+      }
+    }
+
+  // Water molecules (pale blue dots)
+  gx.fillStyle='rgba(80,130,190,.32)';
+  for(const m of waterMols){
+    gx.beginPath(); gx.arc(m.x,m.y,1.5,0,Math.PI*2); gx.fill();
+  }
+
+  // Ink particles — drawn as vivid red circles
+  for(const p of inkParticles){
+    // Outer glow
+    gx.fillStyle='rgba(220,30,30,.22)';
+    gx.beginPath(); gx.arc(p.x,p.y,3.8,0,Math.PI*2); gx.fill();
+    // Core
+    gx.fillStyle='#e82020';
+    gx.beginPath(); gx.arc(p.x,p.y,2.1,0,Math.PI*2); gx.fill();
+    // Specular
+    gx.fillStyle='rgba(255,160,155,.6)';
+    gx.beginPath(); gx.arc(p.x-.55,p.y-.55,.85,0,Math.PI*2); gx.fill();
+  }
+
+  // Drop indicator while pressing
+  if(inkPress){
+    gx.strokeStyle='rgba(240,60,60,.38)'; gx.lineWidth=1.2; gx.setLineDash([2,3]);
+    gx.beginPath(); gx.moveTo(inkSX,GY); gx.lineTo(inkSX,inkSY); gx.stroke();
+    gx.setLineDash([]);
+    gx.fillStyle='rgba(220,30,30,.8)';
+    gx.beginPath(); gx.arc(inkSX,inkSY,4.5,0,Math.PI*2); gx.fill();
+  }
+
+  // Glass shine
+  const sh=gx.createLinearGradient(GX,0,GX+18,0);
+  sh.addColorStop(0,'rgba(130,180,255,.1)'); sh.addColorStop(1,'rgba(130,180,255,0)');
+  gx.fillStyle=sh; gx.fillRect(GX,GY,18,GH);
+  gx.strokeStyle='#374e88'; gx.lineWidth=2; gx.strokeRect(GX,GY,GW,GH);
+  gx.strokeStyle='rgba(110,155,230,.16)'; gx.lineWidth=1;
+  gx.beginPath(); gx.moveTo(GX+4,GY+4); gx.lineTo(GX+GW-4,GY+4); gx.stroke();
+}
+
+/* ═══════════════ INK METERS ════════════ */
+function drawInkMeters(){
+  const tW=5, bulbR=7;
+  const counts=inkColCount();
+  let cur=0; for(let ix=0;ix<NX;ix++) if(counts[ix]>cur) cur=counts[ix];
+  if(cur>inkPeak) inkPeak=cur;
+  const scale=Math.max(inkPeak,1);
+  const showCurve=inkParticles.length>6;
+
+  gx.fillStyle='#6e7e98'; gx.font='italic 11px "EB Garamond",Georgia';
+  gx.textAlign='left'; gx.fillText('Concentration  C(x, t)', GX, TY+12);
+
+  gx.strokeStyle='#1e2438'; gx.lineWidth=.8;
+  for(let k=0;k<=4;k++){
+    const ty=BULB_Y-8-(k/4)*(TUBE_H-2);
+    gx.beginPath(); gx.moveTo(GX-4,ty); gx.lineTo(GX,ty); gx.stroke();
+  }
+
+  for(let ix=0;ix<NX;ix++){
+    const x=GX+ix*CS+CS*.5;
+    const frac=Math.min(1,counts[ix]/scale);
+    const fillH=frac*(TUBE_H-2);
+
+    gx.fillStyle='rgba(4,7,18,.96)';
+    gx.strokeStyle='rgba(65,105,155,.42)'; gx.lineWidth=.7;
+    rr(x-tW*.5,TUBE_TOP,tW,TUBE_H,2.5); gx.fill(); gx.stroke();
+
+    if(fillH>0.8){
+      gx.fillStyle='#b81818';
+      rr(x-tW*.5+.5,BULB_Y-7-fillH,tW-1,fillH,1.5); gx.fill();
+    }
+    gx.fillStyle='#b81818';
+    gx.beginPath(); gx.arc(x,BULB_Y,bulbR,0,Math.PI*2); gx.fill();
+    gx.fillStyle='rgba(255,255,255,.2)';
+    gx.beginPath(); gx.arc(x-2.5,BULB_Y-2.5,2.5,0,Math.PI*2); gx.fill();
+  }
+
+  if(showCurve){
+    gx.strokeStyle='rgba(255,100,50,.88)'; gx.lineWidth=2.2; gx.setLineDash([]);
+    gx.shadowColor='rgba(255,60,30,.4)'; gx.shadowBlur=6;
+    gx.beginPath();
+    for(let ix=0;ix<NX;ix++){
+      const x=GX+ix*CS+CS*.5;
+      const tipY=BULB_Y-7-Math.min(1,counts[ix]/scale)*(TUBE_H-2);
+      ix===0?gx.moveTo(x,tipY):gx.lineTo(x,tipY);
+    }
+    gx.stroke(); gx.shadowBlur=0;
+    gx.fillStyle='rgba(255,100,50,.88)';
+    for(let ix=0;ix<NX;ix++){
+      const x=GX+ix*CS+CS*.5;
+      const tipY=BULB_Y-7-Math.min(1,counts[ix]/scale)*(TUBE_H-2);
+      gx.beginPath(); gx.arc(x,tipY,2.4,0,Math.PI*2); gx.fill();
+    }
+    gx.fillStyle='rgba(255,100,50,.85)';
+    gx.font='10px "EB Garamond",Georgia'; gx.textAlign='right';
+    gx.fillText('Gaussian profile →', GX+GW, TY+12);
+  }
+}
+
+/* ═══════════════ SLOW-MO OVERLAY ═══════ */
+function drawSlowBadge(){
+  if(!slowMo) return;
+  gx.fillStyle='rgba(80,170,220,.62)';
+  gx.font='bold 11px "Inconsolata",monospace';
+  gx.textAlign='right';
+  gx.fillText('🐢 SLOW-MO', GX+GW-2, GY+14);
+}
+
+/* ═══════════════ MAIN LOOP ══════════════ */
+function frame(ts){
+  gx.fillStyle='#090c18'; gx.fillRect(0,0,CW,CH);
+  const steps=slowMo ? 1 : 3;
+
+  if(scene===0){
+    for(let s=0;s<steps;s++){ injectHeat(); diffuseHeat(); }
+    drawLattice(ts);
+    drawCandle(ts);
+    drawHeatMeters();
+  } else {
+    for(let s=0;s<steps;s++) updateWaterAndInk();
+    drawWater();
+    drawInkMeters();
+  }
+
+  drawSlowBadge();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ═══════════════ UI ══════════════════════ */
+function switchTo(s){
+  scene=s;
+  document.getElementById('t0').className='tab'+(s===0?' on':'');
+  document.getElementById('t1').className='tab'+(s===1?' on':'');
+  document.getElementById('btnFire').style.display=s===0?'':'none';
+  document.getElementById('eq').textContent=s===0
+    ?'T(x, t) = Q / √(4πDt) · exp( −x² / 4Dt )'
+    :'C(x, t) = M / √(4πDt) · exp( −x² / 4Dt )';
+  document.getElementById('hint').textContent=s===0
+    ?"Trascina la candela e accendila per riscaldare il solido"
+    :"Clicca nell'acqua per iniettare inchiostro rosso";
+  resetSim();
+}
+
+function toggleFire(){
+  candleLit=!candleLit;
+  updateFireBtn();
+}
+function updateFireBtn(){
+  const b=document.getElementById('btnFire');
+  if(candleLit){ b.textContent='🔥 Spegni'; b.classList.add('lit'); }
+  else         { b.textContent='🕯 Accendi'; b.classList.remove('lit'); }
+}
+
+function toggleSlow(){
+  slowMo=!slowMo;
+  const b=document.getElementById('btnSlow');
+  b.textContent=slowMo?'⚡ Normale':'🐢 Slow-mo';
+  b.classList.toggle('on',slowMo);
+}
+
+/* ═══════════════ INPUT ═══════════════════ */
+function getPos(e){
+  const rect=cv.getBoundingClientRect();
+  const sx=CW/rect.width, sy=CH/rect.height;
+  const cl=e.touches?e.touches[0]:e;
+  return{
+    x:(cl.clientX-rect.left)*sx,
+    y:(cl.clientY-rect.top)*sy,
+  };
+}
+
+function onDown(e){
+  const p=getPos(e);
+  if(scene===0){
+    // Candle drag: click anywhere in the candle zone (below grid)
+    if(p.y>GY+GH){
+      dragging=true;
+      moveCandleTo(p);
+    }
+  } else {
+    // Ink: press inside grid
+    if(p.x>=GX&&p.x<=GX+GW&&p.y>=GY&&p.y<=GY+GH){
+      inkPress=true; inkSX=p.x; inkSY=p.y;
+    }
+  }
+}
+function moveCandleTo(p){
+  candleX=Math.max(GX+CS*1.5,Math.min(GX+GW-CS*1.5,p.x));
+  // Allow dragging up into grid (candle embeds)
+  candleBaseY=Math.max(GY+GH+10,Math.min(GY+GH+CZ-10,p.y));
+}
+function onMove(e){
+  const p=getPos(e);
+  if(scene===0){ if(dragging) moveCandleTo(p); }
+  else{ if(inkPress&&p.x>=GX&&p.x<=GX+GW&&p.y>=GY&&p.y<=GY+GH){ inkSX=p.x; inkSY=p.y; } }
+}
+function onUp(){ dragging=false; inkPress=false; }
+
+cv.addEventListener('mousedown', onDown);
+cv.addEventListener('mousemove', onMove);
+cv.addEventListener('mouseup',   onUp);
+cv.addEventListener('mouseleave',onUp);
+cv.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+cv.addEventListener('touchmove', e=>{e.preventDefault();onMove(e);},{passive:false});
+cv.addEventListener('touchend',  onUp);
+
+// Hide fire button for ink scene on load
+document.getElementById('btnFire').style.display='';
+</script>
+</body>
+</html>
